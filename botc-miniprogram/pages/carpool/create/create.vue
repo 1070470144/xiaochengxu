@@ -3,9 +3,6 @@
     <view class="container">
       <!-- 表单卡片 -->
       <view class="form-card card">
-        <view class="card-header">
-          <text class="card-title">发起拼车</text>
-        </view>
         <view class="card-body">
           <!-- 基础信息 -->
           <uni-forms :model="formData" ref="form" :rules="formRules">

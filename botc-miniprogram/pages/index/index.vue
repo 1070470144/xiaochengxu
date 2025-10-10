@@ -48,7 +48,7 @@
           <view class="card-badge new">最新</view>
         </view>
         
-        <view class="function-card" @click="goToStoryteller">
+        <view class="function-card" @click="goToStorytellerList">
           <view class="card-icon">🎭</view>
           <text class="card-title">说书人</text>
           <text class="card-desc">寻找优秀ST</text>
@@ -185,16 +185,19 @@ export default {
     // 加载首页数据
     async loadHomeData() {
       try {
-        // 这里可以调用云函数获取真实数据
-        // const res = await uniCloud.callFunction({
-        //   name: 'home-data',
-        //   data: {}
-        // })
-        // this.stats = res.result.data.stats
-        // this.hotScripts = res.result.data.hotScripts
-        // this.latestCarpools = res.result.data.latestCarpools
+        const res = await uniCloud.callFunction({
+          name: 'home-data',
+          data: {}
+        })
+        
+        if (res.result.code === 0) {
+          this.stats = res.result.data.stats
+          this.hotScripts = res.result.data.hotScripts
+          this.latestCarpools = res.result.data.latestCarpools
+        }
       } catch (error) {
         console.error('加载首页数据失败:', error)
+        // 使用默认数据
       }
     },
     
@@ -217,11 +220,10 @@ export default {
       })
     },
     
-    // 跳转到说书人页面
-    goToStoryteller() {
-      uni.showToast({
-        title: '说书人功能开发中...',
-        icon: 'none'
+    // 跳转到说书人列表
+    goToStorytellerList() {
+      uni.navigateTo({
+        url: '/pages/storyteller/list/list'
       })
     },
     

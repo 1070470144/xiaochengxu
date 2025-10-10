@@ -1,0 +1,8 @@
+{
+  "name": "storyteller-detail",
+  "version": "1.0.0",
+  "description": "获取说书人详情",
+  "main": "index.js",
+  "dependencies": {}
+}
+
