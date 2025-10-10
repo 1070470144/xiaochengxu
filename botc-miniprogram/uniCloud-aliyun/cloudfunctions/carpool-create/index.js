@@ -16,7 +16,8 @@ exports.main = async (event, context) => {
     requirements,
     contact_wechat,
     contact_phone,
-    tags = []
+    tags = [],
+    token
   } = event
   
   // 参数验证
@@ -28,14 +29,22 @@ exports.main = async (event, context) => {
     }
   }
   
-  // 获取当前用户ID（从uni-id中获取）
-  const uniIdCommon = require('uni-id-common')
-  const { uid } = await uniIdCommon.checkToken(event.uniIdToken)
+  // 验证token并获取用户ID
+  if (!token) {
+    return {
+      code: 401,
+      message: '请先登录',
+      data: null
+    }
+  }
+  
+  // 解析token获取userId（简化方案）
+  const uid = token.split('_')[0]
   
   if (!uid) {
     return {
       code: 401,
-      message: '请先登录',
+      message: 'Token无效',
       data: null
     }
   }

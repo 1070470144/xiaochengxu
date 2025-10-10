@@ -3,7 +3,5 @@
   "version": "1.0.0",
   "description": "报名参加血染钟楼拼车云函数",
   "main": "index.js",
-  "dependencies": {
-    "uni-id-common": "file:../common/uni-id-common"
-  }
+  "dependencies": {}
 }

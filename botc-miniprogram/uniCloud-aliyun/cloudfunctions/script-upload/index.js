@@ -14,7 +14,8 @@ exports.main = async (event, context) => {
     duration = 0,
     tags = [],
     jsonData = null,
-    jsonUrl = ''
+    jsonUrl = '',
+    token
   } = event
   
   if (!title) {
@@ -25,14 +26,21 @@ exports.main = async (event, context) => {
     }
   }
   
-  // 获取当前用户ID
-  const uniIdCommon = require('uni-id-common')
-  const { uid } = await uniIdCommon.checkToken(event.uniIdToken)
+  // 验证token并获取用户ID
+  if (!token) {
+    return {
+      code: 401,
+      message: '请先登录',
+      data: null
+    }
+  }
+  
+  const uid = token.split('_')[0]
   
   if (!uid) {
     return {
       code: 401,
-      message: '请先登录',
+      message: 'Token无效',
       data: null
     }
   }

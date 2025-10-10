@@ -146,6 +146,8 @@
 </template>
 
 <script>
+import Auth from '@/utils/auth.js'
+
 export default {
   name: 'CarpoolCreate',
   
@@ -330,9 +332,12 @@ export default {
       this.submitting = true
 
       try {
+        const token = Auth.getToken()
+        
         const result = await uniCloud.callFunction({
           name: 'carpool-create',
           data: {
+            token: token,
             title: this.formData.title.trim(),
             script_id: this.formData.scriptId || null,
             storyteller_id: this.formData.storytellerId || null,

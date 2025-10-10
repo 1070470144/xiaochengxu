@@ -3,9 +3,15 @@
     <!-- 用户信息头部 -->
     <view class="profile-header clock-tower-gradient">
       <view class="user-info">
-        <image class="user-avatar" :src="userInfo.avatar || '/static/images/default-avatar.png'" mode="aspectFill"></image>
+        <view class="avatar-wrapper" @click="editProfile">
+          <image class="user-avatar" :src="userInfo.avatar || '/static/logo.png'" mode="aspectFill"></image>
+          <view class="avatar-edit-icon">
+            <text>✏️</text>
+          </view>
+        </view>
         <view class="user-details">
           <text class="user-name">{{ userInfo.nickname || '血染玩家' }}</text>
+          <text class="user-mobile">{{ formatMobile(userInfo.mobile) }}</text>
           <view class="user-level-info">
             <text class="level-text">{{ levelInfo.name }}</text>
             <text class="level-number">Lv.{{ userInfo.level || 1 }}</text>
@@ -124,7 +130,7 @@
 </template>
 
 <script>
-import { getUserLevelInfo } from '@/utils/common.js'
+import Auth from '@/utils/auth.js'
 
 export default {
   name: 'UserProfile',
@@ -140,7 +146,7 @@ export default {
 
   onLoad() {
     console.log('用户中心页面加载')
-    this.loadUserData()
+    this.checkLogin()
   },
 
   onShow() {
@@ -149,17 +155,29 @@ export default {
   },
 
   methods: {
+    // 检查登录状态
+    checkLogin() {
+      if (!Auth.isLogin()) {
+        Auth.toLogin()
+        return
+      }
+      this.loadUserData()
+    },
+
     // 加载用户数据
     async loadUserData() {
       try {
-        // 从本地获取用户信息
-        const app = getApp()
-        if (app.globalData.userInfo) {
-          this.userInfo = app.globalData.userInfo
+        // 从Storage获取用户信息
+        const storedUserInfo = Auth.getUserInfo()
+        if (storedUserInfo) {
+          this.userInfo = storedUserInfo
           this.calculateLevelInfo()
         }
         
-        // 从服务器获取最新的用户统计数据
+        // 从服务器获取最新信息
+        await this.refreshUserInfo()
+        
+        // 获取用户统计数据
         await this.loadUserStats()
         
       } catch (error) {
@@ -167,15 +185,40 @@ export default {
       }
     },
 
-    // 加载用户统计数据
-    async loadUserStats() {
+    // 刷新用户信息
+    async refreshUserInfo() {
       try {
+        const token = Auth.getToken()
+        
         const result = await uniCloud.callFunction({
-          name: 'user-stats'
+          name: 'user-info',
+          data: {
+            token: token
+          }
         })
 
         if (result.result.code === 0) {
-          this.userStats = result.result.data
+          this.userInfo = result.result.data
+          this.calculateLevelInfo()
+          
+          // 更新本地存储
+          uni.setStorageSync('userInfo', this.userInfo)
+        }
+      } catch (error) {
+        console.error('刷新用户信息失败：', error)
+      }
+    },
+
+    // 加载用户统计数据
+    async loadUserStats() {
+      try {
+        // TODO: 创建 user-stats 云函数
+        // 暂时使用模拟数据
+        this.userStats = {
+          uploadCount: 0,
+          favoriteCount: 0,
+          carpoolCount: 0,
+          commentCount: 0
         }
       } catch (error) {
         console.error('加载用户统计失败：', error)
@@ -184,10 +227,47 @@ export default {
 
     // 计算等级信息
     calculateLevelInfo() {
-      this.levelInfo = getUserLevelInfo(
-        this.userInfo.level || 1, 
-        this.userInfo.exp || 0
-      )
+      const level = this.userInfo.level || 1
+      const exp = this.userInfo.exp || 0
+      
+      // 等级配置（根据 spec-kit）
+      const levelConfig = [
+        { level: 1, name: '初来乍到', exp: 0 },
+        { level: 2, name: '略知一二', exp: 100 },
+        { level: 3, name: '初窥门径', exp: 300 },
+        { level: 4, name: '渐入佳境', exp: 600 },
+        { level: 5, name: '驾轻就熟', exp: 1000 },
+        { level: 6, name: '炉火纯青', exp: 1500 },
+        { level: 7, name: '登峰造极', exp: 2200 },
+        { level: 8, name: '出神入化', exp: 3000 },
+        { level: 9, name: '无与伦比', exp: 4000 },
+        { level: 10, name: '传奇玩家', exp: 5500 }
+      ]
+      
+      const currentLevel = levelConfig.find(l => l.level === level) || levelConfig[0]
+      const nextLevel = levelConfig.find(l => l.level === level + 1)
+      
+      this.levelInfo = {
+        name: currentLevel.name,
+        currentLevelExp: currentLevel.exp,
+        nextLevelExp: nextLevel ? nextLevel.exp : null,
+        progress: nextLevel 
+          ? ((exp - currentLevel.exp) / (nextLevel.exp - currentLevel.exp) * 100).toFixed(0)
+          : 100
+      }
+    },
+
+    // 格式化手机号
+    formatMobile(mobile) {
+      if (!mobile) return ''
+      return mobile.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+    },
+
+    // 编辑资料
+    editProfile() {
+      uni.navigateTo({
+        url: '/pages/user/edit-profile/edit-profile'
+      })
     },
 
     // 页面跳转方法
@@ -246,32 +326,45 @@ export default {
     },
 
     // 退出登录
-    handleLogout() {
+    async handleLogout() {
       uni.showModal({
         title: '确认退出',
         content: '确定要退出登录吗？',
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
-            // 清除本地存储
-            uni.removeStorageSync('token')
-            uni.removeStorageSync('userInfo')
-            
-            // 清除全局数据
-            const app = getApp()
-            app.globalData.token = null
-            app.globalData.userInfo = null
-            
-            uni.showToast({
-              title: '已退出登录',
-              icon: 'success'
-            })
-            
-            // 跳转到登录页
-            setTimeout(() => {
-              uni.reLaunch({
-                url: '/pages/user/login/login'
+            try {
+              const token = Auth.getToken()
+              
+              // 调用云函数退出登录
+              await uniCloud.callFunction({
+                name: 'user-logout',
+                data: {
+                  token: token
+                }
               })
-            }, 1500)
+              
+              // 使用Auth工具类清除登录信息
+              Auth.logout()
+              
+              uni.showToast({
+                title: '已退出登录',
+                icon: 'success'
+              })
+              
+              // 跳转到登录页
+              setTimeout(() => {
+                uni.reLaunch({
+                  url: '/pages/login/sms-login'
+                })
+              }, 1500)
+            } catch (error) {
+              console.error('退出登录失败：', error)
+              // 即使失败也清除本地登录信息
+              Auth.logout()
+              uni.reLaunch({
+                url: '/pages/login/sms-login'
+              })
+            }
           }
         }
       })
@@ -281,6 +374,10 @@ export default {
 </script>
 
 <style scoped>
+.clock-tower-gradient {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+}
+
 .profile-header {
   padding: 40rpx 30rpx;
   color: white;
@@ -291,12 +388,31 @@ export default {
   align-items: center;
 }
 
+.avatar-wrapper {
+  position: relative;
+  margin-right: 30rpx;
+}
+
 .user-avatar {
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
-  margin-right: 30rpx;
   border: 4rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.avatar-edit-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 36rpx;
+  height: 36rpx;
+  background-color: #8B4513;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  border: 2rpx solid white;
 }
 
 .user-details {
@@ -304,8 +420,16 @@ export default {
 }
 
 .user-name {
+  display: block;
   font-size: 36rpx;
   font-weight: bold;
+  margin-bottom: 8rpx;
+}
+
+.user-mobile {
+  display: block;
+  font-size: 24rpx;
+  opacity: 0.8;
   margin-bottom: 12rpx;
 }
 

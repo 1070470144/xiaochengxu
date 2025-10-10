@@ -37,7 +37,7 @@ exports.main = async (event, context) => {
       .lookup({
         from: 'uni-id-users',
         localField: 'storyteller_id',
-        foreignKey: '_id',
+        foreignField: '_id',
         as: 'storyteller'
       })
       .addFields({

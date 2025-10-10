@@ -8,6 +8,12 @@
 			}
 		},
 		{
+			"path": "pages/login/sms-login",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/script/list/list",
 			"style": {
 				"navigationBarTitleText": "剧本库",
@@ -29,6 +35,14 @@
 			"path": "pages/user/profile/profile",
 			"style": {
 				"navigationBarTitleText": "我的",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/user/edit-profile/edit-profile",
+			"style": {
+				"navigationBarTitleText": "编辑资料",
 				"navigationBarBackgroundColor": "#8B4513",
 				"navigationBarTextStyle": "white"
 			}
@@ -380,9 +394,11 @@
 		}]
 	},
 	"uniIdRouter": {
-		"loginPage": "uni_modules/uni-id-pages/pages/login/login-withoutpwd",
+		"loginPage": "pages/login/sms-login",
 		"needLogin": [
-			"/uni_modules/uni-id-pages/pages/userinfo/userinfo"
+			"/uni_modules/uni-id-pages/pages/userinfo/userinfo",
+			"/pages/carpool/create/create",
+			"/pages/storyteller/detail/detail"
 		],
 		"resToLogin": true
 	}

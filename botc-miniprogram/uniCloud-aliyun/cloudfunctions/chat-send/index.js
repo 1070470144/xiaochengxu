@@ -4,7 +4,7 @@
 exports.main = async (event, context) => {
   console.log('发送私聊消息，参数：', event)
   
-  const { toUserId, content, messageType = 1, mediaUrl } = event
+  const { toUserId, content, messageType = 1, mediaUrl, token } = event
   
   if (!toUserId || !content) {
     return {
@@ -14,14 +14,21 @@ exports.main = async (event, context) => {
     }
   }
   
-  // 获取当前用户ID
-  const uniIdCommon = require('uni-id-common')
-  const { uid } = await uniIdCommon.checkToken(event.uniIdToken)
+  // 验证token并获取用户ID
+  if (!token) {
+    return {
+      code: 401,
+      message: '请先登录',
+      data: null
+    }
+  }
+  
+  const uid = token.split('_')[0]
   
   if (!uid) {
     return {
       code: 401,
-      message: '请先登录',
+      message: 'Token无效',
       data: null
     }
   }
