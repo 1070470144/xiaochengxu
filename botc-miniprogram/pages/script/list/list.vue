@@ -301,89 +301,117 @@ export default {
 </script>
 
 <style scoped>
+/* 搜索栏 - 统一间距 */
 .search-bar {
-  background: white;
-  padding: 20rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  background: #FFFFFF;
+  padding: 24rpx;
+  border-bottom: 1px solid #E8E8E8;
 }
 
+/* 筛选栏 */
 .filter-bar {
-  background: white;
-  border-bottom: 1rpx solid #f0f0f0;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E8;
 }
 
 .filter-scroll {
   white-space: nowrap;
-  padding: 20rpx 0;
+  padding: 24rpx 0;
 }
 
 .filter-items {
   display: inline-flex;
-  padding: 0 20rpx;
+  padding: 0 24rpx;
 }
 
+/* 筛选项 - 满足触摸区域 */
 .filter-item {
   display: inline-block;
-  padding: 12rpx 24rpx;
-  margin-right: 20rpx;
+  padding: 16rpx 24rpx;
+  margin-right: 16rpx;
   font-size: 28rpx;
+  font-weight: 400;
   color: #666666;
-  background-color: #f5f5f5;
-  border-radius: 20rpx;
+  background-color: #F5F5F5;
+  border-radius: 16rpx;
   white-space: nowrap;
+  min-height: 60rpx;
+  line-height: 1.4;
+  transition: all 0.2s ease;
 }
 
 .filter-item.active {
   background-color: #8B4513;
-  color: white;
+  color: #FFFFFF;
+  font-weight: 500;
 }
 
+/* 剧本列表容器 */
 .script-list {
-  padding: 20rpx;
+  padding: 24rpx;
 }
 
+/* 剧本卡片 - 增强交互反馈 */
 .script-card {
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
+  transition: all 0.3s ease;
+  min-height: 180rpx;
 }
 
+.script-card:active {
+  transform: scale(0.98);
+  opacity: 0.95;
+}
+
+/* 剧本标题区域 */
 .script-header {
   margin-bottom: 16rpx;
 }
 
+/* 剧本标题 - 次级标题规范 */
 .script-title {
   font-size: 32rpx;
-  font-weight: bold;
-  color: #333333;
+  font-weight: 700;
+  color: #1A1A1A;
   line-height: 1.4;
 }
 
+/* 剧本副标题 */
 .script-subtitle {
   display: block;
   font-size: 26rpx;
+  font-weight: 400;
   color: #8B4513;
   margin-top: 8rpx;
+  line-height: 1.5;
 }
 
+/* 评分区域 */
 .script-rating {
   text-align: right;
   flex-shrink: 0;
-  margin-left: 20rpx;
+  margin-left: 24rpx;
 }
 
 .rating-score {
   font-size: 28rpx;
+  font-weight: 700;
   color: #FF6B35;
-  font-weight: bold;
+  line-height: 1.4;
 }
 
 .rating-count {
   font-size: 22rpx;
+  font-weight: 400;
   color: #999999;
-  margin-left: 4rpx;
+  margin-left: 8rpx;
+  line-height: 1.4;
 }
 
+/* 剧本描述 */
 .script-desc {
   font-size: 26rpx;
+  font-weight: 400;
   color: #666666;
   line-height: 1.6;
   margin-bottom: 16rpx;
@@ -393,6 +421,7 @@ export default {
   overflow: hidden;
 }
 
+/* 元信息区域 */
 .script-meta {
   margin-bottom: 16rpx;
 }
@@ -400,56 +429,69 @@ export default {
 .meta-left {
   display: flex;
   flex-wrap: wrap;
+  gap: 16rpx 8rpx;
 }
 
 .meta-right {
   display: flex;
   align-items: center;
+  gap: 16rpx;
 }
 
 .meta-item {
   font-size: 24rpx;
+  font-weight: 400;
   color: #999999;
-  margin-right: 20rpx;
-  margin-bottom: 8rpx;
+  line-height: 1.4;
 }
 
+/* 难度标签 */
 .difficulty {
-  padding: 4rpx 8rpx;
+  padding: 8rpx 16rpx;
   border-radius: 8rpx;
-  color: white !important;
-  font-weight: bold;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  font-size: 22rpx;
+  line-height: 1;
 }
 
-.difficulty-easy { background-color: #52c41a; }
-.difficulty-normal { background-color: #1890ff; }
-.difficulty-hard { background-color: #faad14; }  
-.difficulty-expert { background-color: #f5222d; }
-.difficulty-unknown { background-color: #d9d9d9; }
+/* Apple HIG辅助色系 */
+.difficulty-easy { background-color: #52C41A; }
+.difficulty-normal { background-color: #1890FF; }
+.difficulty-hard { background-color: #FAAD14; }  
+.difficulty-expert { background-color: #F5222D; }
+.difficulty-unknown { background-color: #D9D9D9; }
 
+/* 页脚信息 */
 .script-footer {
   font-size: 24rpx;
+  font-weight: 400;
   color: #999999;
-  margin-bottom: 12rpx;
+  margin-bottom: 16rpx;
+  line-height: 1.4;
 }
 
+/* 标签区域 */
 .script-tags {
   display: flex;
   flex-wrap: wrap;
+  gap: 8rpx;
 }
 
 .tag {
   font-size: 22rpx;
+  font-weight: 400;
   color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.1);
-  padding: 4rpx 8rpx;
+  background-color: rgba(139, 69, 19, 0.08);
+  padding: 8rpx 16rpx;
   border-radius: 8rpx;
-  margin-right: 8rpx;
-  margin-bottom: 8rpx;
+  line-height: 1;
 }
 
+/* 加载状态 */
 .loading-state, .empty-state {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 400rpx;
@@ -458,15 +500,18 @@ export default {
 .empty-icon {
   width: 120rpx;
   height: 120rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
 }
 
 .empty-text {
   color: #999999;
   font-size: 28rpx;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
+/* 加载更多区域 */
 .load-more {
-  padding: 20rpx;
+  padding: 24rpx;
 }
 </style>

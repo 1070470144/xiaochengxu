@@ -335,96 +335,130 @@ export default {
 </script>
 
 <style scoped>
+/* 筛选栏 */
 .filter-bar {
-  background: white;
-  border-bottom: 1rpx solid #f0f0f0;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E8;
 }
 
 .filter-scroll {
   white-space: nowrap;
-  padding: 20rpx 0;
+  padding: 24rpx 0;
 }
 
 .filter-items {
   display: inline-flex;
-  padding: 0 20rpx;
+  padding: 0 24rpx;
 }
 
+/* 筛选项 - Apple HIG触摸区域 */
 .filter-item {
   display: inline-block;
-  padding: 12rpx 24rpx;
-  margin-right: 20rpx;
+  padding: 16rpx 24rpx;
+  margin-right: 16rpx;
   font-size: 28rpx;
+  font-weight: 400;
   color: #666666;
-  background-color: #f5f5f5;
-  border-radius: 20rpx;
+  background-color: #F5F5F5;
+  border-radius: 16rpx;
   white-space: nowrap;
+  min-height: 60rpx;
+  line-height: 1.4;
+  transition: all 0.2s ease;
 }
 
 .filter-item.active {
   background-color: #8B4513;
-  color: white;
+  color: #FFFFFF;
+  font-weight: 500;
 }
 
+/* 创建按钮容器 */
 .create-btn-container {
-  padding: 20rpx;
-  background: white;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 24rpx;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E8;
 }
 
+/* 主要按钮 - Apple HIG规范 */
 .create-btn {
   width: 100%;
-  height: 80rpx;
-  line-height: 80rpx;
-  border-radius: 40rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 12rpx;
   font-size: 30rpx;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
 }
 
+.create-btn:active {
+  opacity: 0.6;
+}
+
+/* 拼车列表容器 */
 .carpool-list {
-  padding: 20rpx;
+  padding: 24rpx;
 }
 
+/* 拼车卡片 - 增强交互反馈 */
 .carpool-card {
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
+  transition: all 0.3s ease;
+  min-height: 200rpx;
 }
 
+.carpool-card:active {
+  transform: scale(0.98);
+  opacity: 0.95;
+}
+
+/* 拼车标题区域 */
 .carpool-header {
   margin-bottom: 16rpx;
 }
 
+/* 拼车标题 - 次级标题规范 */
 .carpool-title {
   font-size: 32rpx;
-  font-weight: bold;
-  color: #333333;
+  font-weight: 700;
+  color: #1A1A1A;
   flex: 1;
-  margin-right: 20rpx;
+  margin-right: 24rpx;
+  line-height: 1.4;
 }
 
+/* 状态标签 */
 .status-badge {
   font-size: 24rpx;
-  padding: 6rpx 12rpx;
-  border-radius: 12rpx;
-  color: white;
   font-weight: 500;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  color: #FFFFFF;
+  line-height: 1;
 }
 
-.status-recruiting { background-color: #52c41a; }
-.status-full { background-color: #faad14; }
-.status-confirmed { background-color: #1890ff; }
-.status-finished { background-color: #d9d9d9; color: #666666 !important; }
+/* Apple HIG辅助色系 */
+.status-recruiting { background-color: #52C41A; }
+.status-full { background-color: #FAAD14; }
+.status-confirmed { background-color: #1890FF; }
+.status-finished { background-color: #D9D9D9; color: #666666 !important; }
 
+/* 关联剧本 */
 .related-script {
   margin-bottom: 16rpx;
 }
 
 .script-info {
   font-size: 26rpx;
+  font-weight: 400;
   color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.1);
-  padding: 8rpx 12rpx;
+  background-color: rgba(139, 69, 19, 0.08);
+  padding: 8rpx 16rpx;
   border-radius: 8rpx;
+  line-height: 1.5;
 }
 
+/* 拼车信息区域 */
 .carpool-info {
   margin-bottom: 16rpx;
 }
@@ -432,7 +466,8 @@ export default {
 .info-row {
   display: flex;
   align-items: center;
-  margin-bottom: 12rpx;
+  margin-bottom: 16rpx;
+  min-height: 40rpx;
 }
 
 .info-row:last-child {
@@ -441,23 +476,26 @@ export default {
 
 .info-icon {
   font-size: 24rpx;
-  width: 40rpx;
+  width: 48rpx;
   flex-shrink: 0;
 }
 
 .info-text {
   font-size: 26rpx;
-  color: #333333;
+  font-weight: 400;
+  color: #1A1A1A;
   flex: 1;
+  line-height: 1.5;
 }
 
+/* 进度条 */
 .progress-bar {
   width: 80rpx;
   height: 8rpx;
-  background-color: #f0f0f0;
+  background-color: #F0F0F0;
   border-radius: 4rpx;
   overflow: hidden;
-  margin-left: 12rpx;
+  margin-left: 16rpx;
 }
 
 .progress-fill {
@@ -467,17 +505,21 @@ export default {
   transition: width 0.3s ease;
 }
 
+/* 人员信息 */
 .people-info {
-  margin-bottom: 12rpx;
+  margin-bottom: 16rpx;
   font-size: 24rpx;
+  line-height: 1.4;
 }
 
 .people-label {
   color: #999999;
+  font-weight: 400;
 }
 
 .people-name {
-  color: #333333;
+  color: #1A1A1A;
+  font-weight: 400;
   margin-left: 8rpx;
 }
 
@@ -486,48 +528,58 @@ export default {
   font-weight: 500;
 }
 
+/* 用户等级标签 */
 .user-level {
   color: #FF6B35;
-  font-size: 20rpx;
-  background-color: rgba(255, 107, 53, 0.1);
-  padding: 2rpx 6rpx;
-  border-radius: 6rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  background-color: rgba(255, 107, 53, 0.08);
+  padding: 4rpx 8rpx;
+  border-radius: 8rpx;
   margin-left: 8rpx;
+  line-height: 1;
 }
 
+/* 拼车描述 */
 .carpool-desc {
   font-size: 26rpx;
+  font-weight: 400;
   color: #666666;
-  line-height: 1.4;
-  margin-bottom: 12rpx;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* 标签区域 */
 .carpool-tags {
   display: flex;
   flex-wrap: wrap;
-  margin-bottom: 12rpx;
+  gap: 8rpx;
+  margin-bottom: 16rpx;
 }
 
 .tag {
   font-size: 22rpx;
+  font-weight: 400;
   color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.1);
-  padding: 4rpx 8rpx;
+  background-color: rgba(139, 69, 19, 0.08);
+  padding: 8rpx 16rpx;
   border-radius: 8rpx;
-  margin-right: 8rpx;
-  margin-bottom: 8rpx;
+  line-height: 1;
 }
 
+/* 页脚信息 */
 .carpool-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 22rpx;
+  font-weight: 400;
   color: #999999;
+  line-height: 1.4;
 }
 
 .room-number {
@@ -535,6 +587,7 @@ export default {
   font-weight: 500;
 }
 
+/* 加载状态 */
 .loading-state, .empty-state {
   display: flex;
   flex-direction: column;
@@ -546,21 +599,26 @@ export default {
 .empty-icon {
   width: 120rpx;
   height: 120rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
 }
 
 .empty-text {
   color: #666666;
   font-size: 28rpx;
+  font-weight: 400;
   margin-bottom: 8rpx;
+  line-height: 1.5;
 }
 
 .empty-subtitle {
   color: #999999;
   font-size: 24rpx;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
+/* 加载更多区域 */
 .load-more {
-  padding: 20rpx;
+  padding: 24rpx;
 }
 </style>
