@@ -1,0 +1,1888 @@
+# 血染钟楼小程序项目开发规范
+
+## 1. 项目概述
+
+### 1.1 项目简介
+血染钟楼（Blood on the Clocktower）用户交流平台，为玩家提供剧本管理、分享和交流的综合性微信小程序。
+
+### 1.2 核心功能
+- **剧本管理**：下载、复制、分享剧本JSON文件
+- **剧本展示**：详细的剧本介绍和展示页面
+- **社交功能**：剧本评论、点赞、收藏、玩家私聊
+- **排行系统**：基于多维度的剧本排行榜
+- **用户系统**：微信授权登录 + 手机号验证、玩家等级系统
+- **拼车功能**：线下游戏组局约人、发起拼车、报名响应
+- **说书人系统**：说书人展示页、认证系统、评价体系
+- **后台管理**：完善的管理系统，支持内容审核、数据统计
+
+### 1.3 目标平台
+- **用户端**：微信小程序（运行在微信平台）
+- **管理端**：Web网页（运行在浏览器，PC/移动端自适应）
+
+---
+
+## 2. 技术栈选型
+
+### 2.1 小程序端
+- **平台**：微信小程序平台
+- **框架**：微信原生小程序 / uni-app（推荐uni-app，便于后续跨平台扩展）
+- **UI组件库**：
+  - Vant Weapp（原生小程序）
+  - uni-ui（uni-app）
+- **状态管理**：Vuex / Pinia
+- **网络请求**：封装的request工具类（支持拦截器、token刷新）
+- **工具库**：
+  - dayjs（时间处理）
+  - lodash（工具函数）
+- **发布**：微信小程序审核上架
+
+### 2.2 后端技术（uniCloud云开发）
+- **云开发平台**：HBuilderX uniCloud
+- **云函数**：Node.js云函数（无需服务器）
+- **云数据库**：MongoDB云数据库（自动扩容）
+- **云存储**：uniCloud云存储（文件上传）
+- **实时通信**：uniCloud实时数据推送
+- **优势**：
+  - 无需购买服务器
+  - 按使用量付费，成本极低
+  - 自动弹性扩缩容
+  - HBuilderX集成开发，一键部署
+
+### 2.3 Web管理后台
+- **平台**：Web网页端（浏览器）
+- **框架**：Vue 3 + Element Plus
+- **构建工具**：Vite  
+- **状态管理**：Pinia
+- **路由**：Vue Router
+- **部署方案**：
+  - 方案1：uniCloud前端网页托管（推荐）
+  - 方案2：传统Web服务器部署
+  - 方案3：GitHub Pages + Vercel免费部署
+
+### 2.4 uniCloud开发工具
+- **开发IDE**：HBuilderX（集成云开发）
+- **版本控制**：Git + HBuilderX内置Git
+- **部署工具**：HBuilderX一键上传部署
+- **调试工具**：uniCloud Web控制台
+- **监控工具**：uniCloud自带监控和日志
+
+---
+
+## 3. 项目架构
+
+### 3.1 uniCloud云开发架构
+```
+┌─────────────────┐       ┌─────────────────┐
+│  微信小程序端    │       │   Web管理后台   │
+│ (运行在微信平台) │       │ (运行在浏览器)   │
+└────────┬────────┘       └────────┬────────┘
+         │                        │
+         │ uniCloud SDK调用        │ HTTP API调用
+         │                        │
+         └──────────┬────────────────┘
+                    ↓
+        ┌───────────────────────────┐
+        │       uniCloud云服务       │
+        │  ┌─────────────────────┐  │
+        │  │     云函数服务       │  │
+        │  │ ┌────────┬────────┐ │  │
+        │  │ │用户管理 │剧本管理│ │  │
+        │  │ │云函数  │云函数  │ │  │
+        │  │ └────────┴────────┘ │  │
+        │  │ ┌────────┬────────┐ │  │
+        │  │ │拼车管理 │消息管理│ │  │
+        │  │ │云函数  │云函数  │ │  │
+        │  │ └────────┴────────┘ │  │
+        │  └─────────────────────┘  │
+        │  ┌─────────────────────┐  │
+        │  │     云数据库         │  │
+        │  │    (MongoDB)        │  │
+        │  └─────────────────────┘  │
+        │  ┌─────────────────────┐  │
+        │  │     云存储          │  │
+        │  │  (文件/图片存储)     │  │
+        │  └─────────────────────┘  │
+        └─────────────────────────────┘
+        
+注：Web管理后台可选择：
+方案1：uniCloud前端网页托管 ✅推荐
+方案2：独立Web服务器部署
+方案3：Vercel/Netlify免费部署
+```
+
+### 3.2 uniCloud小程序项目结构
+```
+botc-miniprogram/              # 项目根目录
+├── uniCloud-aliyun/           # uniCloud云服务空间
+│   ├── cloudfunctions/        # 云函数目录
+│   │   ├── user-login/        # 用户登录云函数
+│   │   ├── user-register/     # 用户注册云函数
+│   │   ├── script-list/       # 获取剧本列表
+│   │   ├── script-detail/     # 获取剧本详情
+│   │   ├── script-upload/     # 上传剧本
+│   │   ├── comment-add/       # 添加评论
+│   │   ├── comment-list/      # 获取评论列表
+│   │   ├── chat-send/         # 发送消息
+│   │   ├── chat-list/         # 获取消息列表
+│   │   ├── carpool-create/    # 创建拼车
+│   │   ├── carpool-list/      # 获取拼车列表
+│   │   ├── carpool-join/      # 加入拼车
+│   │   └── admin-*/           # 管理后台云函数
+│   ├── database/              # 数据库初始化脚本
+│   │   └── db_init.json       # 数据库初始数据
+│   └── common/                # 云端公共模块
+│       └── utils.js           # 云函数工具类
+├── pages/                     # 小程序页面
+│   ├── index/                 # 首页
+│   ├── script/                # 剧本相关页面
+│   │   ├── list/             # 剧本列表
+│   │   ├── detail/           # 剧本详情
+│   │   └── search/           # 搜索
+│   ├── user/                  # 用户相关页面
+│   │   ├── login/            # 登录
+│   │   ├── profile/          # 个人主页
+│   │   ├── favorite/         # 收藏
+│   │   └── history/          # 浏览历史
+│   ├── community/             # 社区
+│   │   └── chat/             # 私聊
+│   │       ├── list/         # 聊天列表
+│   │       └── conversation/ # 对话页
+│   ├── carpool/               # 拼车功能
+│   │   ├── list/             # 拼车列表
+│   │   ├── create/           # 发起拼车
+│   │   ├── detail/           # 拼车详情
+│   │   └── my/               # 我的拼车
+│   └── storyteller/           # 说书人
+│       ├── list/             # 说书人列表
+│       ├── profile/          # 说书人主页
+│       └── apply/            # 申请说书人
+├── components/                # 组件
+│   ├── script-card/          # 剧本卡片
+│   ├── comment-item/         # 评论项
+│   ├── chat-item/            # 聊天项
+│   ├── carpool-card/         # 拼车卡片
+│   └── common/               # 通用组件
+├── utils/                     # 工具类
+│   ├── unicloud.js           # uniCloud工具封装
+│   ├── auth.js               # 认证工具
+│   ├── storage.js            # 本地存储
+│   ├── validator.js          # 验证工具
+│   └── constants.js          # 常量定义
+├── store/                     # 状态管理
+│   ├── modules/
+│   │   ├── user.js           # 用户状态
+│   │   ├── script.js         # 剧本状态
+│   │   └── chat.js           # 聊天状态
+│   └── index.js
+├── static/                    # 静态资源
+│   ├── images/
+│   ├── icons/
+│   └── fonts/
+├── app.js                     # 应用入口
+├── app.json                   # 应用配置
+├── app.wxss                   # 全局样式
+└── project.config.json        # 项目配置
+```
+
+### 3.3 Web管理后台目录结构
+```
+admin-web/                   # Web管理后台项目
+├── src/
+│   ├── views/               # 页面视图
+│   │   ├── dashboard/       # 仪表盘
+│   │   │   └── index.vue
+│   │   ├── script/          # 剧本管理
+│   │   │   ├── list.vue     # 剧本列表
+│   │   │   └── detail.vue   # 剧本详情
+│   │   ├── user/            # 用户管理
+│   │   │   ├── list.vue     # 用户列表
+│   │   │   └── profile.vue  # 用户详情
+│   │   ├── comment/         # 评论管理
+│   │   │   └── list.vue
+│   │   ├── carpool/         # 拼车管理
+│   │   │   └── list.vue
+│   │   ├── storyteller/     # 说书人管理
+│   │   │   ├── list.vue     # 说书人列表
+│   │   │   └── audit.vue    # 认证审核
+│   │   ├── login/           # 登录页面
+│   │   │   └── index.vue
+│   │   └── layout/          # 布局组件
+│   │       └── index.vue
+│   ├── components/          # 通用组件
+│   │   ├── common/
+│   │   ├── charts/          # 图表组件
+│   │   └── form/            # 表单组件
+│   ├── api/                 # API接口封装
+│   │   ├── unicloud.js      # uniCloud云函数调用封装
+│   │   ├── user.js          # 用户相关接口
+│   │   ├── script.js        # 剧本相关接口
+│   │   └── index.js
+│   ├── store/               # 状态管理
+│   │   ├── modules/
+│   │   │   ├── user.js
+│   │   │   ├── app.js
+│   │   │   └── script.js
+│   │   └── index.js
+│   ├── router/              # 路由配置
+│   │   └── index.js
+│   ├── utils/               # 工具函数
+│   │   ├── request.js       # 请求工具
+│   │   ├── auth.js          # 认证工具
+│   │   └── constants.js     # 常量
+│   ├── assets/              # 静态资源
+│   │   ├── images/
+│   │   ├── styles/
+│   │   └── fonts/
+│   ├── App.vue              # 根组件
+│   └── main.js              # 入口文件
+├── public/                  # 公共资源
+│   ├── index.html
+│   └── favicon.ico
+├── package.json
+├── vite.config.js           # 构建配置
+└── .env                     # 环境变量
+```
+
+---
+
+## 4. 数据库设计
+
+### 4.1 用户表 (users)
+```sql
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    openid VARCHAR(64) UNIQUE NOT NULL COMMENT '微信openid',
+    unionid VARCHAR(64) COMMENT '微信unionid',
+    phone VARCHAR(20) UNIQUE COMMENT '手机号',
+    nickname VARCHAR(50) COMMENT '昵称',
+    avatar VARCHAR(255) COMMENT '头像URL',
+    gender TINYINT DEFAULT 0 COMMENT '性别：0-未知，1-男，2-女',
+    role TINYINT DEFAULT 1 COMMENT '角色：1-普通用户，2-VIP，3-说书人，9-管理员',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-禁用，1-正常',
+    level INT DEFAULT 1 COMMENT '用户等级',
+    exp INT DEFAULT 0 COMMENT '经验值',
+    login_count INT DEFAULT 0 COMMENT '登录次数',
+    last_login_at DATETIME COMMENT '最后登录时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_phone (phone),
+    INDEX idx_openid (openid),
+    INDEX idx_level (level),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+```
+
+### 4.2 剧本表 (scripts)
+```sql
+CREATE TABLE scripts (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(100) NOT NULL COMMENT '剧本标题',
+    subtitle VARCHAR(200) COMMENT '副标题',
+    author VARCHAR(50) COMMENT '作者',
+    cover_image VARCHAR(255) COMMENT '封面图',
+    description TEXT COMMENT '剧本描述',
+    player_count VARCHAR(20) COMMENT '玩家人数（如：5-7人）',
+    difficulty TINYINT COMMENT '难度：1-简单，2-中等，3-困难，4-专家',
+    duration INT COMMENT '预计时长（分钟）',
+    tags JSON COMMENT '标签数组',
+    json_url VARCHAR(255) COMMENT '剧本JSON文件URL',
+    json_data JSON COMMENT '剧本JSON内容（可选）',
+    creator_id BIGINT COMMENT '上传者ID',
+    status TINYINT DEFAULT 0 COMMENT '状态：0-待审核，1-已发布，2-已下架',
+    view_count INT DEFAULT 0 COMMENT '浏览量',
+    download_count INT DEFAULT 0 COMMENT '下载量',
+    share_count INT DEFAULT 0 COMMENT '分享量',
+    favorite_count INT DEFAULT 0 COMMENT '收藏量',
+    comment_count INT DEFAULT 0 COMMENT '评论量',
+    rating DECIMAL(3,2) DEFAULT 0 COMMENT '评分（0-5分）',
+    rating_count INT DEFAULT 0 COMMENT '评分人数',
+    is_featured TINYINT DEFAULT 0 COMMENT '是否精选',
+    published_at DATETIME COMMENT '发布时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_creator (creator_id),
+    INDEX idx_status (status),
+    INDEX idx_view_count (view_count),
+    INDEX idx_rating (rating),
+    INDEX idx_created_at (created_at),
+    INDEX idx_featured (is_featured),
+    FOREIGN KEY (creator_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='剧本表';
+```
+
+### 4.3 评论表 (comments)
+```sql
+CREATE TABLE comments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    script_id BIGINT NOT NULL COMMENT '剧本ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    parent_id BIGINT DEFAULT 0 COMMENT '父评论ID（0表示顶级评论）',
+    content TEXT NOT NULL COMMENT '评论内容',
+    rating TINYINT COMMENT '评分（1-5分）',
+    like_count INT DEFAULT 0 COMMENT '点赞数',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-已删除，1-正常，2-待审核',
+    ip VARCHAR(45) COMMENT 'IP地址',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_script (script_id),
+    INDEX idx_user (user_id),
+    INDEX idx_parent (parent_id),
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (script_id) REFERENCES scripts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
+```
+
+### 4.4 用户收藏表 (user_favorites)
+```sql
+CREATE TABLE user_favorites (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    script_id BIGINT NOT NULL COMMENT '剧本ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_script (user_id, script_id),
+    INDEX idx_user (user_id),
+    INDEX idx_script (script_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (script_id) REFERENCES scripts(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户收藏表';
+```
+
+### 4.5 浏览历史表 (user_history)
+```sql
+CREATE TABLE user_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    script_id BIGINT NOT NULL COMMENT '剧本ID',
+    view_duration INT DEFAULT 0 COMMENT '浏览时长（秒）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_script (script_id),
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (script_id) REFERENCES scripts(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='浏览历史表';
+```
+
+### 4.6 排行榜表 (rankings)
+```sql
+CREATE TABLE rankings (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    script_id BIGINT NOT NULL COMMENT '剧本ID',
+    rank_type VARCHAR(20) NOT NULL COMMENT '排行类型：hot-热门，new-最新，download-下载，rating-评分',
+    rank_position INT NOT NULL COMMENT '排名位置',
+    score DECIMAL(10,2) COMMENT '排行分数',
+    period VARCHAR(20) COMMENT '统计周期：daily-日，weekly-周，monthly-月，all-总',
+    period_date DATE COMMENT '周期日期',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_rank (rank_type, period, period_date, script_id),
+    INDEX idx_rank_type (rank_type, period, rank_position),
+    FOREIGN KEY (script_id) REFERENCES scripts(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜表';
+```
+
+### 4.7 系统配置表 (system_config)
+```sql
+CREATE TABLE system_config (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    config_key VARCHAR(100) UNIQUE NOT NULL COMMENT '配置键',
+    config_value TEXT COMMENT '配置值',
+    description VARCHAR(255) COMMENT '描述',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
+```
+
+### 4.8 操作日志表 (operation_logs)
+```sql
+CREATE TABLE operation_logs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT COMMENT '操作用户ID',
+    action VARCHAR(50) NOT NULL COMMENT '操作类型',
+    resource_type VARCHAR(50) COMMENT '资源类型',
+    resource_id BIGINT COMMENT '资源ID',
+    content TEXT COMMENT '操作内容',
+    ip VARCHAR(45) COMMENT 'IP地址',
+    user_agent TEXT COMMENT 'User Agent',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_action (action),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
+```
+
+### 4.9 私聊消息表 (chat_messages)
+```sql
+CREATE TABLE chat_messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    from_user_id BIGINT NOT NULL COMMENT '发送者ID',
+    to_user_id BIGINT NOT NULL COMMENT '接收者ID',
+    content TEXT NOT NULL COMMENT '消息内容',
+    message_type TINYINT DEFAULT 1 COMMENT '消息类型：1-文本，2-图片，3-语音',
+    media_url VARCHAR(255) COMMENT '媒体文件URL',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读：0-未读，1-已读',
+    read_at DATETIME COMMENT '阅读时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_from_user (from_user_id),
+    INDEX idx_to_user (to_user_id),
+    INDEX idx_conversation (from_user_id, to_user_id, created_at),
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (from_user_id) REFERENCES users(id),
+    FOREIGN KEY (to_user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='私聊消息表';
+```
+
+### 4.10 拼车房间表 (carpool_rooms)
+```sql
+CREATE TABLE carpool_rooms (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    room_number VARCHAR(20) UNIQUE NOT NULL COMMENT '房间号',
+    title VARCHAR(100) NOT NULL COMMENT '拼车标题',
+    script_id BIGINT COMMENT '关联剧本ID',
+    host_id BIGINT NOT NULL COMMENT '发起人ID',
+    storyteller_id BIGINT COMMENT '说书人ID（如果已确定）',
+    game_time DATETIME NOT NULL COMMENT '线下游戏时间',
+    location VARCHAR(200) NOT NULL COMMENT '线下游戏地点',
+    location_detail TEXT COMMENT '地点详细信息（地址、交通等）',
+    max_players INT DEFAULT 7 COMMENT '需要的总人数',
+    current_players INT DEFAULT 1 COMMENT '当前报名人数',
+    player_count VARCHAR(20) COMMENT '人数说明（如：还差3人）',
+    description TEXT COMMENT '拼车说明',
+    requirements TEXT COMMENT '对玩家的要求',
+    contact_wechat VARCHAR(50) COMMENT '微信号',
+    contact_phone VARCHAR(20) COMMENT '联系电话',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-已取消，1-招募中，2-已满员，3-已确认，4-已结束',
+    is_public TINYINT DEFAULT 1 COMMENT '是否公开：0-私密，1-公开',
+    tags JSON COMMENT '标签数组',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_room_number (room_number),
+    INDEX idx_host (host_id),
+    INDEX idx_script (script_id),
+    INDEX idx_status (status),
+    INDEX idx_game_time (game_time),
+    INDEX idx_location (location),
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (host_id) REFERENCES users(id),
+    FOREIGN KEY (script_id) REFERENCES scripts(id),
+    FOREIGN KEY (storyteller_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='拼车房间表（线下组局）';
+```
+
+### 4.11 拼车成员表 (carpool_members)
+```sql
+CREATE TABLE carpool_members (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    room_id BIGINT NOT NULL COMMENT '拼车房间ID',
+    user_id BIGINT NOT NULL COMMENT '报名用户ID',
+    join_type TINYINT DEFAULT 1 COMMENT '加入方式：1-主动报名，2-邀请加入',
+    message TEXT COMMENT '报名留言',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-已退出，1-已报名，2-发起人已确认',
+    confirmed_at DATETIME COMMENT '确认时间',
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '报名时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_room_user (room_id, user_id),
+    INDEX idx_room (room_id),
+    INDEX idx_user (user_id),
+    INDEX idx_status (status),
+    FOREIGN KEY (room_id) REFERENCES carpool_rooms(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='拼车成员表（报名记录）';
+```
+
+### 4.12 说书人信息表 (storyteller_profiles)
+```sql
+CREATE TABLE storyteller_profiles (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNIQUE NOT NULL COMMENT '用户ID',
+    real_name VARCHAR(50) COMMENT '真实姓名',
+    certification_status TINYINT DEFAULT 0 COMMENT '认证状态：0-未认证，1-已认证',
+    certification_images JSON COMMENT '认证图片',
+    experience_years DECIMAL(3,1) COMMENT '从业年限',
+    game_count INT DEFAULT 0 COMMENT '主持场次',
+    total_players INT DEFAULT 0 COMMENT '累计玩家数',
+    rating DECIMAL(3,2) DEFAULT 0 COMMENT '评分（0-5分）',
+    rating_count INT DEFAULT 0 COMMENT '评分人数',
+    speciality TEXT COMMENT '擅长剧本',
+    introduction TEXT COMMENT '个人介绍',
+    service_area VARCHAR(200) COMMENT '服务地区',
+    price_range VARCHAR(50) COMMENT '价格范围',
+    contact_wechat VARCHAR(50) COMMENT '微信号',
+    contact_phone VARCHAR(20) COMMENT '联系电话',
+    is_featured TINYINT DEFAULT 0 COMMENT '是否推荐',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-禁用，1-正常，2-待审核',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_user (user_id),
+    INDEX idx_certification (certification_status),
+    INDEX idx_rating (rating),
+    INDEX idx_featured (is_featured),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='说书人信息表';
+```
+
+### 4.13 说书人评价表 (storyteller_reviews)
+```sql
+CREATE TABLE storyteller_reviews (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    storyteller_id BIGINT NOT NULL COMMENT '说书人ID',
+    user_id BIGINT NOT NULL COMMENT '评价用户ID',
+    rating TINYINT NOT NULL COMMENT '评分（1-5分）',
+    content TEXT COMMENT '评价内容',
+    tags JSON COMMENT '标签数组',
+    images JSON COMMENT '图片数组',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-已删除，1-正常，2-待审核',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删除时间',
+    INDEX idx_storyteller (storyteller_id),
+    INDEX idx_user (user_id),
+    INDEX idx_rating (rating),
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (storyteller_id) REFERENCES users(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='说书人评价表';
+```
+
+### 4.14 用户等级配置表 (user_level_config)
+```sql
+CREATE TABLE user_level_config (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    level INT UNIQUE NOT NULL COMMENT '等级',
+    level_name VARCHAR(50) COMMENT '等级名称',
+    required_exp INT NOT NULL COMMENT '所需经验值',
+    icon VARCHAR(255) COMMENT '等级图标',
+    privileges JSON COMMENT '等级特权',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户等级配置表';
+```
+
+---
+
+## 5. 核心功能详细设计
+
+### 5.1 玩家私聊功能
+
+#### 5.1.1 功能说明
+- 用户之间可以进行一对一私聊
+- 支持文本、图片、语音消息
+- 实时消息推送
+- 消息已读未读状态
+- 聊天记录持久化存储
+
+#### 5.1.2 技术实现
+- 使用WebSocket实现实时通信
+- 消息存储在MySQL数据库
+- 在线状态使用Redis管理
+- 支持离线消息推送
+
+#### 5.1.3 交互流程
+1. 用户A发起聊天，建立WebSocket连接
+2. 发送消息到服务器
+3. 服务器保存消息到数据库
+4. 如果用户B在线，通过WebSocket推送
+5. 如果用户B离线，记录为未读消息
+6. 用户B上线后拉取未读消息
+
+### 5.2 血染钟楼拼车功能
+
+#### 5.2.1 功能说明
+- 玩家可以发起拼车，寻找线下游戏队友
+- 设置线下游戏的时间、地点、剧本、人数要求
+- 其他玩家看到拼车信息后可以报名响应
+- 人满后房主可以关闭招募
+- 玩家通过私聊联系，约定具体细节
+- 线下见面进行游戏
+
+#### 5.2.2 拼车状态
+- 招募中：正在寻找队友，可以报名
+- 已满员：人数已满，不再接受新人
+- 已确认：房主确认成员，准备线下游戏
+- 已取消：发起人取消本次拼车
+- 已结束：线下游戏已完成，拼车关闭
+
+#### 5.2.3 业务规则
+- 每个拼车有唯一房间号
+- 发起人可以移除已报名的成员
+- 成员可以自由退出报名
+- 拼车信息包含联系方式（微信、电话等）
+- 人满后发起人联系所有成员确认
+- 拼车是线下组局工具，不涉及线上游戏
+
+### 5.3 说书人系统
+
+#### 5.3.1 功能说明
+- 玩家可以申请成为认证说书人
+- 说书人有专属主页展示
+- 显示主持场次、评分、擅长剧本等
+- 玩家可以评价说书人
+- 支持说书人排行榜
+
+#### 5.3.2 认证流程
+1. 用户提交申请
+2. 填写个人信息（真实姓名、从业年限等）
+3. 上传认证材料
+4. 管理员审核
+5. 审核通过后成为认证说书人
+
+#### 5.3.3 说书人权益
+- 专属标识和主页
+- 优先展示在拼车房间
+- 可以设置服务价格
+- 接收玩家预约
+- 查看详细的主持数据统计
+
+#### 5.3.4 评价体系
+- 玩家可以评价说书人
+- 评分维度：专业度、气氛营造、公正性等
+- 支持文字评价和图片
+- 评价会影响说书人排名
+
+### 5.4 用户等级系统
+
+#### 5.4.1 功能说明
+- 用户通过各种行为获取经验值
+- 经验值累积提升等级
+- 不同等级有不同特权
+- 显示等级徽章和称号
+
+#### 5.4.2 等级设置
+```
+等级1：初来乍到（0经验）
+等级2：略知一二（100经验）
+等级3：初窥门径（300经验）
+等级4：渐入佳境（600经验）
+等级5：驾轻就熟（1000经验）
+等级6：炉火纯青（1500经验）
+等级7：登峰造极（2200经验）
+等级8：出神入化（3000经验）
+等级9：无与伦比（4000经验）
+等级10：传奇玩家（5500经验）
+```
+
+#### 5.4.3 经验值获取
+- 每日首次登录：+5经验
+- 上传剧本：+20经验
+- 发表评论：+10经验
+- 分享内容：+5经验
+- 创建拼车房间：+10经验
+- 评价说书人：+5经验
+
+#### 5.4.4 等级特权
+- 高等级用户优先匹配
+- 解锁专属头像框
+- 提高拼车房间创建上限
+- 获得更多展示机会
+
+---
+
+## 6. uniCloud云函数API设计
+
+### 6.1 云函数调用规范
+- 使用uniCloud.callFunction()调用云函数
+- 统一的请求响应格式
+- 内置鉴权和权限控制
+- 自动处理跨域和安全问题
+
+#### 云函数调用示例
+```javascript
+// 小程序端调用云函数
+const result = await uniCloud.callFunction({
+  name: 'script-list', // 云函数名
+  data: {
+    page: 1,
+    pageSize: 20,
+    keyword: ''
+  }
+})
+```
+
+#### Web管理后台调用云函数
+```javascript
+// Web端通过HTTP API调用云函数
+const result = await axios.post('/api/script-list', {
+  page: 1,
+  pageSize: 20,
+  keyword: ''
+})
+```
+
+### 6.2 统一响应格式
+```json
+{
+    "code": 0,              // 业务状态码，0表示成功
+    "message": "success",   // 提示信息
+    "data": {},            // 响应数据
+    "timestamp": 1234567890 // 时间戳
+}
+```
+
+### 6.3 分页格式
+```json
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "list": [],        // 数据列表
+        "total": 100,      // 总数
+        "page": 1,         // 当前页
+        "pageSize": 20,    // 每页数量
+        "hasNext": true    // 是否有下一页
+    }
+}
+```
+
+### 6.4 核心云函数列表
+
+#### 6.4.1 用户相关云函数
+```
+user-login              # 微信登录
+user-bind-phone         # 绑定手机号
+user-send-sms           # 发送验证码
+user-profile            # 获取用户信息
+user-update             # 更新用户信息
+user-favorites          # 获取收藏列表
+user-history            # 获取浏览历史
+user-stats              # 获取用户统计数据
+user-level              # 获取用户等级信息
+```
+
+#### 6.4.2 剧本相关云函数
+```
+script-list             # 获取剧本列表
+script-detail           # 获取剧本详情
+script-upload           # 上传剧本
+script-update           # 更新剧本
+script-delete           # 删除剧本
+script-download         # 下载剧本
+script-favorite         # 收藏/取消收藏剧本
+script-search           # 搜索剧本
+```
+
+#### 6.4.3 评论相关云函数
+```
+comment-list            # 获取评论列表
+comment-add             # 发表评论
+comment-update          # 修改评论
+comment-delete          # 删除评论
+comment-like            # 点赞评论
+```
+
+#### 6.4.4 排行榜相关云函数
+```
+ranking-hot             # 热门排行
+ranking-new             # 最新排行
+ranking-download        # 下载排行
+ranking-rating          # 评分排行
+```
+
+#### 6.4.5 管理后台云函数
+```
+admin-dashboard         # 数据统计
+admin-script-list       # 剧本管理列表
+admin-script-audit      # 审核剧本
+admin-user-list         # 用户管理列表
+admin-user-status       # 修改用户状态
+admin-comment-list      # 评论管理列表
+admin-comment-delete    # 删除评论
+admin-logs              # 操作日志
+admin-login             # 管理员登录
+```
+
+#### 6.4.6 私聊相关云函数
+```
+chat-conversations      # 获取会话列表
+chat-messages           # 获取聊天记录
+chat-send               # 发送消息
+chat-read               # 标记消息已读
+chat-unread-count       # 获取未读消息数
+chat-delete             # 删除消息
+```
+
+#### 6.4.7 拼车相关云函数
+```
+carpool-list            # 获取拼车列表（支持按地点、时间筛选）
+carpool-detail          # 获取拼车详情
+carpool-create          # 发起拼车
+carpool-update          # 更新拼车信息
+carpool-delete          # 取消拼车
+carpool-apply           # 报名参加拼车
+carpool-quit            # 退出报名
+carpool-my-rooms        # 我发起的/参加的拼车
+carpool-members         # 获取报名成员列表
+carpool-confirm         # 发起人确认某个成员
+carpool-remove          # 发起人移除某个成员
+carpool-close           # 关闭招募
+```
+
+#### 6.4.8 说书人相关云函数
+```
+storyteller-list        # 获取说书人列表
+storyteller-detail      # 获取说书人详情
+storyteller-apply       # 申请成为说书人
+storyteller-update      # 更新说书人信息
+storyteller-reviews     # 获取说书人评价
+storyteller-review      # 评价说书人
+storyteller-stats       # 说书人统计数据
+```
+
+---
+
+## 7. 前端开发规范
+
+### 7.1 命名规范
+- **文件命名**：kebab-case（如：script-detail.vue）
+- **组件命名**：PascalCase（如：ScriptCard）
+- **变量/函数**：camelCase（如：getUserInfo）
+- **常量**：UPPER_SNAKE_CASE（如：API_BASE_URL）
+- **CSS类名**：BEM规范（如：script-card__title）
+
+### 7.2 代码规范
+- 使用ESLint + Prettier进行代码格式化
+- 使用TypeScript（推荐）或添加JSDoc注释
+- 每个函数添加清晰的注释说明
+- 组件props必须定义类型和默认值
+- 避免过深的嵌套，单个函数不超过50行
+
+### 7.3 小程序开发规范
+```javascript
+// 页面生命周期顺序
+Page({
+    // 数据
+    data: {},
+    
+    // 生命周期
+    onLoad(options) {},
+    onShow() {},
+    onReady() {},
+    onHide() {},
+    onUnload() {},
+    
+    // 下拉刷新
+    onPullDownRefresh() {},
+    
+    // 上拉加载
+    onReachBottom() {},
+    
+    // 分享
+    onShareAppMessage() {},
+    
+    // 事件处理
+    handleClick() {},
+    
+    // 私有方法
+    _privateMethod() {}
+})
+```
+
+### 7.4 请求封装示例
+```javascript
+// utils/request.js
+class Request {
+    constructor() {
+        this.baseURL = 'https://api.example.com/v1'
+        this.timeout = 30000
+    }
+    
+    request(options) {
+        const { url, method = 'GET', data = {}, header = {} } = options
+        
+        // 添加token
+        const token = wx.getStorageSync('token')
+        if (token) {
+            header['Authorization'] = `Bearer ${token}`
+        }
+        
+        return new Promise((resolve, reject) => {
+            wx.request({
+                url: this.baseURL + url,
+                method,
+                data,
+                header,
+                timeout: this.timeout,
+                success: (res) => {
+                    if (res.statusCode === 200) {
+                        if (res.data.code === 0) {
+                            resolve(res.data.data)
+                        } else {
+                            wx.showToast({
+                                title: res.data.message,
+                                icon: 'none'
+                            })
+                            reject(res.data)
+                        }
+                    } else if (res.statusCode === 401) {
+                        // token过期，重新登录
+                        this.reLogin()
+                        reject(res)
+                    } else {
+                        reject(res)
+                    }
+                },
+                fail: (err) => {
+                    wx.showToast({
+                        title: '网络请求失败',
+                        icon: 'none'
+                    })
+                    reject(err)
+                }
+            })
+        })
+    }
+    
+    get(url, data) {
+        return this.request({ url, method: 'GET', data })
+    }
+    
+    post(url, data) {
+        return this.request({ url, method: 'POST', data })
+    }
+    
+    put(url, data) {
+        return this.request({ url, method: 'PUT', data })
+    }
+    
+    delete(url, data) {
+        return this.request({ url, method: 'DELETE', data })
+    }
+    
+    reLogin() {
+        wx.removeStorageSync('token')
+        wx.navigateTo({
+            url: '/pages/user/login/login'
+        })
+    }
+}
+
+export default new Request()
+```
+
+### 7.5 错误处理
+```javascript
+// 全局错误处理
+App({
+    onError(error) {
+        console.error('Global error:', error)
+        // 上报错误到监控平台
+        this.reportError(error)
+    },
+    
+    reportError(error) {
+        // 接入Sentry或其他监控平台
+    }
+})
+```
+
+---
+
+## 8. 后端开发规范
+
+### 8.1 代码规范
+- 使用统一的代码风格（ESLint/Prettier）
+- 分层架构：Controller → Service → Model
+- 单一职责原则，每个函数只做一件事
+- 避免硬编码，使用配置文件
+- 敏感信息使用环境变量
+
+### 8.2 错误处理
+```javascript
+// 自定义错误类
+class BusinessError extends Error {
+    constructor(code, message) {
+        super(message)
+        this.code = code
+        this.name = 'BusinessError'
+    }
+}
+
+// 统一错误处理中间件
+app.use(async (ctx, next) => {
+    try {
+        await next()
+    } catch (err) {
+        if (err instanceof BusinessError) {
+            ctx.body = {
+                code: err.code,
+                message: err.message
+            }
+        } else {
+            console.error(err)
+            ctx.body = {
+                code: 500,
+                message: '服务器内部错误'
+            }
+        }
+    }
+})
+```
+
+### 8.3 参数验证
+```javascript
+// 使用joi或class-validator进行参数验证
+const Joi = require('joi')
+
+const scriptSchema = Joi.object({
+    title: Joi.string().min(2).max(100).required(),
+    description: Joi.string().max(1000),
+    player_count: Joi.string().pattern(/^\d+-\d+人$/),
+    difficulty: Joi.number().integer().min(1).max(4)
+})
+
+// 验证中间件
+const validate = (schema) => {
+    return async (ctx, next) => {
+        const { error, value } = schema.validate(ctx.request.body)
+        if (error) {
+            ctx.body = {
+                code: 400,
+                message: error.details[0].message
+            }
+            return
+        }
+        ctx.request.body = value
+        await next()
+    }
+}
+```
+
+### 8.4 认证中间件
+```javascript
+// JWT认证
+const jwt = require('jsonwebtoken')
+
+const authMiddleware = async (ctx, next) => {
+    const token = ctx.headers.authorization?.replace('Bearer ', '')
+    
+    if (!token) {
+        ctx.status = 401
+        ctx.body = { code: 401, message: '未授权' }
+        return
+    }
+    
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        ctx.state.user = decoded
+        await next()
+    } catch (err) {
+        ctx.status = 401
+        ctx.body = { code: 401, message: 'Token无效或已过期' }
+    }
+}
+```
+
+### 8.5 微信登录流程
+```javascript
+// 微信登录service
+class WechatService {
+    async login(code) {
+        // 1. code换取openid和session_key
+        const { openid, session_key } = await this.code2Session(code)
+        
+        // 2. 查找或创建用户
+        let user = await User.findOne({ openid })
+        if (!user) {
+            user = await User.create({ openid })
+        }
+        
+        // 3. 生成token
+        const token = jwt.sign(
+            { userId: user.id, openid },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        )
+        
+        // 4. 保存session_key到Redis
+        await redis.set(`session:${user.id}`, session_key, 'EX', 7 * 24 * 3600)
+        
+        return { token, user }
+    }
+    
+    async code2Session(code) {
+        const url = 'https://api.weixin.qq.com/sns/jscode2session'
+        const params = {
+            appid: process.env.WECHAT_APPID,
+            secret: process.env.WECHAT_SECRET,
+            js_code: code,
+            grant_type: 'authorization_code'
+        }
+        
+        const res = await axios.get(url, { params })
+        if (res.data.errcode) {
+            throw new Error(res.data.errmsg)
+        }
+        
+        return {
+            openid: res.data.openid,
+            session_key: res.data.session_key
+        }
+    }
+    
+    async bindPhone(userId, phoneNumber, code) {
+        // 验证短信验证码
+        const cacheCode = await redis.get(`sms:${phoneNumber}`)
+        if (cacheCode !== code) {
+            throw new BusinessError(400, '验证码错误')
+        }
+        
+        // 绑定手机号
+        await User.update({ phone: phoneNumber }, { where: { id: userId } })
+        
+        // 删除验证码
+        await redis.del(`sms:${phoneNumber}`)
+        
+        return true
+    }
+}
+```
+
+### 7.6 缓存策略
+```javascript
+// Redis缓存工具
+class CacheService {
+    // 剧本详情缓存（5分钟）
+    async getScriptDetail(scriptId) {
+        const cacheKey = `script:${scriptId}`
+        let script = await redis.get(cacheKey)
+        
+        if (!script) {
+            script = await Script.findById(scriptId)
+            await redis.set(cacheKey, JSON.stringify(script), 'EX', 300)
+        } else {
+            script = JSON.parse(script)
+        }
+        
+        return script
+    }
+    
+    // 热门排行榜缓存（10分钟）
+    async getHotRanking() {
+        const cacheKey = 'ranking:hot'
+        let ranking = await redis.get(cacheKey)
+        
+        if (!ranking) {
+            ranking = await this.calculateHotRanking()
+            await redis.set(cacheKey, JSON.stringify(ranking), 'EX', 600)
+        } else {
+            ranking = JSON.parse(ranking)
+        }
+        
+        return ranking
+    }
+    
+    // 清除缓存
+    async clearScriptCache(scriptId) {
+        await redis.del(`script:${scriptId}`)
+        // 清除相关排行榜缓存
+        await redis.del('ranking:hot')
+        await redis.del('ranking:new')
+    }
+}
+```
+
+### 7.7 WebSocket实时通信
+```javascript
+// socket/chat.socket.js - 私聊WebSocket处理
+const socketIO = require('socket.io')
+const jwt = require('jsonwebtoken')
+
+class ChatSocket {
+    constructor(server) {
+        this.io = socketIO(server, {
+            cors: {
+                origin: '*',
+                credentials: true
+            }
+        })
+        
+        // 用户socket映射
+        this.userSockets = new Map()
+        
+        this.init()
+    }
+    
+    init() {
+        // 认证中间件
+        this.io.use(async (socket, next) => {
+            try {
+                const token = socket.handshake.auth.token
+                const decoded = jwt.verify(token, process.env.JWT_SECRET)
+                socket.userId = decoded.userId
+                next()
+            } catch (err) {
+                next(new Error('Authentication error'))
+            }
+        })
+        
+        this.io.on('connection', (socket) => {
+            console.log(`User ${socket.userId} connected`)
+            
+            // 保存用户socket连接
+            this.userSockets.set(socket.userId, socket.id)
+            
+            // 监听发送消息
+            socket.on('send_message', async (data) => {
+                await this.handleSendMessage(socket, data)
+            })
+            
+            // 监听消息已读
+            socket.on('mark_read', async (data) => {
+                await this.handleMarkRead(socket, data)
+            })
+            
+            // 监听输入状态
+            socket.on('typing', (data) => {
+                this.handleTyping(socket, data)
+            })
+            
+            // 断开连接
+            socket.on('disconnect', () => {
+                console.log(`User ${socket.userId} disconnected`)
+                this.userSockets.delete(socket.userId)
+            })
+        })
+    }
+    
+    async handleSendMessage(socket, data) {
+        const { toUserId, content, messageType } = data
+        
+        // 保存消息到数据库
+        const message = await ChatMessage.create({
+            from_user_id: socket.userId,
+            to_user_id: toUserId,
+            content,
+            message_type: messageType || 1
+        })
+        
+        // 发送给接收者
+        const toSocketId = this.userSockets.get(toUserId)
+        if (toSocketId) {
+            this.io.to(toSocketId).emit('new_message', {
+                id: message.id,
+                fromUserId: socket.userId,
+                content,
+                messageType,
+                createdAt: message.created_at
+            })
+        }
+        
+        // 确认发送成功
+        socket.emit('message_sent', {
+            id: message.id,
+            createdAt: message.created_at
+        })
+    }
+    
+    async handleMarkRead(socket, data) {
+        const { messageIds } = data
+        
+        await ChatMessage.update(
+            { is_read: 1, read_at: new Date() },
+            { where: { id: messageIds } }
+        )
+        
+        socket.emit('messages_read', { messageIds })
+    }
+    
+    handleTyping(socket, data) {
+        const { toUserId } = data
+        const toSocketId = this.userSockets.get(toUserId)
+        
+        if (toSocketId) {
+            this.io.to(toSocketId).emit('user_typing', {
+                userId: socket.userId
+            })
+        }
+    }
+}
+
+module.exports = ChatSocket
+```
+
+
+### 7.8 用户等级系统
+```javascript
+// services/level.service.js
+class LevelService {
+    // 等级配置
+    static LEVEL_CONFIG = [
+        { level: 1, name: '初来乍到', exp: 0 },
+        { level: 2, name: '略知一二', exp: 100 },
+        { level: 3, name: '初窥门径', exp: 300 },
+        { level: 4, name: '渐入佳境', exp: 600 },
+        { level: 5, name: '驾轻就熟', exp: 1000 },
+        { level: 6, name: '炉火纯青', exp: 1500 },
+        { level: 7, name: '登峰造极', exp: 2200 },
+        { level: 8, name: '出神入化', exp: 3000 },
+        { level: 9, name: '无与伦比', exp: 4000 },
+        { level: 10, name: '传奇玩家', exp: 5500 }
+    ]
+    
+    // 经验值获取规则
+    static EXP_RULES = {
+        LOGIN: 5,           // 每日首次登录
+        UPLOAD_SCRIPT: 20,  // 上传剧本
+        COMMENT: 10,        // 发表评论
+        SHARE: 5,           // 分享内容
+        CREATE_CARPOOL: 10, // 创建拼车房间
+        REVIEW_STORYTELLER: 5 // 评价说书人
+    }
+    
+    // 增加经验值
+    async addExp(userId, expType, amount = null) {
+        const exp = amount || this.EXP_RULES[expType] || 0
+        
+        const user = await User.findById(userId)
+        const newExp = user.exp + exp
+        
+        // 计算新等级
+        const newLevel = this.calculateLevel(newExp)
+        const levelUp = newLevel > user.level
+        
+        // 更新用户
+        await User.update(
+            { exp: newExp, level: newLevel },
+            { where: { id: userId } }
+        )
+        
+        return {
+            exp: newExp,
+            level: newLevel,
+            levelUp,
+            nextLevelExp: this.getNextLevelExp(newLevel)
+        }
+    }
+    
+    // 计算等级
+    calculateLevel(exp) {
+        for (let i = this.LEVEL_CONFIG.length - 1; i >= 0; i--) {
+            if (exp >= this.LEVEL_CONFIG[i].exp) {
+                return this.LEVEL_CONFIG[i].level
+            }
+        }
+        return 1
+    }
+    
+    // 获取下一等级所需经验
+    getNextLevelExp(currentLevel) {
+        const nextLevel = this.LEVEL_CONFIG.find(l => l.level === currentLevel + 1)
+        return nextLevel ? nextLevel.exp : null
+    }
+    
+    // 获取用户等级信息
+    async getUserLevelInfo(userId) {
+        const user = await User.findById(userId)
+        const currentLevelConfig = this.LEVEL_CONFIG.find(l => l.level === user.level)
+        const nextLevelConfig = this.LEVEL_CONFIG.find(l => l.level === user.level + 1)
+        
+        return {
+            level: user.level,
+            levelName: currentLevelConfig.name,
+            currentExp: user.exp,
+            currentLevelExp: currentLevelConfig.exp,
+            nextLevelExp: nextLevelConfig ? nextLevelConfig.exp : null,
+            progress: nextLevelConfig 
+                ? ((user.exp - currentLevelConfig.exp) / (nextLevelConfig.exp - currentLevelConfig.exp) * 100).toFixed(2)
+                : 100
+        }
+    }
+}
+```
+
+---
+
+## 9. 数据库优化
+
+### 9.1 索引优化
+- 为常用查询字段建立索引
+- 避免过多索引影响写入性能
+- 使用EXPLAIN分析查询性能
+- 定期维护和优化索引
+
+### 9.2 查询优化
+- 避免SELECT *，只查询需要的字段
+- 使用分页查询，避免一次性加载大量数据
+- 使用JOIN时注意关联表的数据量
+- 对于复杂统计使用物化视图或定时任务
+
+### 9.3 读写分离
+- 主库处理写操作
+- 从库处理读操作
+- 使用连接池提高性能
+
+---
+
+## 10. 安全规范
+
+### 10.1 认证和授权
+- 所有API接口必须进行身份验证
+- 敏感操作需要二次验证
+- token过期时间设置合理（7天）
+- refresh token机制
+
+### 10.2 数据安全
+- 密码使用bcrypt加密
+- 敏感数据传输使用HTTPS
+- 数据库连接信息使用环境变量
+- 定期备份数据库
+
+### 10.3 输入验证
+- 所有用户输入必须验证
+- 防止SQL注入
+- 防止XSS攻击
+- 防止CSRF攻击
+
+### 10.4 限流和防刷
+```javascript
+// 使用Redis实现限流
+class RateLimiter {
+    async check(key, limit = 100, window = 60) {
+        const count = await redis.incr(key)
+        
+        if (count === 1) {
+            await redis.expire(key, window)
+        }
+        
+        if (count > limit) {
+            throw new BusinessError(429, '请求过于频繁')
+        }
+        
+        return true
+    }
+}
+
+// 使用
+app.use(async (ctx, next) => {
+    const key = `ratelimit:${ctx.ip}:${ctx.path}`
+    await rateLimiter.check(key)
+    await next()
+})
+```
+
+### 10.5 内容安全
+- 用户上传内容必须经过审核
+- 集成微信内容安全API
+- 敏感词过滤
+- 评论防灌水机制
+
+---
+
+## 11. 测试规范
+
+### 11.1 单元测试
+- 使用Jest/Mocha进行单元测试
+- 核心业务逻辑必须有单元测试
+- 测试覆盖率要求 > 70%
+
+### 11.2 接口测试
+- 使用Postman/Apifox管理接口文档
+- 编写自动化接口测试脚本
+- 测试各种边界情况和异常情况
+
+### 11.3 性能测试
+- 使用JMeter进行压力测试
+- 关键接口响应时间 < 500ms
+- 系统支持并发量 > 1000
+
+---
+
+## 12. uniCloud部署和运维
+
+### 12.1 uniCloud云开发部署策略
+
+#### 部署架构优势
+✅ **零服务器运维**：无需购买和配置服务器  
+✅ **一键部署**：HBuilderX直接上传云函数  
+✅ **自动扩容**：根据访问量自动伸缩  
+✅ **极低成本**：按实际使用量付费  
+
+#### 小程序端部署
+1. **开发**：HBuilderX开发小程序
+2. **云函数上传**：右键云函数→上传部署
+3. **小程序发布**：发行→微信小程序
+4. **提交审核**：微信开发者后台
+
+#### Web管理后台部署
+**方案1：uniCloud前端网页托管（推荐）**
+```bash
+# 1. 构建Web管理后台
+cd admin-web
+npm run build
+
+# 2. 上传到uniCloud前端网页托管
+# 在HBuilderX中右键dist目录 → 上传到前端网页托管
+```
+
+**方案2：Vercel免费部署（备选）**
+```bash
+# 连接GitHub仓库，自动构建部署
+vercel --prod
+```
+
+#### 访问方式
+- **小程序**：用户在微信内使用
+- **Web管理后台**：`https://your-project.cdn.dcloud.net.cn/admin`
+- **uniCloud控制台**：https://unicloud.dcloud.net.cn
+
+#### 环境管理
+- **开发环境**：本地HBuilderX开发
+- **测试环境**：uniCloud测试空间
+- **生产环境**：uniCloud正式空间
+
+### 12.2 uniCloud部署流程
+
+#### 小程序端部署
+```bash
+# HBuilderX操作流程：
+# 1. 右键项目 → 发行 → 微信小程序
+# 2. 选择云服务空间
+# 3. 点击"上传所有云函数"
+# 4. 点击"发布"
+# 完成！云函数自动部署到uniCloud
+```
+
+#### Web管理后台部署
+**uniCloud前端网页托管方式：**
+```bash
+# HBuilderX操作流程：
+# 1. 构建Web管理后台
+cd admin-web && npm run build
+
+# 2. 右键dist目录 → 上传到前端网页托管
+# 3. 配置域名和SSL（uniCloud自动提供）
+# 完成！无需服务器，自动CDN加速
+```
+
+#### 数据库初始化
+```bash
+# HBuilderX操作流程：
+# 1. 右键uniCloud → web控制台
+# 2. 云数据库 → 导入数据
+# 3. 上传db_init.json初始化数据
+```
+
+### 12.3 uniCloud成本控制
+
+#### uniCloud定价（按使用量付费）
+- **云函数**：前5万次调用免费，超出部分 ¥0.0133/万次
+- **云数据库**：前1GB存储免费，超出部分 ¥0.07/GB/天
+- **云存储**：前5GB免费，超出部分 ¥0.0045/GB/天
+- **前端网页托管**：前5GB免费，超出部分 ¥0.0043/GB/天
+
+#### 预计成本（第一年）
+假设1000用户，正常使用：
+- **云函数调用**：约50万次/月 → ¥60/年
+- **数据库存储**：约2GB → ¥50/年  
+- **文件存储**：约10GB → ¥160/年
+- **网页托管**：约1GB → ¥16/年
+- **总计**：约¥300/年！
+
+#### 与传统方案成本对比
+- **传统方案**：服务器+数据库+存储 = 4000-8000元/年
+- **uniCloud方案**：300-1000元/年
+- **节约成本**：3000-7000元/年（节约80%+）
+
+### 12.4 uniCloud监控和日志
+- **云函数监控**：uniCloud Web控制台实时监控
+- **调用统计**：自动统计云函数调用次数和耗时
+- **错误日志**：uniCloud自动收集云函数错误
+- **性能分析**：内置性能分析工具
+- **实时日志**：HBuilderX可实时查看云函数日志
+- **告警通知**：可配置短信/邮件告警
+
+### 12.5 uniCloud备份策略
+- **云数据库**：uniCloud自动备份，支持手动备份导出
+- **云存储文件**：自动冗余存储，99.9%可靠性
+- **云函数代码**：版本控制，支持回滚
+- **配置备份**：uniCloud控制台支持配置导入导出
+
+---
+
+## 13. 版本管理
+
+### 13.1 Git分支策略
+- **main/master**：生产环境代码
+- **develop**：开发环境代码
+- **feature/xxx**：功能分支
+- **hotfix/xxx**：紧急修复分支
+- **release/xxx**：发布分支
+
+### 13.2 提交规范
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+类型（type）：
+- feat: 新功能
+- fix: 修复bug
+- docs: 文档更新
+- style: 代码格式调整
+- refactor: 重构
+- test: 测试相关
+- chore: 构建/工具链
+
+示例：
+```
+feat(script): 添加剧本下载功能
+
+- 实现剧本JSON下载
+- 添加下载次数统计
+- 优化下载体验
+
+Closes #123
+```
+
+### 13.3 版本号规范
+使用语义化版本号：`主版本号.次版本号.修订号`
+- 主版本号：不兼容的API修改
+- 次版本号：向下兼容的功能性新增
+- 修订号：向下兼容的问题修正
+
+---
+
+## 14. 性能优化
+
+### 14.1 小程序端优化
+- **分包加载**：将功能模块拆分为分包
+- **图片优化**：使用webp格式，懒加载
+- **数据缓存**：合理使用本地缓存
+- **骨架屏**：提升用户体验
+- **节流防抖**：优化频繁操作
+
+### 14.2 后端优化
+- **数据库优化**：索引优化、查询优化
+- **缓存策略**：Redis缓存热点数据
+- **CDN加速**：静态资源使用CDN
+- **异步处理**：耗时操作使用消息队列
+- **连接池**：数据库连接池复用
+
+### 14.3 网络优化
+- **HTTP/2**：启用HTTP/2协议
+- **Gzip压缩**：压缩响应数据
+- **Keep-Alive**：保持长连接
+- **请求合并**：减少请求次数
+
+---
+
+## 15. 用户体验优化
+
+### 15.1 交互设计
+- 操作反馈及时（加载提示、成功提示）
+- 错误提示友好且具体
+- 引导流程清晰
+- 减少用户操作步骤
+
+### 15.2 视觉设计
+- 统一的设计规范
+- 合理的颜色搭配
+- 清晰的层级关系
+- 适配不同尺寸屏幕
+
+### 15.3 性能体验
+- 首屏加载时间 < 2秒
+- 页面切换流畅
+- 下拉刷新、上拉加载体验流畅
+- 弱网环境下也能正常使用
+
+---
+
+## 16. 微信小程序规范
+
+### 16.1 审核规范
+- 内容健康，无违规信息
+- 功能完整，可正常使用
+- 隐私政策完善
+- 用户协议清晰
+
+### 16.2 运营规范
+- 合理使用消息推送
+- 不得诱导分享
+- 不得诱导关注
+- 遵守微信运营规范
+
+### 16.3 技术限制
+- 代码包大小：主包 < 2MB，总包 < 20MB
+- 同时打开页面数：< 10个
+- 网络请求并发：< 10个
+- WebSocket连接：< 5个
+
+---
+
+## 17. 项目里程碑
+
+### 17.1 第一阶段（MVP）
+- [ ] 基础架构搭建
+- [ ] 用户登录注册
+- [ ] 微信授权登录
+- [ ] 手机号绑定
+- [ ] 剧本列表展示
+- [ ] 剧本详情页
+- [ ] 剧本下载功能
+
+### 17.2 第二阶段（社区功能）
+- [ ] 剧本上传功能
+- [ ] 剧本评论功能
+- [ ] 用户收藏功能
+- [ ] 排行榜功能
+- [ ] 搜索功能
+- [ ] 私聊功能
+- [ ] WebSocket实时通信
+
+### 17.3 第三阶段（拼车功能）
+- [ ] 拼车功能开发
+- [ ] 发起线下拼车
+- [ ] 报名/退出拼车
+- [ ] 地点和时间筛选
+- [ ] 拼车状态管理
+- [ ] 发起人确认成员
+
+### 17.4 第四阶段（说书人和等级）
+- [ ] 说书人系统
+- [ ] 说书人认证
+- [ ] 说书人主页
+- [ ] 说书人评价
+- [ ] 用户等级系统
+- [ ] 经验值获取
+- [ ] 等级权益
+- [ ] 成就系统
+
+### 17.5 第五阶段（后台管理）
+- [ ] 后台管理系统
+- [ ] 内容审核功能
+- [ ] 用户管理
+- [ ] 拼车管理
+- [ ] 说书人审核
+- [ ] 数据统计分析
+- [ ] 运营工具
+
+### 17.6 第六阶段（优化和扩展）
+- [ ] 性能优化
+- [ ] 用户体验优化
+- [ ] 推荐算法
+- [ ] 消息推送
+- [ ] 活动系统
+- [ ] 积分商城
+
+---
+
+## 18. 团队协作
+
+### 18.1 代码审查
+- 所有代码必须经过Code Review
+- 至少一人审核通过才能合并
+- 关注代码质量、性能、安全
+
+### 18.2 文档管理
+- API文档及时更新
+- 重要功能编写设计文档
+- 问题和解决方案记录
+
+### 18.3 沟通机制
+- 每日站会（15分钟）
+- 周会总结（1小时）
+- 重要问题及时沟通
+
+---
+
+## 19. 附录
+
+### 19.1 参考资料
+- [微信小程序官方文档](https://developers.weixin.qq.com/miniprogram/dev/framework/)
+- [微信登录接口文档](https://developers.weixin.qq.com/miniprogram/dev/api-backend/open-api/login/auth.code2Session.html)
+- [微信内容安全](https://developers.weixin.qq.com/miniprogram/dev/api-backend/open-api/sec-check/security.msgSecCheck.html)
+
+### 19.2 常用工具
+- **微信开发者工具**：小程序开发IDE
+- **Postman/Apifox**：API测试工具
+- **Navicat**：数据库管理工具
+- **Redis Desktop Manager**：Redis管理工具
+- **VS Code**：代码编辑器
+
+### 19.3 第三方服务
+- **腾讯云**：服务器、COS对象存储、CDN
+- **短信服务**：腾讯云短信/阿里云短信
+- **监控服务**：Sentry错误监控
+- **统计服务**：微信小程序数据助手
+
+---
+
+## 20. 更新日志
+
+### v2.0.0 (2025-10-10) - 重大架构升级
+- 🚀 **采用uniCloud云开发架构**：从传统服务器架构升级为serverless架构
+- 💰 **成本大幅降低**：年运营成本从4000-8000元降至300-1000元（节约80%+）
+- 🛠️ **简化部署**：从复杂的Docker+Nginx部署改为HBuilderX一键上传
+- 📦 **云函数后端**：将REST API改为云函数，约30个核心云函数
+- 🗄️ **云数据库**：从MySQL改为MongoDB云数据库，自动扩容
+- 📁 **云存储**：使用uniCloud云存储替代腾讯云COS
+- 🌐 **Web管理后台**：支持uniCloud前端网页托管，免费CDN加速
+- ⚡ **零运维**：无需服务器维护，自动扩容，按需付费
+- 🎯 **个人开发友好**：HBuilderX集成开发，大幅降低技术门槛
+
+### v1.6.0 (2025-10-10)
+- 实现一体化部署方案（传统架构）
+- Docker和Nginx配置
+
+### v1.5.0 (2025-10-10)
+- 明确平台部署：用户端（微信小程序）+ 管理端（Web网页）
+- 更新整体架构图，区分微信平台和浏览器平台
+- 完善技术栈说明，明确各端部署方式
+- 更新部署策略，区分小程序审核和Web部署
+- 优化目录结构说明
+
+### v1.4.0 (2025-10-10)
+- 澄清拼车功能定位：线下组局约人工具
+- 更新拼车房间表结构，增加联系方式字段
+- 调整拼车状态：招募中→已满员→已确认→已结束
+- 移除拼车房间WebSocket实时通信（改用私聊）
+- 更新拼车相关API接口（报名、确认、移除等）
+- 优化拼车业务规则描述
+
+### v1.3.0 (2025-10-10)
+- 移除游戏记录相关功能（game_records, game_players表）
+- 移除游戏相关API接口
+- 简化说书人评价系统（移除与游戏的关联）
+- 调整用户等级经验值获取规则
+- 优化数据库表设计
+
+### v1.2.0 (2025-10-10)
+- 移除角色统计分析功能
+
+### v1.1.0 (2025-10-10)
+- 新增玩家私聊功能
+- 新增血染钟楼拼车功能
+- 新增说书人系统
+- 新增用户等级系统
+- 新增WebSocket实时通信
+- 新增6个数据库表设计
+- 更新API接口设计
+- 完善功能模块划分
+
+### v1.0.0 (2025-10-10)
+- 初始版本
+- 完成项目架构设计
+- 完成数据库设计
+- 完成API接口设计
+- 完成开发规范制定
+
+---
+
+**文档维护者**: 开发团队  
+**最后更新**: 2025年10月10日  
+**文档版本**: v2.0.0
+
+
