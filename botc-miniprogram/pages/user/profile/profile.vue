@@ -30,118 +30,112 @@
     <view class="stats-section">
       <view class="stats-grid">
         <view class="stat-item" @click="goToMyPosts">
+          <view class="stat-icon">📝</view>
           <text class="stat-number">{{ userStats.postCount || 0 }}</text>
           <text class="stat-label">我的帖子</text>
         </view>
         <view class="stat-item" @click="goToMyCarpool">
+          <view class="stat-icon">🚗</view>
           <text class="stat-number">{{ userStats.carpoolCount || 0 }}</text>
           <text class="stat-label">我的拼车</text>
         </view>
         <view class="stat-item" @click="goToFavorites">
+          <view class="stat-icon">⭐</view>
           <text class="stat-number">{{ userStats.favoriteCount || 0 }}</text>
           <text class="stat-label">我的收藏</text>
         </view>
         <view class="stat-item">
+          <view class="stat-icon">❤️</view>
           <text class="stat-number">{{ userStats.likeCount || 0 }}</text>
           <text class="stat-label">获得点赞</text>
         </view>
       </view>
     </view>
 
-    <!-- 功能菜单 -->
+    <!-- 功能菜单 - 横向布局 -->
     <view class="menu-section">
-      <view class="menu-list">
-        <!-- 我的内容 -->
-        <view class="menu-group">
-          <text class="menu-group-title">我的内容</text>
-          <view class="menu-item" @click="goToMyPosts">
-            <text class="menu-icon">📝</text>
-            <text class="menu-text">我的帖子</text>
-            <text class="menu-arrow">></text>
+      <!-- 我的内容 -->
+      <view class="function-card">
+        <view class="card-title">我的内容</view>
+        <view class="function-grid">
+          <view class="function-item" @click="goToMyPosts">
+            <view class="function-icon">📝</view>
+            <text class="function-text">我的帖子</text>
           </view>
-          <view class="menu-item" @click="goToMyScripts">
-            <text class="menu-icon">📚</text>
-            <text class="menu-text">我的剧本</text>
-            <text class="menu-arrow">></text>
+          <view class="function-item" @click="goToMyScripts">
+            <view class="function-icon">📚</view>
+            <text class="function-text">我的剧本</text>
           </view>
-          <view class="menu-item" @click="goToFavorites">
-            <text class="menu-icon">⭐</text>
-            <text class="menu-text">我的收藏</text>
-            <text class="menu-arrow">></text>
+          <view class="function-item" @click="goToFavorites">
+            <view class="function-icon">⭐</view>
+            <text class="function-text">我的收藏</text>
           </view>
-          <view class="menu-item" @click="goToHistory">
-            <text class="menu-icon">👁️</text>
-            <text class="menu-text">浏览历史</text>
-            <text class="menu-arrow">></text>
+          <view class="function-item" @click="goToHistory">
+            <view class="function-icon">👁️</view>
+            <text class="function-text">浏览历史</text>
           </view>
         </view>
+      </view>
 
-        <!-- 拼车相关 -->
-        <view class="menu-group">
-          <text class="menu-group-title">拼车相关</text>
-          <view class="menu-item" @click="goToMyCarpool">
-            <text class="menu-icon">🚗</text>
-            <text class="menu-text">我的拼车</text>
-            <text class="menu-arrow">></text>
+      <!-- 拼车与店铺 -->
+      <view class="function-card">
+        <view class="card-title">拼车与店铺</view>
+        <view class="function-grid">
+          <view class="function-item" @click="goToMyCarpool">
+            <view class="function-icon">🚗</view>
+            <text class="function-text">我的拼车</text>
           </view>
-          <view class="menu-item" @click="goToAppliedCarpool">
-            <text class="menu-icon">📝</text>
-            <text class="menu-text">报名记录</text>
-            <text class="menu-arrow">></text>
+          <view class="function-item" @click="goToAppliedCarpool">
+            <view class="function-icon">📋</view>
+            <text class="function-text">报名记录</text>
+          </view>
+          <view class="function-item" @click="goToShopList">
+            <view class="function-icon">🏪</view>
+            <text class="function-text">血染店铺</text>
+          </view>
+          <view class="function-item" @click="goToShopApply">
+            <view class="function-icon">🏅</view>
+            <text class="function-text">店铺认证</text>
           </view>
         </view>
+      </view>
 
-        <!-- 说书人功能 -->
-        <view class="menu-group" v-if="userInfo.role >= 3">
-          <text class="menu-group-title">说书人</text>
-          <view class="menu-item" @click="goToStorytellerProfile">
-            <text class="menu-icon">🎭</text>
-            <text class="menu-text">我的说书人主页</text>
-            <text class="menu-arrow">></text>
+      <!-- 说书人 -->
+      <view class="function-card" v-if="userInfo.role >= 3">
+        <view class="card-title">说书人</view>
+        <view class="function-grid">
+          <view class="function-item" @click="goToStorytellerProfile">
+            <view class="function-icon">🎭</view>
+            <text class="function-text">我的主页</text>
           </view>
         </view>
-        
-        <view class="menu-group" v-else>
-          <text class="menu-group-title">说书人</text>
-          <view class="menu-item" @click="goToStorytellerApply">
-            <text class="menu-icon">🎭</text>
-            <text class="menu-text">申请成为说书人</text>
-            <text class="menu-arrow">></text>
+      </view>
+      
+      <view class="function-card" v-else>
+        <view class="card-title">说书人</view>
+        <view class="function-grid">
+          <view class="function-item" @click="goToStorytellerApply">
+            <view class="function-icon">🎭</view>
+            <text class="function-text">申请认证</text>
           </view>
         </view>
+      </view>
 
-        <!-- 店铺功能 -->
-        <view class="menu-group">
-          <text class="menu-group-title">店铺</text>
-          <view class="menu-item" @click="goToShopList">
-            <text class="menu-icon">🏪</text>
-            <text class="menu-text">血染店铺</text>
-            <text class="menu-arrow">></text>
+      <!-- 系统设置 -->
+      <view class="function-card">
+        <view class="card-title">系统设置</view>
+        <view class="function-grid">
+          <view class="function-item" @click="goToSettings">
+            <view class="function-icon">⚙️</view>
+            <text class="function-text">设置</text>
           </view>
-          <view class="menu-item" @click="goToShopApply">
-            <text class="menu-icon">📝</text>
-            <text class="menu-text">店铺认证</text>
-            <text class="menu-arrow">></text>
+          <view class="function-item" @click="goToAbout">
+            <view class="function-icon">ℹ️</view>
+            <text class="function-text">关于我们</text>
           </view>
-        </view>
-
-        <!-- 系统功能 -->
-        <view class="menu-group">
-          <text class="menu-group-title">系统功能</text>
-          <view class="menu-item" @click="goToSettings">
-            <text class="menu-icon">⚙️</text>
-            <text class="menu-text">设置</text>
-            <text class="menu-arrow">></text>
-          </view>
-          <view class="menu-item" @click="goToAbout">
-            <text class="menu-icon">ℹ️</text>
-            <text class="menu-text">关于我们</text>
-            <text class="menu-arrow">></text>
-          </view>
-          <view class="menu-item" @click="handleLogout">
-            <text class="menu-icon">🚪</text>
-            <text class="menu-text">退出登录</text>
-            <text class="menu-arrow">></text>
+          <view class="function-item" @click="handleLogout">
+            <view class="function-icon">🚪</view>
+            <text class="function-text">退出登录</text>
           </view>
         </view>
       </view>
@@ -554,82 +548,108 @@ export default {
 .stats-section {
   background: white;
   margin: 20rpx;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
   padding: 30rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0;
+  gap: 20rpx;
 }
 
 .stat-item {
-  text-align: center;
-  padding: 20rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15rpx 10rpx;
+  border-radius: 12rpx;
+  background: #f8f8f8;
+  transition: all 0.3s;
+}
+
+.stat-item:active {
+  background: #f0f0f0;
+  transform: scale(0.95);
+}
+
+.stat-icon {
+  font-size: 36rpx;
+  margin-bottom: 8rpx;
 }
 
 .stat-number {
   display: block;
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: bold;
   color: #8B4513;
-  margin-bottom: 8rpx;
+  margin-bottom: 6rpx;
 }
 
 .stat-label {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #666666;
+  text-align: center;
+  word-break: keep-all;
+  white-space: nowrap;
 }
 
+/* 功能菜单 - 横向布局 */
 .menu-section {
-  margin: 20rpx;
+  background: #f5f5f5;
+  padding: 20rpx;
 }
 
-.menu-group {
-  background: white;
-  border-radius: 12rpx;
-  margin-bottom: 20rpx;
-  overflow: hidden;
-}
-
-.menu-group-title {
-  display: block;
-  font-size: 26rpx;
-  color: #999999;
-  padding: 20rpx 30rpx 0;
-  font-weight: 500;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
+.function-card {
+  background: #fff;
+  border-radius: 16rpx;
   padding: 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
 }
 
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.menu-item:active {
-  background-color: #f5f5f5;
-}
-
-.menu-icon {
-  font-size: 36rpx;
-  width: 50rpx;
-  margin-right: 20rpx;
-}
-
-.menu-text {
-  flex: 1;
+.card-title {
   font-size: 30rpx;
-  color: #333333;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 25rpx;
+  padding-left: 15rpx;
+  border-left: 4rpx solid #8B4513;
 }
 
-.menu-arrow {
-  font-size: 28rpx;
-  color: #cccccc;
+.function-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20rpx;
+}
+
+.function-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 10rpx;
+  border-radius: 12rpx;
+  background: #f8f8f8;
+  transition: all 0.3s;
+}
+
+.function-item:active {
+  background: #f0f0f0;
+  transform: scale(0.95);
+}
+
+.function-icon {
+  font-size: 40rpx;
+  margin-bottom: 10rpx;
+}
+
+.function-text {
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+  word-break: keep-all;
+  white-space: nowrap;
 }
 </style>
