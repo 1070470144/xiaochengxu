@@ -14,9 +14,27 @@
 			}
 		},
 		{
+			"path": "pages/script/index/index",
+			"style": {
+				"navigationBarTitleText": "剧本",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/script/list/list",
 			"style": {
-				"navigationBarTitleText": "剧本库",
+				"navigationBarTitleText": "查找剧本",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/script/ranking/ranking",
+			"style": {
+				"navigationBarTitleText": "剧本榜单",
 				"navigationBarBackgroundColor": "#8B4513",
 				"navigationBarTextStyle": "white",
 				"enablePullDownRefresh": true
@@ -458,8 +476,8 @@
 			"iconPath": "static/tabbar/home.png",
 			"selectedIconPath": "static/tabbar/home_active.png",
 			"text": "首页"
-		}, {
-			"pagePath": "pages/script/list/list",
+		}, 		{
+			"pagePath": "pages/script/index/index",
 			"iconPath": "static/tabbar/script.png",
 			"selectedIconPath": "static/tabbar/script_active.png",
 			"text": "剧本"

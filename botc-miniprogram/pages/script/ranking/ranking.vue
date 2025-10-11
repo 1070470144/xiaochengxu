@@ -1,0 +1,538 @@
+<template>
+  <view class="page">
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <uni-search-bar 
+        v-model="searchKeyword"
+        placeholder="搜索剧本名称、作者"
+        @confirm="handleSearch"
+        @clear="handleClear"
+        :focus="false"
+        bg-color="#ffffff"
+        cancel-button="none">
+      </uni-search-bar>
+    </view>
+
+    <!-- 榜单列表 -->
+    <scroll-view scroll-y class="rankings-container">
+      <!-- 最新剧本榜单 -->
+      <view class="ranking-section">
+        <view class="section-header">
+          <text class="section-title">📘 最新剧本</text>
+          <text class="section-more" @click="viewMore('new')">更多 ></text>
+        </view>
+        <scroll-view scroll-x class="script-scroll">
+          <view class="script-list-horizontal">
+            <view 
+              v-for="script in latestScripts" 
+              :key="script._id"
+              class="script-card-horizontal"
+              @click="goToDetail(script._id)">
+              <image 
+                class="script-cover" 
+                :src="script.cover_image || '/static/logo.png'" 
+                mode="aspectFill" />
+              <view class="script-info">
+                <text class="script-name">{{ script.title }}</text>
+                <view class="script-meta">
+                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">👥{{ script.player_count }}</text>
+                </view>
+                <view class="script-type-tag" :class="getTypeClass(script.script_type)">
+                  {{ getTypeText(script.script_type) }}
+                </view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 萌萌想玩热榜 -->
+      <view class="ranking-section">
+        <view class="section-header">
+          <text class="section-title">🔥 萌萌想玩热榜</text>
+          <text class="section-more" @click="viewMore('hot')">更多 ></text>
+        </view>
+        <scroll-view scroll-x class="script-scroll">
+          <view class="script-list-horizontal">
+            <view 
+              v-for="(script, index) in hotScripts" 
+              :key="script._id"
+              class="script-card-horizontal hot-card"
+              @click="goToDetail(script._id)">
+              <view class="rank-badge" :class="getRankClass(index)">{{ index + 1 }}</view>
+              <image 
+                class="script-cover" 
+                :src="script.cover_image || '/static/logo.png'" 
+                mode="aspectFill" />
+              <view class="script-info">
+                <text class="script-name">{{ script.title }}</text>
+                <view class="script-meta">
+                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">👁️{{ script.view_count || 0 }}</text>
+                </view>
+                <view class="hot-tag">🔥热门</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 近期推理剧本 -->
+      <view class="ranking-section">
+        <view class="section-header">
+          <text class="section-title">🔍 近期推理剧本</text>
+          <text class="section-more" @click="viewMore('recent-mystery')">更多 ></text>
+        </view>
+        <scroll-view scroll-x class="script-scroll">
+          <view class="script-list-horizontal">
+            <view 
+              v-for="script in recentMysteryScripts" 
+              :key="script._id"
+              class="script-card-horizontal"
+              @click="goToDetail(script._id)">
+              <image 
+                class="script-cover" 
+                :src="script.cover_image || '/static/logo.png'" 
+                mode="aspectFill" />
+              <view class="script-info">
+                <text class="script-name">{{ script.title }}</text>
+                <view class="script-meta">
+                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">⏱️{{ script.duration }}分</text>
+                </view>
+                <view class="difficulty-tag" :class="getDifficultyClass(script.difficulty)">
+                  {{ getDifficultyText(script.difficulty) }}
+                </view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 近期娱乐剧本 -->
+      <view class="ranking-section">
+        <view class="section-header">
+          <text class="section-title">🎉 近期娱乐剧本</text>
+          <text class="section-more" @click="viewMore('recent-fun')">更多 ></text>
+        </view>
+        <scroll-view scroll-x class="script-scroll">
+          <view class="script-list-horizontal">
+            <view 
+              v-for="script in recentFunScripts" 
+              :key="script._id"
+              class="script-card-horizontal"
+              @click="goToDetail(script._id)">
+              <image 
+                class="script-cover" 
+                :src="script.cover_image || '/static/logo.png'" 
+                mode="aspectFill" />
+              <view class="script-info">
+                <text class="script-name">{{ script.title }}</text>
+                <view class="script-meta">
+                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">👥{{ script.player_count }}</text>
+                </view>
+                <view class="fun-tag">🎊娱乐</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 萌萌推理高分榜单 -->
+      <view class="ranking-section">
+        <view class="section-header">
+          <text class="section-title">🏆 萌萌推理高分榜</text>
+          <text class="section-more" @click="viewMore('top-mystery')">更多 ></text>
+        </view>
+        <scroll-view scroll-x class="script-scroll">
+          <view class="script-list-horizontal">
+            <view 
+              v-for="(script, index) in topMysteryScripts" 
+              :key="script._id"
+              class="script-card-horizontal top-card"
+              @click="goToDetail(script._id)">
+              <view class="rank-badge" :class="getRankClass(index)">{{ index + 1 }}</view>
+              <image 
+                class="script-cover" 
+                :src="script.cover_image || '/static/logo.png'" 
+                mode="aspectFill" />
+              <view class="script-info">
+                <text class="script-name">{{ script.title }}</text>
+                <view class="script-meta">
+                  <text class="meta-text rating-highlight">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">({{ script.rating_count || 0 }}评)</text>
+                </view>
+                <view class="top-tag">🏆高分</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 萌萌娱乐高分榜单 -->
+      <view class="ranking-section">
+        <view class="section-header">
+          <text class="section-title">🏆 萌萌娱乐高分榜</text>
+          <text class="section-more" @click="viewMore('top-fun')">更多 ></text>
+        </view>
+        <scroll-view scroll-x class="script-scroll">
+          <view class="script-list-horizontal">
+            <view 
+              v-for="(script, index) in topFunScripts" 
+              :key="script._id"
+              class="script-card-horizontal top-card"
+              @click="goToDetail(script._id)">
+              <view class="rank-badge" :class="getRankClass(index)">{{ index + 1 }}</view>
+              <image 
+                class="script-cover" 
+                :src="script.cover_image || '/static/logo.png'" 
+                mode="aspectFill" />
+              <view class="script-info">
+                <text class="script-name">{{ script.title }}</text>
+                <view class="script-meta">
+                  <text class="meta-text rating-highlight">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">({{ script.rating_count || 0 }}评)</text>
+                </view>
+                <view class="top-tag">🏆高分</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </scroll-view>
+  </view>
+</template>
+
+<script>
+const db = uniCloud.database()
+const dbCmd = db.command
+
+export default {
+  name: 'ScriptRanking',
+  
+  data() {
+    return {
+      searchKeyword: '',
+      latestScripts: [],
+      hotScripts: [],
+      recentMysteryScripts: [],
+      recentFunScripts: [],
+      topMysteryScripts: [],
+      topFunScripts: [],
+      loading: false
+    }
+  },
+
+  onLoad() {
+    this.loadAllRankings()
+  },
+
+  onShow() {
+    this.loadAllRankings()
+  },
+
+  onPullDownRefresh() {
+    this.loadAllRankings()
+    setTimeout(() => {
+      uni.stopPullDownRefresh()
+    }, 1000)
+  },
+
+  methods: {
+    async loadAllRankings() {
+      if (this.loading) return
+      this.loading = true
+
+      try {
+        await Promise.all([
+          this.loadLatestScripts(),
+          this.loadHotScripts(),
+          this.loadRecentMysteryScripts(),
+          this.loadRecentFunScripts(),
+          this.loadTopMysteryScripts(),
+          this.loadTopFunScripts()
+        ])
+      } catch (error) {
+        console.error('加载榜单失败：', error)
+        uni.showToast({ title: '加载失败', icon: 'none' })
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async loadLatestScripts() {
+      const res = await db.collection('botc-scripts')
+        .where({ status: 1 })
+        .orderBy('published_at', 'desc')
+        .limit(10)
+        .get()
+      this.latestScripts = res.result.data
+    },
+
+    async loadHotScripts() {
+      const res = await db.collection('botc-scripts')
+        .where({ status: 1 })
+        .orderBy('view_count', 'desc')
+        .limit(10)
+        .get()
+      this.hotScripts = res.result.data
+    },
+
+    async loadRecentMysteryScripts() {
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const res = await db.collection('botc-scripts')
+        .where({
+          status: 1,
+          script_type: 1,
+          published_at: dbCmd.gte(thirtyDaysAgo)
+        })
+        .orderBy('published_at', 'desc')
+        .limit(10)
+        .get()
+      this.recentMysteryScripts = res.result.data
+    },
+
+    async loadRecentFunScripts() {
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const res = await db.collection('botc-scripts')
+        .where({
+          status: 1,
+          script_type: 2,
+          published_at: dbCmd.gte(thirtyDaysAgo)
+        })
+        .orderBy('published_at', 'desc')
+        .limit(10)
+        .get()
+      this.recentFunScripts = res.result.data
+    },
+
+    async loadTopMysteryScripts() {
+      const res = await db.collection('botc-scripts')
+        .where({
+          status: 1,
+          script_type: 1,
+          rating: dbCmd.gte(4.0),
+          rating_count: dbCmd.gte(5)
+        })
+        .orderBy('rating', 'desc')
+        .orderBy('rating_count', 'desc')
+        .limit(10)
+        .get()
+      this.topMysteryScripts = res.result.data
+    },
+
+    async loadTopFunScripts() {
+      const res = await db.collection('botc-scripts')
+        .where({
+          status: 1,
+          script_type: 2,
+          rating: dbCmd.gte(4.0),
+          rating_count: dbCmd.gte(5)
+        })
+        .orderBy('rating', 'desc')
+        .orderBy('rating_count', 'desc')
+        .limit(10)
+        .get()
+      this.topFunScripts = res.result.data
+    },
+
+    handleSearch(e) {
+      const keyword = e.value || e
+      if (keyword) {
+        uni.navigateTo({
+          url: `/pages/script/list/list?keyword=${keyword}`
+        })
+      }
+    },
+
+    handleClear() {
+      this.searchKeyword = ''
+    },
+
+    viewMore(type) {
+      uni.navigateTo({
+        url: `/pages/script/list/list?type=${type}`
+      })
+    },
+
+    goToDetail(id) {
+      uni.navigateTo({
+        url: `/pages/script/detail/detail?id=${id}`
+      })
+    },
+
+    getTypeText(type) {
+      return type === 1 ? '推理' : '娱乐'
+    },
+
+    getTypeClass(type) {
+      return type === 1 ? 'type-mystery' : 'type-fun'
+    },
+
+    getDifficultyText(difficulty) {
+      const map = { 1: '简单', 2: '中等', 3: '困难', 4: '专家' }
+      return map[difficulty] || '未知'
+    },
+
+    getDifficultyClass(difficulty) {
+      const map = { 1: 'diff-easy', 2: 'diff-normal', 3: 'diff-hard', 4: 'diff-expert' }
+      return map[difficulty] || ''
+    },
+
+    getRankClass(index) {
+      if (index === 0) return 'rank-1'
+      if (index === 1) return 'rank-2'
+      if (index === 2) return 'rank-3'
+      return 'rank-other'
+    }
+  }
+}
+</script>
+
+<style scoped>
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+.search-bar {
+  background: #fff;
+  padding: 20rpx;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.rankings-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ranking-section {
+  background: #fff;
+  margin-bottom: 20rpx;
+  padding: 30rpx 0 20rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30rpx 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.section-more {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.script-scroll {
+  white-space: nowrap;
+}
+
+.script-list-horizontal {
+  display: inline-flex;
+  padding: 0 30rpx;
+  gap: 20rpx;
+}
+
+.script-card-horizontal {
+  position: relative;
+  display: inline-block;
+  width: 240rpx;
+  background: #f8f8f8;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.script-cover {
+  width: 100%;
+  height: 320rpx;
+  background: #ddd;
+}
+
+.script-info {
+  padding: 20rpx;
+}
+
+.script-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 80rpx;
+}
+
+.script-meta {
+  display: flex;
+  gap: 15rpx;
+  margin-top: 15rpx;
+}
+
+.meta-text {
+  font-size: 22rpx;
+  color: #666;
+}
+
+.rating-highlight {
+  color: #ff6b35;
+  font-weight: bold;
+}
+
+.rank-badge {
+  position: absolute;
+  top: 15rpx;
+  left: 15rpx;
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 25rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #fff;
+  z-index: 10;
+}
+
+.rank-1 { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); }
+.rank-2 { background: linear-gradient(135deg, #C0C0C0 0%, #808080 100%); }
+.rank-3 { background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%); }
+.rank-other { background: rgba(0, 0, 0, 0.5); }
+
+.script-type-tag,
+.hot-tag,
+.fun-tag,
+.top-tag,
+.difficulty-tag {
+  display: inline-block;
+  margin-top: 15rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #fff;
+}
+
+.type-mystery { background: #1890ff; }
+.type-fun { background: #52c41a; }
+.hot-tag { background: #ff4d4f; }
+.fun-tag { background: #52c41a; }
+.top-tag { background: #faad14; }
+
+.diff-easy { background: #52c41a; }
+.diff-normal { background: #1890ff; }
+.diff-hard { background: #faad14; }
+.diff-expert { background: #f5222d; }
+</style>
+

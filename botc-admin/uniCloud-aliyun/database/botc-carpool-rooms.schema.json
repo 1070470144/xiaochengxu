@@ -138,5 +138,11 @@
         "$env": "now"
       }
     }
+  },
+  "permission": {
+    "read": true,
+    "create": "auth.uid != null",
+    "update": "auth.uid == doc.host_id",
+    "delete": "auth.uid == doc.host_id"
   }
 }
