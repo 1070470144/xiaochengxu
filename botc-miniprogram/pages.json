@@ -48,6 +48,63 @@
 			}
 		},
 		{
+			"path": "pages/user/my-posts/my-posts",
+			"style": {
+				"navigationBarTitleText": "我的帖子",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/user/my-carpool/my-carpool",
+			"style": {
+				"navigationBarTitleText": "我的拼车",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/user/settings/settings",
+			"style": {
+				"navigationBarTitleText": "设置",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/user/about/about",
+			"style": {
+				"navigationBarTitleText": "关于我们",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/shop/list/list",
+			"style": {
+				"navigationBarTitleText": "血染店铺",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/shop/detail/detail",
+			"style": {
+				"navigationBarTitleText": "店铺详情",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/shop/apply/apply",
+			"style": {
+				"navigationBarTitleText": "店铺认证申请",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/script/detail/detail",
 			"style": {
 				"navigationBarTitleText": "剧本详情",
@@ -84,6 +141,31 @@
 			"path": "pages/storyteller/detail/detail",
 			"style": {
 				"navigationBarTitleText": "说书人详情",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/community/list/list",
+			"style": {
+				"navigationBarTitleText": "社区广场",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/community/create/create",
+			"style": {
+				"navigationBarTitleText": "发布帖子",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/community/detail/detail",
+			"style": {
+				"navigationBarTitleText": "帖子详情",
 				"navigationBarBackgroundColor": "#8B4513",
 				"navigationBarTextStyle": "white"
 			}
@@ -386,6 +468,11 @@
 			"iconPath": "static/tabbar/carpool.png", 
 			"selectedIconPath": "static/tabbar/carpool_active.png",
 			"text": "拼车"
+		}, {
+			"pagePath": "pages/community/list/list",
+			"iconPath": "static/tabbar/community.png", 
+			"selectedIconPath": "static/tabbar/community_active.png",
+			"text": "社区"
 		}, {
 			"pagePath": "pages/user/profile/profile",
 			"iconPath": "static/tabbar/me.png",

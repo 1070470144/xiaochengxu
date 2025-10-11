@@ -1,0 +1,188 @@
+{
+  "bsonType": "object",
+  "description": "血染钟楼店铺表",
+  "required": ["owner_id", "shop_name", "contact_phone"],
+  "permission": {
+    "read": true,
+    "create": "auth.uid != null",
+    "update": "doc.owner_id == auth.uid",
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "店铺ID"
+    },
+    "owner_id": {
+      "bsonType": "string",
+      "description": "店主用户ID",
+      "foreignKey": "uni-id-users._id"
+    },
+    "shop_name": {
+      "bsonType": "string",
+      "description": "店铺名称",
+      "trim": "both",
+      "minLength": 2,
+      "maxLength": 50,
+      "errorMessage": {
+        "minLength": "店铺名称至少2个字符",
+        "maxLength": "店铺名称不能超过50个字符"
+      }
+    },
+    "shop_logo": {
+      "bsonType": "string",
+      "description": "店铺Logo"
+    },
+    "shop_images": {
+      "bsonType": "array",
+      "description": "店铺图片",
+      "items": {
+        "bsonType": "string"
+      },
+      "maxItems": 9
+    },
+    "province": {
+      "bsonType": "string",
+      "description": "省份"
+    },
+    "city": {
+      "bsonType": "string",
+      "description": "城市"
+    },
+    "district": {
+      "bsonType": "string",
+      "description": "区县"
+    },
+    "address": {
+      "bsonType": "string",
+      "description": "详细地址",
+      "maxLength": 200
+    },
+    "location": {
+      "bsonType": "object",
+      "description": "地理位置",
+      "properties": {
+        "latitude": {
+          "bsonType": "double",
+          "description": "纬度"
+        },
+        "longitude": {
+          "bsonType": "double",
+          "description": "经度"
+        }
+      }
+    },
+    "contact_person": {
+      "bsonType": "string",
+      "description": "联系人",
+      "maxLength": 20
+    },
+    "contact_phone": {
+      "bsonType": "string",
+      "description": "联系电话",
+      "pattern": "^1[3-9]\\d{9}$",
+      "errorMessage": {
+        "pattern": "请输入正确的手机号"
+      }
+    },
+    "contact_wechat": {
+      "bsonType": "string",
+      "description": "微信号",
+      "maxLength": 50
+    },
+    "business_hours": {
+      "bsonType": "string",
+      "description": "营业时间",
+      "maxLength": 100
+    },
+    "description": {
+      "bsonType": "string",
+      "description": "店铺介绍",
+      "maxLength": 1000
+    },
+    "facilities": {
+      "bsonType": "array",
+      "description": "店铺设施",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "table_count": {
+      "bsonType": "int",
+      "description": "桌数",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "avg_price": {
+      "bsonType": "int",
+      "description": "人均消费（元）",
+      "minimum": 0
+    },
+    "license_image": {
+      "bsonType": "string",
+      "description": "营业执照照片"
+    },
+    "license_number": {
+      "bsonType": "string",
+      "description": "营业执照号码"
+    },
+    "verify_status": {
+      "bsonType": "int",
+      "description": "认证状态：0-待审核 1-已通过 2-已拒绝",
+      "enum": [0, 1, 2],
+      "defaultValue": 0
+    },
+    "verify_time": {
+      "bsonType": "timestamp",
+      "description": "认证时间"
+    },
+    "reject_reason": {
+      "bsonType": "string",
+      "description": "拒绝原因"
+    },
+    "rating": {
+      "bsonType": "double",
+      "description": "评分",
+      "minimum": 0,
+      "maximum": 5,
+      "defaultValue": 5
+    },
+    "view_count": {
+      "bsonType": "int",
+      "description": "浏览数",
+      "defaultValue": 0
+    },
+    "favorite_count": {
+      "bsonType": "int",
+      "description": "收藏数",
+      "defaultValue": 0
+    },
+    "review_count": {
+      "bsonType": "int",
+      "description": "评价数",
+      "defaultValue": 0
+    },
+    "status": {
+      "bsonType": "int",
+      "description": "状态：0-已关闭 1-正常营业",
+      "enum": [0, 1],
+      "defaultValue": 1
+    },
+    "is_recommend": {
+      "bsonType": "bool",
+      "description": "是否推荐",
+      "defaultValue": false
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间"
+    }
+  }
+}
+

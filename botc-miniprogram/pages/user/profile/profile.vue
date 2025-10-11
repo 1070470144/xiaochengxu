@@ -29,21 +29,21 @@
     <!-- 用户统计 -->
     <view class="stats-section">
       <view class="stats-grid">
-        <view class="stat-item" @click="goToMyScripts">
-          <text class="stat-number">{{ userStats.uploadCount || 0 }}</text>
-          <text class="stat-label">上传剧本</text>
-        </view>
-        <view class="stat-item" @click="goToFavorites">
-          <text class="stat-number">{{ userStats.favoriteCount || 0 }}</text>
-          <text class="stat-label">收藏剧本</text>
+        <view class="stat-item" @click="goToMyPosts">
+          <text class="stat-number">{{ userStats.postCount || 0 }}</text>
+          <text class="stat-label">我的帖子</text>
         </view>
         <view class="stat-item" @click="goToMyCarpool">
           <text class="stat-number">{{ userStats.carpoolCount || 0 }}</text>
-          <text class="stat-label">参与拼车</text>
+          <text class="stat-label">我的拼车</text>
+        </view>
+        <view class="stat-item" @click="goToFavorites">
+          <text class="stat-number">{{ userStats.favoriteCount || 0 }}</text>
+          <text class="stat-label">我的收藏</text>
         </view>
         <view class="stat-item">
-          <text class="stat-number">{{ userStats.commentCount || 0 }}</text>
-          <text class="stat-label">发表评论</text>
+          <text class="stat-number">{{ userStats.likeCount || 0 }}</text>
+          <text class="stat-label">获得点赞</text>
         </view>
       </view>
     </view>
@@ -54,6 +54,11 @@
         <!-- 我的内容 -->
         <view class="menu-group">
           <text class="menu-group-title">我的内容</text>
+          <view class="menu-item" @click="goToMyPosts">
+            <text class="menu-icon">📝</text>
+            <text class="menu-text">我的帖子</text>
+            <text class="menu-arrow">></text>
+          </view>
           <view class="menu-item" @click="goToMyScripts">
             <text class="menu-icon">📚</text>
             <text class="menu-text">我的剧本</text>
@@ -101,6 +106,21 @@
           <view class="menu-item" @click="goToStorytellerApply">
             <text class="menu-icon">🎭</text>
             <text class="menu-text">申请成为说书人</text>
+            <text class="menu-arrow">></text>
+          </view>
+        </view>
+
+        <!-- 店铺功能 -->
+        <view class="menu-group">
+          <text class="menu-group-title">店铺</text>
+          <view class="menu-item" @click="goToShopList">
+            <text class="menu-icon">🏪</text>
+            <text class="menu-text">血染店铺</text>
+            <text class="menu-arrow">></text>
+          </view>
+          <view class="menu-item" @click="goToShopApply">
+            <text class="menu-icon">📝</text>
+            <text class="menu-text">店铺认证</text>
             <text class="menu-arrow">></text>
           </view>
         </view>
@@ -212,16 +232,43 @@ export default {
     // 加载用户统计数据
     async loadUserStats() {
       try {
-        // TODO: 创建 user-stats 云函数
-        // 暂时使用模拟数据
+        const token = Auth.getToken()
+        
+        const result = await uniCloud.callFunction({
+          name: 'user-stats',
+          data: {
+            token: token
+          }
+        })
+        
+        if (result.result.code === 0) {
+          this.userStats = result.result.data
+        } else {
+          // 失败时使用默认值
+          this.userStats = {
+            uploadCount: 0,
+            favoriteCount: 0,
+            carpoolCount: 0,
+            joinedCarpoolCount: 0,
+            postCount: 0,
+            commentCount: 0,
+            likeCount: 0,
+            viewCount: 0
+          }
+        }
+      } catch (error) {
+        console.error('加载用户统计失败：', error)
+        // 失败时使用默认值
         this.userStats = {
           uploadCount: 0,
           favoriteCount: 0,
           carpoolCount: 0,
-          commentCount: 0
+          joinedCarpoolCount: 0,
+          postCount: 0,
+          commentCount: 0,
+          likeCount: 0,
+          viewCount: 0
         }
-      } catch (error) {
-        console.error('加载用户统计失败：', error)
       }
     },
 
@@ -272,32 +319,43 @@ export default {
 
     // 页面跳转方法
     goToMyScripts() {
-      uni.navigateTo({
-        url: '/pages/user/my-scripts/my-scripts'
+      uni.showToast({
+        title: '功能开发中',
+        icon: 'none'
       })
     },
 
     goToFavorites() {
-      uni.navigateTo({
-        url: '/pages/user/favorites/favorites'
+      uni.showToast({
+        title: '功能开发中',
+        icon: 'none'
       })
     },
 
     goToHistory() {
-      uni.navigateTo({
-        url: '/pages/user/history/history'
+      uni.showToast({
+        title: '功能开发中',
+        icon: 'none'
       })
     },
 
     goToMyCarpool() {
       uni.navigateTo({
-        url: '/pages/carpool/my/my'
+        url: '/pages/user/my-carpool/my-carpool'
       })
     },
 
     goToAppliedCarpool() {
+      uni.showToast({
+        title: '功能开发中',
+        icon: 'none'
+      })
+    },
+
+    // 跳转到我的帖子
+    goToMyPosts() {
       uni.navigateTo({
-        url: '/pages/carpool/applied/applied'
+        url: '/pages/user/my-posts/my-posts'
       })
     },
 
@@ -322,6 +380,20 @@ export default {
     goToAbout() {
       uni.navigateTo({
         url: '/pages/user/about/about'
+      })
+    },
+
+    // 跳转到店铺列表
+    goToShopList() {
+      uni.navigateTo({
+        url: '/pages/shop/list/list'
+      })
+    },
+
+    // 跳转到店铺认证
+    goToShopApply() {
+      uni.navigateTo({
+        url: '/pages/shop/apply/apply'
       })
     },
 
