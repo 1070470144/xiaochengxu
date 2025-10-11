@@ -1,0 +1,69 @@
+{
+  "bsonType": "object",
+  "description": "私聊消息表", 
+  "required": ["from_user_id", "to_user_id", "content"],
+  "properties": {
+    "_id": {
+      "description": "消息ID"
+    },
+    "from_user_id": {
+      "bsonType": "string",
+      "description": "发送者ID",
+      "foreignKey": "uni-id-users._id",
+      "errorMessage": {
+        "required": "发送者不能为空"
+      }
+    },
+    "to_user_id": {
+      "bsonType": "string",
+      "description": "接收者ID",
+      "foreignKey": "uni-id-users._id", 
+      "errorMessage": {
+        "required": "接收者不能为空"
+      }
+    },
+    "content": {
+      "bsonType": "string",
+      "description": "消息内容",
+      "maxLength": 500,
+      "errorMessage": {
+        "required": "消息内容不能为空",
+        "maxLength": "消息内容不能超过500个字符"
+      }
+    },
+    "message_type": {
+      "bsonType": "int",
+      "description": "消息类型：1-文本，2-图片",
+      "defaultValue": 1,
+      "minimum": 1,
+      "maximum": 2
+    },
+    "media_url": {
+      "bsonType": "string",
+      "description": "媒体文件URL"
+    },
+    "is_read": {
+      "bsonType": "bool",
+      "description": "是否已读",
+      "defaultValue": false
+    },
+    "read_at": {
+      "bsonType": "timestamp",
+      "description": "阅读时间"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

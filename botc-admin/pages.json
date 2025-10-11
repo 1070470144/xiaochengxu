@@ -285,6 +285,28 @@
 			]
 		},
 		{
+			"root": "pages/botc",
+			"pages": [{
+					"path": "shop/verify-list",
+					"style": {
+						"navigationBarTitleText": "店铺认证审核"
+					}
+				},
+				{
+					"path": "carpool/list",
+					"style": {
+						"navigationBarTitleText": "拼车管理"
+					}
+				},
+				{
+					"path": "post/audit-list",
+					"style": {
+						"navigationBarTitleText": "帖子审核"
+					}
+				}
+			]
+		},
+		{
 			"root": "pages/uni-stat",
 			"pages": [{
 					"path": "page-res/page-res",

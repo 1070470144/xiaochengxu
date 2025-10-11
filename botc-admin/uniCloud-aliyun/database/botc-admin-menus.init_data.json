@@ -1,0 +1,47 @@
+[
+  {
+    "menu_id": "botc-manage",
+    "name": "血染钟楼管理",
+    "icon": "admin-icons-apps",
+    "url": "",
+    "sort": 100,
+    "parent_id": "",
+    "permission": [],
+    "enable": true,
+    "create_date": 1702800000000
+  },
+  {
+    "menu_id": "botc-shop-verify",
+    "name": "店铺认证审核",
+    "icon": "admin-icons-order",
+    "url": "/pages/botc/shop/verify-list",
+    "sort": 101,
+    "parent_id": "botc-manage",
+    "permission": [],
+    "enable": true,
+    "create_date": 1702800000000
+  },
+  {
+    "menu_id": "botc-carpool",
+    "name": "拼车管理",
+    "icon": "admin-icons-car",
+    "url": "/pages/botc/carpool/list",
+    "sort": 102,
+    "parent_id": "botc-manage",
+    "permission": [],
+    "enable": true,
+    "create_date": 1702800000000
+  },
+  {
+    "menu_id": "botc-post-audit",
+    "name": "帖子审核",
+    "icon": "admin-icons-read",
+    "url": "/pages/botc/post/audit-list",
+    "sort": 103,
+    "parent_id": "botc-manage",
+    "permission": [],
+    "enable": true,
+    "create_date": 1702800000000
+  }
+]
+

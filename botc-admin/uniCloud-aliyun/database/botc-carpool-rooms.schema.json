@@ -1,0 +1,142 @@
+{
+  "bsonType": "object",
+  "description": "拼车房间表（线下组局）",
+  "required": ["title", "host_id", "game_time", "location", "max_players"],
+  "properties": {
+    "_id": {
+      "description": "房间ID"
+    },
+    "room_number": {
+      "bsonType": "string",
+      "description": "房间号",
+      "maxLength": 20
+    },
+    "title": {
+      "bsonType": "string",
+      "description": "拼车标题",
+      "maxLength": 100,
+      "errorMessage": {
+        "required": "拼车标题不能为空",
+        "maxLength": "标题不能超过100个字符"
+      }
+    },
+    "script_id": {
+      "bsonType": "string",
+      "description": "关联剧本ID",
+      "foreignKey": "botc-scripts._id"
+    },
+    "host_id": {
+      "bsonType": "string",
+      "description": "发起人ID",
+      "foreignKey": "uni-id-users._id",
+      "errorMessage": {
+        "required": "发起人不能为空"
+      }
+    },
+    "storyteller_id": {
+      "bsonType": "string",
+      "description": "说书人ID（如果已确定）",
+      "foreignKey": "uni-id-users._id"
+    },
+    "game_time": {
+      "bsonType": "timestamp",
+      "description": "线下游戏时间",
+      "errorMessage": {
+        "required": "游戏时间不能为空"
+      }
+    },
+    "location": {
+      "bsonType": "string",
+      "description": "线下游戏地点",
+      "maxLength": 200,
+      "errorMessage": {
+        "required": "游戏地点不能为空",
+        "maxLength": "地点描述不能超过200个字符"
+      }
+    },
+    "location_detail": {
+      "bsonType": "string",
+      "description": "地点详细信息（地址、交通等）",
+      "maxLength": 500
+    },
+    "max_players": {
+      "bsonType": "int",
+      "description": "需要的总人数",
+      "minimum": 5,
+      "maximum": 20,
+      "defaultValue": 7,
+      "errorMessage": {
+        "required": "人数设置不能为空",
+        "minimum": "最少需要5人",
+        "maximum": "最多20人"
+      }
+    },
+    "current_players": {
+      "bsonType": "int",
+      "description": "当前报名人数",
+      "minimum": 1,
+      "defaultValue": 1
+    },
+    "player_count": {
+      "bsonType": "string",
+      "description": "人数说明（如：还差3人）",
+      "maxLength": 50
+    },
+    "description": {
+      "bsonType": "string",
+      "description": "拼车说明",
+      "maxLength": 500
+    },
+    "requirements": {
+      "bsonType": "string",
+      "description": "对玩家的要求",
+      "maxLength": 300
+    },
+    "contact_wechat": {
+      "bsonType": "string",
+      "description": "微信号",
+      "maxLength": 50
+    },
+    "contact_phone": {
+      "bsonType": "string",
+      "description": "联系电话",
+      "pattern": "^1[3-9]\\d{9}$",
+      "errorMessage": {
+        "pattern": "请输入正确的手机号"
+      }
+    },
+    "status": {
+      "bsonType": "int",
+      "description": "状态：0-已取消，1-招募中，2-已满员，3-已确认，4-已结束",
+      "defaultValue": 1,
+      "minimum": 0,
+      "maximum": 4
+    },
+    "is_public": {
+      "bsonType": "bool",
+      "description": "是否公开",
+      "defaultValue": true
+    },
+    "tags": {
+      "bsonType": "array",
+      "description": "标签数组",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}
