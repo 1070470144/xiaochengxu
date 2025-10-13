@@ -70,7 +70,11 @@ exports.main = async (event, context) => {
       .where({
         _id: db.command.in(otherUserIds)
       })
-      .field('_id,nickname,avatar')
+      .field({
+        _id: true,
+        nickname: true,
+        avatar: true
+      })
       .get()
     
     const users = usersResult.data || []

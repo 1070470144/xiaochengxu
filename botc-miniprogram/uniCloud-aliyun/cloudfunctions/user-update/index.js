@@ -8,7 +8,7 @@
 const db = uniCloud.database()
 
 exports.main = async (event, context) => {
-    const { nickname, avatar, gender, token } = event
+    const { nickname, avatar, gender, background_image, token } = event
     
     try {
         // 获取token
@@ -66,6 +66,11 @@ exports.main = async (event, context) => {
             updateData.gender = gender
         }
         
+        if (background_image !== undefined) {
+            // 背景图片可以为空字符串（删除背景）或云存储文件ID
+            updateData.background_image = background_image
+        }
+        
         // 如果没有要更新的数据
         if (Object.keys(updateData).length === 0) {
             return {
@@ -91,13 +96,16 @@ exports.main = async (event, context) => {
             message: '更新成功',
             data: {
                 _id: userInfo._id,
+                uid: userInfo._id,  // 添加 uid 字段，与 _id 相同
                 mobile: userInfo.mobile,
                 nickname: userInfo.nickname,
                 avatar: userInfo.avatar || '',
                 gender: userInfo.gender || 0,
                 level: userInfo.level || 1,
                 exp: userInfo.exp || 0,
-                status: userInfo.status
+                status: userInfo.status,
+                role: userInfo.role || 0,
+                background_image: userInfo.background_image || ''
             }
         }
         

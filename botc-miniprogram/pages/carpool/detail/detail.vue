@@ -221,6 +221,8 @@
 </template>
 
 <script>
+import Auth from '@/utils/auth.js'
+
 export default {
   name: 'CarpoolDetail',
   
@@ -246,6 +248,11 @@ export default {
       this.carpoolId = options.id
       this.getCurrentUser()
       this.loadCarpoolDetail()
+      
+      // 记录浏览历史
+      if (Auth.isLogin()) {
+        this.recordHistory()
+      }
     }
   },
 
@@ -288,6 +295,23 @@ export default {
         })
       } finally {
         this.loading = false
+      }
+    },
+
+    // 记录浏览历史
+    async recordHistory() {
+      try {
+        await uniCloud.callFunction({
+          name: 'history-add',
+          data: {
+            target_type: 'carpool',
+            target_id: this.carpoolId,
+            token: Auth.getToken()
+          }
+        })
+        console.log('✅ 浏览历史记录成功')
+      } catch (error) {
+        console.error('记录浏览历史失败：', error)
       }
     },
 

@@ -132,7 +132,10 @@ async function getScriptHeat(scriptId, db) {
   // 3. 获取剧本自身数据
   const scriptResult = await db.collection('botc-scripts')
     .doc(scriptId)
-    .field('view_count,download_count')
+    .field({
+      view_count: true,
+      download_count: true
+    })
     .get()
   
   const script = scriptResult.data && scriptResult.data.length > 0 ? scriptResult.data[0] : {}

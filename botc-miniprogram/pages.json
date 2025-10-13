@@ -66,6 +66,32 @@
 			}
 		},
 		{
+			"path": "pages/user/following/following",
+			"style": {
+				"navigationBarTitleText": "我的关注",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/user/followers/followers",
+			"style": {
+				"navigationBarTitleText": "我的粉丝",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/user/other-profile/other-profile",
+			"style": {
+				"navigationBarTitleText": "用户主页",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/user/my-posts/my-posts",
 			"style": {
 				"navigationBarTitleText": "我的帖子",
@@ -79,6 +105,33 @@
 				"navigationBarTitleText": "我的拼车",
 				"navigationBarBackgroundColor": "#8B4513",
 				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/user/applied-carpool/applied-carpool",
+			"style": {
+				"navigationBarTitleText": "报名记录",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/user/favorites/favorites",
+			"style": {
+				"navigationBarTitleText": "我的收藏",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/user/history/history",
+			"style": {
+				"navigationBarTitleText": "浏览历史",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
 			}
 		},
 		{

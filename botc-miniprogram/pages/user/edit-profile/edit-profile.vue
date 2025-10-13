@@ -147,12 +147,15 @@ export default {
       uni.showLoading({ title: '上传中...' })
 
       try {
+        console.log('📤 开始上传头像，文件路径：', filePath)
+        
         // 上传到云存储
         const result = await uniCloud.uploadFile({
           filePath: filePath,
           cloudPath: `avatars/${Date.now()}-${Math.random().toString(36).substr(2)}.jpg`
         })
 
+        console.log('✅ 头像上传成功，fileID：', result.fileID)
         this.formData.avatar = result.fileID
 
         uni.hideLoading()
@@ -163,7 +166,7 @@ export default {
 
       } catch (error) {
         uni.hideLoading()
-        console.error('上传头像失败：', error)
+        console.error('❌ 上传头像失败：', error)
         uni.showToast({
           title: '上传失败',
           icon: 'none'
@@ -241,12 +244,25 @@ export default {
         if (result.result.code === 0) {
           // 更新本地用户信息
           const updatedUserInfo = result.result.data
+          console.log('✅ 保存成功，更新本地用户信息：', updatedUserInfo)
           uni.setStorageSync('userInfo', updatedUserInfo)
 
           uni.showToast({
             title: '保存成功',
             icon: 'success'
           })
+
+          // 通知上一个页面刷新
+          const pages = getCurrentPages()
+          if (pages.length > 1) {
+            const prePage = pages[pages.length - 2]
+            if (prePage.route === 'pages/user/profile/profile' && prePage.$vm.loadUserData) {
+              // 延迟刷新，确保本地存储已更新
+              setTimeout(() => {
+                prePage.$vm.loadUserData()
+              }, 100)
+            }
+          }
 
           // 返回上一页
           setTimeout(() => {

@@ -3,9 +3,9 @@
   "description": "私聊会话表",
   "required": ["user1_id", "user2_id"],
   "permission": {
-    "read": "doc.user1_id == auth.uid || doc.user2_id == auth.uid",
-    "create": "auth.uid != null",
-    "update": "doc.user1_id == auth.uid || doc.user2_id == auth.uid",
+    "read": true,
+    "create": true,
+    "update": true,
     "delete": false
   },
   "properties": {

@@ -1,0 +1,7 @@
+{
+  "name": "user-followers-list",
+  "version": "1.0.0",
+  "description": "获取粉丝列表",
+  "main": "index.js"
+}
+

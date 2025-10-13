@@ -43,12 +43,28 @@ exports.main = async (event, context) => {
         
         const userInfo = userResult.data[0]
         
+        // 实时统计关注数和粉丝数
+        const followingCountResult = await db.collection('botc-user-follows')
+            .where({
+                follower_id: userId,
+                status: 1
+            })
+            .count()
+            
+        const followersCountResult = await db.collection('botc-user-follows')
+            .where({
+                following_id: userId,
+                status: 1
+            })
+            .count()
+
         // 返回用户信息（过滤敏感字段）
         return {
             code: 0,
             message: '获取成功',
             data: {
                 _id: userInfo._id,
+                uid: userInfo._id,  // 添加 uid 字段，与 _id 相同
                 mobile: userInfo.mobile,
                 nickname: userInfo.nickname,
                 avatar: userInfo.avatar || '',
@@ -56,8 +72,12 @@ exports.main = async (event, context) => {
                 level: userInfo.level || 1,
                 exp: userInfo.exp || 0,
                 status: userInfo.status,
+                role: userInfo.role || 0,
                 register_date: userInfo.register_date,
-                last_login_date: userInfo.last_login_date
+                last_login_date: userInfo.last_login_date,
+                following_count: followingCountResult.total || 0,  // 实时统计关注数
+                followers_count: followersCountResult.total || 0,   // 实时统计粉丝数
+                background_image: userInfo.background_image || ''   // 背景图片
             }
         }
         

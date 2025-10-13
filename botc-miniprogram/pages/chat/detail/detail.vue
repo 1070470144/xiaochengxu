@@ -1,5 +1,25 @@
 <template>
   <view class="page">
+    <!-- 聊天头部 -->
+    <view class="chat-header" v-if="otherUser.nickname">
+      <view class="header-user" @click="goToUserProfile">
+        <image 
+          class="user-avatar-small" 
+          :src="otherUser.avatar || '/static/logo.png'" 
+          mode="aspectFill"
+        />
+        <view class="user-info">
+          <text class="user-name">{{ otherUser.nickname }}</text>
+          <text class="online-status">点击查看主页</text>
+        </view>
+      </view>
+      <view class="header-actions">
+        <view class="action-btn" @click="showMoreActions">
+          <text>⋯</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 消息列表 -->
     <scroll-view 
       class="message-list" 
@@ -48,6 +68,14 @@
     
     <!-- 输入栏 -->
     <view class="input-bar">
+      <view class="input-actions">
+        <view class="action-icon" @click="chooseImage">
+          <text>📷</text>
+        </view>
+        <view class="action-icon" @click="showEmojiPicker">
+          <text>😊</text>
+        </view>
+      </view>
       <textarea 
         v-model="inputText"
         class="message-input"
@@ -56,6 +84,8 @@
         :adjust-position="true"
         :auto-height="true"
         :show-confirm-bar="false"
+        @focus="onInputFocus"
+        @blur="onInputBlur"
       />
       <button 
         class="send-btn"
@@ -65,6 +95,20 @@
       >
         {{ sending ? '发送中...' : '发送' }}
       </button>
+    </view>
+
+    <!-- 表情选择器 -->
+    <view class="emoji-picker" v-if="showEmojiPanel">
+      <scroll-view class="emoji-list" scroll-x>
+        <view 
+          class="emoji-item" 
+          v-for="emoji in emojiList" 
+          :key="emoji"
+          @click="insertEmoji(emoji)"
+        >
+          <text>{{ emoji }}</text>
+        </view>
+      </scroll-view>
     </view>
   </view>
 </template>
@@ -91,7 +135,9 @@ export default {
       pageSize: 20,
       hasMore: true,
       scrollToView: '',
-      autoRefreshTimer: null
+      autoRefreshTimer: null,
+      showEmojiPanel: false,
+      emojiList: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭']
     }
   },
   
@@ -114,8 +160,16 @@ export default {
     this.loadOtherUserInfo()
     this.loadMessages()
     
+    // 标记消息为已读
+    this.markMessagesAsRead()
+    
     // 设置自动刷新
     this.startAutoRefresh()
+  },
+  
+  onShow() {
+    // 页面显示时标记消息为已读（从其他页面返回时）
+    this.markMessagesAsRead()
   },
   
   onUnload() {
@@ -265,6 +319,128 @@ export default {
       }
     },
     
+    // 跳转到用户主页
+    goToUserProfile() {
+      uni.navigateTo({
+        url: `/pages/user/other-profile/other-profile?user_id=${this.userId}`
+      })
+    },
+    
+    // 显示更多操作
+    showMoreActions() {
+      uni.showActionSheet({
+        itemList: ['查看主页', '清空聊天记录', '举报用户'],
+        success: (res) => {
+          switch (res.tapIndex) {
+            case 0:
+              this.goToUserProfile()
+              break
+            case 1:
+              this.clearChatHistory()
+              break
+            case 2:
+              this.reportUser()
+              break
+          }
+        }
+      })
+    },
+    
+    // 清空聊天记录
+    clearChatHistory() {
+      uni.showModal({
+        title: '提示',
+        content: '确定要清空聊天记录吗？此操作不可恢复。',
+        success: (res) => {
+          if (res.confirm) {
+            this.messageList = []
+            uni.showToast({
+              title: '聊天记录已清空',
+              icon: 'success'
+            })
+          }
+        }
+      })
+    },
+    
+    // 举报用户
+    reportUser() {
+      uni.showToast({
+        title: '举报功能开发中',
+        icon: 'none'
+      })
+    },
+    
+    // 选择图片
+    chooseImage() {
+      uni.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          // 这里应该上传图片并发送
+          uni.showToast({
+            title: '图片发送功能开发中',
+            icon: 'none'
+          })
+        }
+      })
+    },
+    
+    // 显示表情选择器
+    showEmojiPicker() {
+      this.showEmojiPanel = !this.showEmojiPanel
+    },
+    
+    // 插入表情
+    insertEmoji(emoji) {
+      this.inputText += emoji
+    },
+    
+    // 输入框获得焦点
+    onInputFocus() {
+      this.showEmojiPanel = false
+    },
+    
+    // 输入框失去焦点
+    onInputBlur() {
+      // 延迟隐藏表情面板，避免点击表情时面板消失
+      setTimeout(() => {
+        // this.showEmojiPanel = false
+      }, 200)
+    },
+    
+    // 标记消息为已读
+    async markMessagesAsRead() {
+      if (!this.userId) {
+        return
+      }
+      
+      try {
+        const result = await uniCloud.callFunction({
+          name: 'chat-mark-read',
+          data: {
+            user_id: this.userId,
+            conversation_id: this.conversationId,
+            token: Auth.getToken()
+          }
+        })
+        
+        if (result.result.code === 0) {
+          console.log('消息标记为已读成功:', result.result.data)
+          
+          // 保存会话ID（如果之前没有的话）
+          if (!this.conversationId) {
+            this.conversationId = result.result.data.conversation_id
+          }
+        } else {
+          console.warn('标记消息为已读失败:', result.result.message)
+        }
+      } catch (error) {
+        console.error('标记消息为已读出错:', error)
+      }
+    },
+    
     // 开始自动刷新
     startAutoRefresh() {
       this.autoRefreshTimer = setInterval(() => {
@@ -330,6 +506,9 @@ export default {
           this.$nextTick(() => {
             this.scrollToView = 'msg-' + (this.messageList.length - 1)
           })
+          
+          // 标记新消息为已读
+          this.markMessagesAsRead()
         }
         
       } catch (error) {
@@ -357,9 +536,71 @@ export default {
   background: #f5f5f5;
 }
 
+/* 聊天头部样式 */
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 30rpx;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  cursor: pointer;
+}
+
+.user-avatar-small {
+  width: 70rpx;
+  height: 70rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.user-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.online-status {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.header-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.action-btn {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 32rpx;
+}
+
+.action-btn:active {
+  background: #e8e8e8;
+}
+
 .message-list {
   flex: 1;
-  padding: 20rpx;
+  padding: 20rpx 40rpx 20rpx 30rpx;  /* 右边距增加到40rpx */
   overflow-y: auto;
 }
 
@@ -377,8 +618,19 @@ export default {
   gap: 20rpx;
 }
 
+.message-item.is-mine {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-right: 40rpx;  /* 增加右边距，让头像往左挪 */
+  padding-right: 15rpx;  /* 增加内边距，留出更多空白 */
+}
+
 .message-item.is-mine .message-content {
-  flex-direction: row-reverse;
+  /* 保持正常顺序：消息气泡 - 头像 */
+  max-width: calc(100% - 80rpx);  /* 增加更多预留空间 */
+  width: auto;
+  margin-right: 0;
 }
 
 .user-avatar {
@@ -387,6 +639,12 @@ export default {
   border-radius: 50%;
   background: #f0f0f0;
   flex-shrink: 0;
+}
+
+.message-item.is-mine .user-avatar {
+  margin-right: 0;
+  margin-left: 15rpx;  /* 增加与消息气泡的间距 */
+  flex-shrink: 0;  /* 确保头像不被压缩 */
 }
 
 .message-bubble {
@@ -400,6 +658,8 @@ export default {
 .message-item.is-mine .message-bubble {
   background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
   color: white;
+  margin-right: 0;
+  max-width: 320rpx; /* 进一步缩小，为头像留出足够空间 */
 }
 
 .message-text {
@@ -420,6 +680,11 @@ export default {
   margin-top: 10rpx;
 }
 
+.message-item.is-mine .message-time {
+  text-align: right;
+  margin-right: 20rpx;  /* 增加时间戳右边距，与头像位置保持协调 */
+}
+
 .empty-message {
   text-align: center;
   padding: 200rpx 0;
@@ -433,7 +698,29 @@ export default {
   padding: 20rpx 30rpx;
   background: white;
   border-top: 1px solid #e8e8e8;
-  gap: 20rpx;
+  gap: 15rpx;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.action-icon {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 32rpx;
+}
+
+.action-icon:active {
+  background: #e8e8e8;
 }
 
 .message-input {
@@ -467,6 +754,34 @@ export default {
 
 .send-btn[disabled] {
   opacity: 0.6;
+}
+
+/* 表情选择器样式 */
+.emoji-picker {
+  background: white;
+  border-top: 1px solid #e8e8e8;
+  padding: 20rpx 0;
+}
+
+.emoji-list {
+  white-space: nowrap;
+  padding: 0 30rpx;
+}
+
+.emoji-item {
+  display: inline-block;
+  width: 80rpx;
+  height: 80rpx;
+  text-align: center;
+  line-height: 80rpx;
+  font-size: 48rpx;
+  margin-right: 10rpx;
+  border-radius: 12rpx;
+  cursor: pointer;
+}
+
+.emoji-item:active {
+  background: #f0f0f0;
 }
 </style>
 

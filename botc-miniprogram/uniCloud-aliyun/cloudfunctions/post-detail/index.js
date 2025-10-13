@@ -85,6 +85,7 @@ exports.main = async (event, context) => {
     // 处理评论数据
     const processedComments = commentsResult.data.map(comment => ({
       _id: comment._id,
+      user_id: comment.user_id, // 添加 user_id 字段
       content: comment.content,
       like_count: comment.like_count || 0,
       created_at: comment.created_at,
@@ -118,6 +119,7 @@ exports.main = async (event, context) => {
     // 处理帖子数据
     const processedPost = {
       _id: post._id,
+      user_id: post.user_id, // 添加 user_id 字段
       content: post.content,
       images: post.images || [],
       type: post.type,

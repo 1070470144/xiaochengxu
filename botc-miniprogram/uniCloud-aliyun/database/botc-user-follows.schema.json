@@ -4,9 +4,9 @@
   "required": ["follower_id", "following_id"],
   "permission": {
     "read": true,
-    "create": "auth.uid != null",
+    "create": true,
     "update": false,
-    "delete": "doc.follower_id == auth.uid"
+    "delete": true
   },
   "properties": {
     "_id": {

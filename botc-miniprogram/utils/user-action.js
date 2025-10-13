@@ -49,11 +49,8 @@ class UserAction {
             UserAction.goToChat(userId, userInfo)
             break
           case 1:
-            // 查看主页（暂未实现）
-            uni.showToast({
-              title: '用户主页开发中',
-              icon: 'none'
-            })
+            // 查看主页
+            UserAction.goToProfile(userId, userInfo)
             break
           case 2:
             // 关注
@@ -100,6 +97,29 @@ class UserAction {
     // 跳转到私聊页面
     uni.navigateTo({
       url: `/pages/chat/detail/detail?user_id=${userId}`
+    })
+  }
+  
+  /**
+   * 跳转到用户主页
+   * @param {String} userId - 用户ID
+   * @param {Object} userInfo - 用户信息（可选）
+   */
+  static goToProfile(userId, userInfo = {}) {
+    console.log('goToProfile called:', userId)
+    
+    // 检查userId是否有效
+    if (!userId) {
+      uni.showToast({
+        title: '用户ID无效',
+        icon: 'none'
+      })
+      return
+    }
+    
+    // 跳转到用户主页
+    uni.navigateTo({
+      url: `/pages/user/other-profile/other-profile?user_id=${userId}`
     })
   }
   

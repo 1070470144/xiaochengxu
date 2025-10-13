@@ -1,0 +1,42 @@
+{
+  "bsonType": "object",
+  "description": "用户浏览历史表",
+  "required": ["user_id", "target_type", "target_id"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": true,
+    "delete": true
+  },
+  "properties": {
+    "_id": {
+      "description": "历史记录ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "用户ID",
+      "foreignKey": "uni-id-users._id"
+    },
+    "target_type": {
+      "bsonType": "string",
+      "description": "目标类型",
+      "enum": ["script", "post", "carpool"]
+    },
+    "target_id": {
+      "bsonType": "string",
+      "description": "目标ID"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "首次浏览时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "最后浏览时间"
+    }
+  }
+}
+

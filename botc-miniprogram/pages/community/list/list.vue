@@ -271,11 +271,21 @@ export default {
     
     // 处理用户点击事件
     handleUserClick(userId, userInfo = {}) {
-      console.log('handleUserClick triggered:', userId, userInfo)
+      console.log('🔔 handleUserClick triggered')
+      console.log('   userId:', userId)
+      console.log('   userInfo:', userInfo)
+      console.log('   userId type:', typeof userId)
+      
       if (!userId) {
-        console.warn('userId is empty in handleUserClick')
+        console.warn('❌ userId is empty in handleUserClick')
+        uni.showToast({
+          title: '用户信息无效',
+          icon: 'none'
+        })
         return
       }
+      
+      console.log('✅ 调用 UserAction.showUserMenu')
       UserAction.showUserMenu(userId, userInfo)
     }
   }

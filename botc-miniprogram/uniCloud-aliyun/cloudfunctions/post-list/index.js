@@ -77,6 +77,7 @@ exports.main = async (event, context) => {
     // 处理返回数据，只返回必要的用户信息
     const processedPosts = result.data.map(post => ({
       _id: post._id,
+      user_id: post.user_id, // 添加 user_id 字段
       content: post.content,
       images: post.images || [],
       type: post.type,

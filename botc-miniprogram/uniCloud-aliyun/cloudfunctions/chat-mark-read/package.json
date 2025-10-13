@@ -1,0 +1,6 @@
+{
+  "name": "chat-mark-read",
+  "version": "1.0.0",
+  "description": "标记聊天消息为已读",
+  "main": "index.js"
+}

@@ -31,24 +31,24 @@ exports.main = async (event, context) => {
     // 并行获取各项统计数据
     const [
       uploadCount,      // 上传剧本数
-      favoriteCount,    // 收藏剧本数
+      favoriteCount,    // 收藏数（剧本+帖子）
       carpoolCount,     // 创建拼车数
       joinedCarpoolCount, // 参与拼车数
       postCount,        // 发布帖子数
       commentCount,     // 发表评论数
       likeCount,        // 获得点赞数
       viewCount,        // 获得浏览数
-      chatCount         // 私聊会话数
+      chatCount,        // 私聊会话数
+      historyCount      // 浏览历史数
     ] = await Promise.all([
       // 上传剧本数（假设有botc-scripts表）
       db.collection('botc-scripts').where({
         uploader_id: userId
       }).count(),
       
-      // 收藏剧本数（假设有botc-favorites表）
+      // 收藏数（剧本+帖子）
       db.collection('botc-favorites').where({
-        user_id: userId,
-        type: 'script'
+        user_id: userId
       }).count().catch(() => ({ total: 0 })),
       
       // 创建拼车数
@@ -100,7 +100,12 @@ exports.main = async (event, context) => {
           { user1_id: userId },
           { user2_id: userId }
         ])
-      ).count().catch(() => ({ total: 0 }))
+      ).count().catch(() => ({ total: 0 })),
+      
+      // 浏览历史数
+      db.collection('botc-browse-history').where({
+        user_id: userId
+      }).count().catch(() => ({ total: 0 }))
     ])
     
     return {
@@ -115,7 +120,8 @@ exports.main = async (event, context) => {
         commentCount: commentCount.total || 0,
         likeCount: likeCount.total || 0,
         viewCount: viewCount.total || 0,
-        chatCount: chatCount.total || 0
+        chatCount: chatCount.total || 0,
+        historyCount: historyCount.total || 0
       }
     }
     

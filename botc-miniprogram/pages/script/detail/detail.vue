@@ -244,6 +244,17 @@ export default {
       this.loadScriptDetail()
       this.loadComments()
       this.loadRelatedPosts()
+      
+      // 记录浏览历史
+      console.log('🔍 检查登录状态，Auth.isLogin():', Auth.isLogin())
+      console.log('🔍 scriptId:', this.scriptId)
+      if (Auth.isLogin()) {
+        console.log('✅ 已登录，开始记录浏览历史')
+        this.recordHistory()
+        this.checkFavoriteStatus()
+      } else {
+        console.log('❌ 未登录，跳过浏览历史记录')
+      }
     }
   },
 
@@ -512,16 +523,64 @@ export default {
       // 小程序分享功能会自动调用onShareAppMessage
     },
 
+    // 记录浏览历史
+    async recordHistory() {
+      console.log('📝 开始记录浏览历史...')
+      console.log('📝 target_type: script')
+      console.log('📝 target_id:', this.scriptId)
+      console.log('📝 token:', Auth.getToken())
+      
+      try {
+        const result = await uniCloud.callFunction({
+          name: 'history-add',
+          data: {
+            target_type: 'script',
+            target_id: this.scriptId,
+            token: Auth.getToken()
+          }
+        })
+        console.log('✅ 浏览历史记录成功，返回结果：', result)
+      } catch (error) {
+        console.error('❌ 记录浏览历史失败：', error)
+      }
+    },
+
+    // 检查收藏状态
+    async checkFavoriteStatus() {
+      try {
+        const db = uniCloud.database()
+        const result = await db.collection('botc-favorites')
+          .where({
+            user_id: this.currentUserId,
+            target_type: 'script',
+            target_id: this.scriptId
+          })
+          .get()
+        
+        this.isFavorite = result.data && result.data.length > 0
+        console.log('✅ 收藏状态：', this.isFavorite)
+      } catch (error) {
+        console.error('检查收藏状态失败：', error)
+      }
+    },
+
     // 收藏剧本
     async favoriteScript() {
+      // 检查登录
+      if (!Auth.isLogin()) {
+        Auth.toLogin()
+        return
+      }
+
       try {
-        const action = this.isFavorite ? 'remove' : 'add'
+        const functionName = this.isFavorite ? 'favorite-remove' : 'favorite-add'
         
         const result = await uniCloud.callFunction({
-          name: 'script-favorite',
+          name: functionName,
           data: { 
-            id: this.scriptId,
-            action
+            target_type: 'script',
+            target_id: this.scriptId,
+            token: Auth.getToken()
           }
         })
 
@@ -531,11 +590,13 @@ export default {
             title: this.isFavorite ? '收藏成功' : '取消收藏',
             icon: 'success'
           })
+        } else {
+          throw new Error(result.result.message)
         }
       } catch (error) {
         console.error('收藏操作失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       }

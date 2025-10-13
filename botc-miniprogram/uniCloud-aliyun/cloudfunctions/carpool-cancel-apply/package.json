@@ -1,0 +1,8 @@
+{
+  "name": "carpool-cancel-apply",
+  "version": "1.0.0",
+  "description": "取消拼车报名",
+  "main": "index.js",
+  "dependencies": {}
+}
+

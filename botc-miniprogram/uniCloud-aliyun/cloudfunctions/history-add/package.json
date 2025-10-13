@@ -1,0 +1,8 @@
+{
+  "name": "history-add",
+  "version": "1.0.0",
+  "description": "记录用户浏览历史",
+  "main": "index.js",
+  "dependencies": {}
+}
+

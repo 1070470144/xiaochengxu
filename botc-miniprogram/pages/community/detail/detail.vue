@@ -106,6 +106,14 @@
           />
           <text :class="{ liked: post?.isLiked }">{{ post?.like_count || 0 }}</text>
         </view>
+        <view class="action-btn" @click="handleFavorite">
+          <uni-icons 
+            :type="isFavorite ? 'star-filled' : 'star'" 
+            :size="24" 
+            :color="isFavorite ? '#ffd700' : '#666'"
+          />
+          <text :class="{ favorited: isFavorite }">{{ isFavorite ? '已收藏' : '收藏' }}</text>
+        </view>
       </view>
     </view>
 
@@ -148,14 +156,29 @@ export default {
       post: null,
       showCommentInput: false,
       commentContent: '',
-      commenting: false
+      commenting: false,
+      isFavorite: false,
+      currentUserId: ''
     }
   },
   
   onLoad(options) {
     if (options.id) {
       this.postId = options.id
+      
+      // 获取当前用户ID
+      const userInfo = Auth.getUserInfo()
+      if (userInfo) {
+        this.currentUserId = userInfo.uid || userInfo._id || userInfo.id || userInfo.userId
+      }
+      
       this.loadPostDetail()
+      
+      // 记录浏览历史
+      if (Auth.isLogin()) {
+        this.recordHistory()
+        this.checkFavoriteStatus()
+      }
     }
   },
   
@@ -192,6 +215,79 @@ export default {
         }, 1500)
       } finally {
         uni.hideLoading()
+      }
+    },
+    
+    // 记录浏览历史
+    async recordHistory() {
+      try {
+        await uniCloud.callFunction({
+          name: 'history-add',
+          data: {
+            target_type: 'post',
+            target_id: this.postId,
+            token: Auth.getToken()
+          }
+        })
+        console.log('✅ 浏览历史记录成功')
+      } catch (error) {
+        console.error('记录浏览历史失败：', error)
+      }
+    },
+
+    // 检查收藏状态
+    async checkFavoriteStatus() {
+      try {
+        const db = uniCloud.database()
+        const result = await db.collection('botc-favorites')
+          .where({
+            user_id: this.currentUserId,
+            target_type: 'post',
+            target_id: this.postId
+          })
+          .get()
+        
+        this.isFavorite = result.data && result.data.length > 0
+        console.log('✅ 收藏状态：', this.isFavorite)
+      } catch (error) {
+        console.error('检查收藏状态失败：', error)
+      }
+    },
+
+    // 收藏/取消收藏
+    async handleFavorite() {
+      if (!Auth.isLogin()) {
+        Auth.toLogin()
+        return
+      }
+
+      try {
+        const functionName = this.isFavorite ? 'favorite-remove' : 'favorite-add'
+        
+        const result = await uniCloud.callFunction({
+          name: functionName,
+          data: { 
+            target_type: 'post',
+            target_id: this.postId,
+            token: Auth.getToken()
+          }
+        })
+
+        if (result.result.code === 0) {
+          this.isFavorite = !this.isFavorite
+          uni.showToast({
+            title: this.isFavorite ? '收藏成功' : '取消收藏',
+            icon: 'success'
+          })
+        } else {
+          throw new Error(result.result.message)
+        }
+      } catch (error) {
+        console.error('收藏操作失败：', error)
+        uni.showToast({
+          title: error.message || '操作失败',
+          icon: 'none'
+        })
       }
     },
     
@@ -317,11 +413,21 @@ export default {
     
     // 处理用户点击事件
     handleUserClick(userId, userInfo = {}) {
-      console.log('handleUserClick triggered:', userId, userInfo)
+      console.log('🔔 handleUserClick triggered')
+      console.log('   userId:', userId)
+      console.log('   userInfo:', userInfo)
+      console.log('   userId type:', typeof userId)
+      
       if (!userId) {
-        console.warn('userId is empty in handleUserClick')
+        console.warn('❌ userId is empty in handleUserClick')
+        uni.showToast({
+          title: '用户信息无效',
+          icon: 'none'
+        })
         return
       }
+      
+      console.log('✅ 调用 UserAction.showUserMenu')
       UserAction.showUserMenu(userId, userInfo)
     }
   }

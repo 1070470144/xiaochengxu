@@ -1,7 +1,11 @@
 <template>
   <view class="page">
     <!-- 用户信息头部 -->
-    <view class="profile-header clock-tower-gradient">
+    <view class="profile-header" :class="{ 'clock-tower-gradient': !userInfo.background_image }" :style="backgroundStyle">
+      <!-- 背景图片编辑按钮 -->
+      <view class="bg-edit-btn" @click="changeBackgroundImage">
+        <text class="bg-edit-icon">🖼️</text>
+      </view>
       <view class="user-info">
         <view class="avatar-section">
           <view class="avatar-wrapper" @click="editProfile">
@@ -11,7 +15,7 @@
             </view>
           </view>
           <!-- 粉丝关注数据 -->
-          <view class="follow-stats">
+          <view class="follow-stats" @longpress="syncFollowData">
             <view class="follow-item" @click="goToFollowers">
               <text class="follow-number">{{ userInfo.followers_count || 0 }}</text>
               <text class="follow-label">粉丝</text>
@@ -55,10 +59,6 @@
           <text class="stat-number">{{ userStats.favoriteCount || 0 }}</text>
           <text class="stat-label">收藏</text>
         </view>
-        <view class="stat-item" @click="goToMyScripts">
-          <text class="stat-number">{{ userStats.scriptCount || 0 }}</text>
-          <text class="stat-label">剧本</text>
-        </view>
       </view>
     </view>
 
@@ -84,14 +84,14 @@
             <view class="row-left">
               <view class="row-icon">➕</view>
               <text class="row-title">我的关注</text>
-            </view>
+        </view>
             <view class="row-right">
               <text class="row-count" v-if="userInfo.following_count > 0">{{ userInfo.following_count }}</text>
               <text class="row-arrow">›</text>
-            </view>
-          </view>
+        </view>
         </view>
       </view>
+    </view>
 
       <!-- 拼车服务 -->
       <view class="function-card">
@@ -116,10 +116,10 @@
             </view>
             <view class="row-right">
               <text class="row-arrow">›</text>
-            </view>
+          </view>
+          </view>
           </view>
         </view>
-      </view>
 
       <!-- 内容管理 -->
       <view class="function-card">
@@ -127,15 +127,6 @@
           <text class="card-title">📚 内容管理</text>
         </view>
         <view class="function-list">
-          <view class="function-row" @click="goToMyScripts">
-            <view class="row-left">
-              <view class="row-icon">📚</view>
-              <text class="row-title">我的剧本</text>
-            </view>
-            <view class="row-right">
-              <text class="row-arrow">›</text>
-            </view>
-          </view>
           <view class="function-row" @click="goToFavorites">
             <view class="row-left">
               <view class="row-icon">⭐</view>
@@ -152,11 +143,12 @@
               <text class="row-title">浏览历史</text>
             </view>
             <view class="row-right">
+              <text class="row-count" v-if="userStats.historyCount > 0">{{ userStats.historyCount }}</text>
               <text class="row-arrow">›</text>
             </view>
           </view>
+          </view>
         </view>
-      </view>
 
       <!-- 店铺服务 -->
       <view class="function-card">
@@ -182,9 +174,9 @@
               <text class="row-arrow">›</text>
             </view>
           </view>
+          </view>
         </view>
-      </view>
-
+        
       <!-- 说书人 -->
       <view class="function-card">
         <view class="card-header">
@@ -200,8 +192,8 @@
               <text class="row-arrow">›</text>
             </view>
           </view>
+          </view>
         </view>
-      </view>
 
       <!-- 系统设置 -->
       <view class="function-card">
@@ -218,23 +210,14 @@
               <text class="row-arrow">›</text>
             </view>
           </view>
-          <view class="function-row" @click="goToAbout">
-            <view class="row-left">
-              <view class="row-icon">ℹ️</view>
-              <text class="row-title">关于我们</text>
-            </view>
-            <view class="row-right">
-              <text class="row-arrow">›</text>
-            </view>
-          </view>
           <view class="function-row" @click="handleLogout">
             <view class="row-left">
               <view class="row-icon">🚪</view>
               <text class="row-title">退出登录</text>
-            </view>
+          </view>
             <view class="row-right">
               <text class="row-arrow">›</text>
-            </view>
+          </view>
           </view>
         </view>
       </view>
@@ -254,6 +237,21 @@ export default {
       userStats: {},
       levelInfo: {},
       loading: false
+    }
+  },
+  
+  computed: {
+    // 背景样式
+    backgroundStyle() {
+      if (this.userInfo.background_image) {
+        return {
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${this.userInfo.background_image})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }
+      }
+      return {}
     }
   },
 
@@ -282,6 +280,7 @@ export default {
       try {
         // 从Storage获取用户信息
         const storedUserInfo = Auth.getUserInfo()
+        console.log('📦 从Storage获取用户信息：', storedUserInfo)
         if (storedUserInfo) {
           this.userInfo = storedUserInfo
           this.calculateLevelInfo()
@@ -311,11 +310,23 @@ export default {
         })
 
         if (result.result.code === 0) {
-          this.userInfo = result.result.data
+          console.log('🔄 从服务器刷新用户信息：', result.result.data)
+          
+          // 保留uid和role等重要字段
+          const updatedUserInfo = {
+            ...result.result.data,
+            uid: result.result.data.uid || result.result.data._id,
+            role: result.result.data.role || this.userInfo.role || 0
+          }
+          
+          this.userInfo = updatedUserInfo
           this.calculateLevelInfo()
+          
+          console.log('👥 关注数据 - 粉丝:', this.userInfo.followers_count, '关注:', this.userInfo.following_count)
           
           // 更新本地存储
           uni.setStorageSync('userInfo', this.userInfo)
+          console.log('💾 已更新本地存储')
         }
       } catch (error) {
         console.error('刷新用户信息失败：', error)
@@ -333,7 +344,7 @@ export default {
             token: token
           }
         })
-        
+
         if (result.result.code === 0) {
           this.userStats = result.result.data
         } else {
@@ -411,24 +422,15 @@ export default {
     },
 
     // 页面跳转方法
-    goToMyScripts() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
-      })
-    },
-
     goToFavorites() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/favorites/favorites'
       })
     },
 
     goToHistory() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/history/history'
       })
     },
 
@@ -439,9 +441,8 @@ export default {
     },
 
     goToAppliedCarpool() {
-      uni.showToast({
-        title: '功能开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/applied-carpool/applied-carpool'
       })
     },
 
@@ -470,12 +471,6 @@ export default {
       })
     },
 
-    goToAbout() {
-      uni.navigateTo({
-        url: '/pages/user/about/about'
-      })
-    },
-
     // 跳转到店铺列表
     goToShopList() {
       uni.navigateTo({
@@ -492,18 +487,180 @@ export default {
     
     // 跳转到粉丝列表
     goToFollowers() {
-      uni.showToast({
-        title: '粉丝列表开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/followers/followers'
       })
     },
     
     // 跳转到关注列表
     goToFollowing() {
-      uni.showToast({
-        title: '关注列表开发中',
-        icon: 'none'
+      uni.navigateTo({
+        url: '/pages/user/following/following'
       })
+    },
+    
+    // 同步关注数据（长按触发）
+    async syncFollowData() {
+      console.log('🔄 开始同步关注数据...')
+      
+      uni.showModal({
+        title: '同步数据',
+        content: '是否重新同步关注和粉丝数据？这可以修复数据显示异常的问题。',
+        success: async (res) => {
+          if (res.confirm) {
+            uni.showLoading({
+              title: '同步中...'
+            })
+            
+            try {
+              // 调用同步云函数
+              const result = await uniCloud.callFunction({
+                name: 'user-follow-sync',
+                data: {}
+              })
+              
+              uni.hideLoading()
+              
+              if (result.result.code === 0) {
+                uni.showToast({
+                  title: '同步成功',
+                  icon: 'success'
+                })
+                
+                // 重新加载用户数据
+                await this.refreshUserInfo()
+                console.log('✅ 关注数据同步完成')
+              } else {
+                throw new Error(result.result.message)
+              }
+            } catch (error) {
+              uni.hideLoading()
+              console.error('❌ 同步关注数据失败：', error)
+              uni.showToast({
+                title: '同步失败',
+                icon: 'error'
+              })
+            }
+          }
+        }
+      })
+    },
+    
+    // 更换背景图片
+    async changeBackgroundImage() {
+      uni.showActionSheet({
+        itemList: ['选择图片', '使用默认背景', '删除背景图片'],
+        success: async (res) => {
+          switch (res.tapIndex) {
+            case 0:
+              this.selectBackgroundImage()
+              break
+            case 1:
+              this.setDefaultBackground()
+              break
+            case 2:
+              this.removeBackgroundImage()
+              break
+          }
+        }
+      })
+    },
+    
+    // 选择背景图片
+    async selectBackgroundImage() {
+      uni.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: async (res) => {
+          const tempFilePath = res.tempFilePaths[0]
+          
+          uni.showLoading({
+            title: '上传中...'
+          })
+          
+          try {
+            // 上传图片到云存储
+            const uploadResult = await uniCloud.uploadFile({
+              filePath: tempFilePath,
+              cloudPath: `background/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`
+            })
+            
+            if (uploadResult.fileID) {
+              // 更新用户背景图片
+              await this.updateBackgroundImage(uploadResult.fileID)
+            }
+            
+            uni.hideLoading()
+            uni.showToast({
+              title: '背景图片已更新',
+              icon: 'success'
+            })
+            
+          } catch (error) {
+            uni.hideLoading()
+            console.error('上传背景图片失败：', error)
+            uni.showToast({
+              title: '上传失败',
+              icon: 'error'
+            })
+          }
+        }
+      })
+    },
+    
+    // 设置默认背景
+    async setDefaultBackground() {
+      await this.updateBackgroundImage('')
+      uni.showToast({
+        title: '已恢复默认背景',
+        icon: 'success'
+      })
+    },
+    
+    // 删除背景图片
+    async removeBackgroundImage() {
+      uni.showModal({
+        title: '确认删除',
+        content: '确定要删除背景图片吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            await this.updateBackgroundImage('')
+            uni.showToast({
+              title: '背景图片已删除',
+              icon: 'success'
+            })
+          }
+        }
+      })
+    },
+    
+    // 更新背景图片
+    async updateBackgroundImage(imageUrl) {
+      try {
+        const result = await uniCloud.callFunction({
+          name: 'user-update',
+          data: {
+            background_image: imageUrl,
+            token: Auth.getToken()
+          }
+        })
+        
+        if (result.result.code === 0) {
+          // 更新本地数据
+          this.userInfo.background_image = imageUrl
+          
+          // 更新本地存储
+          uni.setStorageSync('userInfo', this.userInfo)
+          
+          console.log('✅ 背景图片更新成功:', imageUrl)
+        } else {
+          throw new Error(result.result.message)
+        }
+      } catch (error) {
+        console.error('更新背景图片失败：', error)
+        throw error
+      }
     },
     
     // 跳转到私聊列表
@@ -533,18 +690,18 @@ export default {
               
               // 使用Auth工具类清除登录信息
               Auth.logout()
-              
-              uni.showToast({
-                title: '已退出登录',
-                icon: 'success'
-              })
-              
-              // 跳转到登录页
-              setTimeout(() => {
-                uni.reLaunch({
+            
+            uni.showToast({
+              title: '已退出登录',
+              icon: 'success'
+            })
+            
+            // 跳转到登录页
+            setTimeout(() => {
+              uni.reLaunch({
                   url: '/pages/login/sms-login'
-                })
-              }, 1500)
+              })
+            }, 1500)
             } catch (error) {
               console.error('退出登录失败：', error)
               // 即使失败也清除本地登录信息
@@ -568,6 +725,34 @@ export default {
 
 .profile-header {
   padding: 40rpx 30rpx;
+  color: white;
+  position: relative;
+  min-height: 300rpx;
+}
+
+/* 背景编辑按钮 */
+.bg-edit-btn {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  width: 60rpx;
+  height: 60rpx;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(10rpx);
+}
+
+.bg-edit-btn:active {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(0.95);
+}
+
+.bg-edit-icon {
+  font-size: 32rpx;
   color: white;
 }
 
