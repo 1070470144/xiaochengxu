@@ -6,12 +6,13 @@
         <!-- 用户信息 -->
         <view class="post-header">
           <image 
-            class="avatar" 
+            class="avatar clickable" 
             :src="post.user?.avatar || '/static/default-avatar.png'"
             mode="aspectFill"
+            @click="handleUserClick(post.user_id, post.user)"
           />
-          <view class="user-info">
-            <view class="nickname">{{ post.user?.nickname || '匿名用户' }}</view>
+          <view class="user-info" @click="handleUserClick(post.user_id, post.user)">
+            <view class="nickname clickable">{{ post.user?.nickname || '匿名用户' }}</view>
             <view class="time">{{ formatTime(post.created_at) }}</view>
           </view>
         </view>
@@ -55,13 +56,19 @@
         <view v-if="post && post.comments && post.comments.length > 0" class="comments-list">
           <view v-for="comment in post.comments" :key="comment._id" class="comment-item">
             <image 
-              class="comment-avatar" 
+              class="comment-avatar clickable" 
               :src="comment.user?.avatar || '/static/default-avatar.png'"
               mode="aspectFill"
+              @click="handleUserClick(comment.user_id, comment.user)"
             />
             <view class="comment-content">
               <view class="comment-user">
-                <text class="comment-nickname">{{ comment.user?.nickname || '匿名用户' }}</text>
+                <text 
+                  class="comment-nickname clickable" 
+                  @click="handleUserClick(comment.user_id, comment.user)"
+                >
+                  {{ comment.user?.nickname || '匿名用户' }}
+                </text>
                 <text class="comment-time">{{ formatTime(comment.created_at) }}</text>
               </view>
               <view class="comment-text">
@@ -130,6 +137,7 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import UserAction from '@/utils/user-action.js'
 
 export default {
   name: 'PostDetail',
@@ -305,6 +313,16 @@ export default {
         const date = new Date(timestamp)
         return `${date.getMonth() + 1}-${date.getDate()}`
       }
+    },
+    
+    // 处理用户点击事件
+    handleUserClick(userId, userInfo = {}) {
+      console.log('handleUserClick triggered:', userId, userInfo)
+      if (!userId) {
+        console.warn('userId is empty in handleUserClick')
+        return
+      }
+      UserAction.showUserMenu(userId, userInfo)
     }
   }
 }
@@ -353,6 +371,15 @@ export default {
   font-weight: bold;
   color: #333;
   margin-bottom: 5rpx;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.clickable:active {
+  opacity: 0.6;
 }
 
 .time {

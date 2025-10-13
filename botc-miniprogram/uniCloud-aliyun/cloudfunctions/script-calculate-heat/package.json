@@ -1,0 +1,8 @@
+{
+  "name": "script-calculate-heat",
+  "version": "1.0.0",
+  "description": "计算剧本热度",
+  "main": "index.js",
+  "dependencies": {}
+}
+

@@ -1,14 +1,14 @@
 {
   "passwordSecret": "passwordSecret-demo",
   "tokenSecret": "tokenSecret-demo",
-  "tokenExpiresIn": 7200,
-  "tokenExpiresThreshold": 600,
+  "tokenExpiresIn": 7200000,
+  "tokenExpiresThreshold": 600000,
   "passwordErrorLimit": 6,
-  "passwordErrorRetryTime": 3600,
+  "passwordErrorRetryTime": 3600000,
   "autoSetInviteCode": false,
   "forceInviteCode": false,
   "app": {
-    "tokenExpiresIn": 2592000,
+    "tokenExpiresIn": 2592000000,
     "oauth": {
       "weixin": {
         "appid": "your-weixin-appid",

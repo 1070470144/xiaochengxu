@@ -1,5 +1,15 @@
 <template>
   <view class="create-page">
+    <!-- 剧本选择 -->
+    <view class="script-section">
+      <view class="section-title required">选择剧本</view>
+      <view class="script-selector" @click="showScriptPicker">
+        <text v-if="selectedScript" class="selected-script">{{ selectedScript.title }}</text>
+        <text v-else class="placeholder">请选择要讨论的剧本</text>
+        <uni-icons type="right" size="16" color="#999" />
+      </view>
+    </view>
+
     <!-- 内容输入 -->
     <view class="content-section">
       <textarea
@@ -58,12 +68,61 @@
     <view class="footer">
       <button 
         class="publish-btn"
-        :disabled="publishing || !content.trim()"
+        :disabled="publishing || !content.trim() || !selectedScript"
         @click="publishPost"
       >
         {{ publishing ? '发布中...' : '发布' }}
       </button>
     </view>
+
+    <!-- 剧本选择弹窗 -->
+    <uni-popup ref="scriptPopup" type="bottom">
+      <view class="script-popup">
+        <view class="popup-header">
+          <text class="popup-title">选择剧本</text>
+          <view class="popup-close" @click="closeScriptPicker">
+            <uni-icons type="closeempty" size="24" color="#333" />
+          </view>
+        </view>
+        
+        <!-- 搜索框 -->
+        <view class="search-box">
+          <uni-icons type="search" size="18" color="#999" />
+          <input 
+            class="search-input" 
+            v-model="scriptSearchKey"
+            placeholder="搜索剧本名称"
+            @input="searchScripts"
+          />
+        </view>
+        
+        <!-- 剧本列表 -->
+        <scroll-view class="script-list" scroll-y>
+          <view 
+            v-for="script in filteredScripts" 
+            :key="script._id"
+            class="script-item"
+            :class="{ active: selectedScript && selectedScript._id === script._id }"
+            @click="selectScript(script)"
+          >
+            <view class="script-info">
+              <text class="script-name">{{ script.title }}</text>
+              <text class="script-author">作者：{{ script.author }}</text>
+            </view>
+            <uni-icons 
+              v-if="selectedScript && selectedScript._id === script._id"
+              type="checkmarkempty" 
+              size="20" 
+              color="#8B4513" 
+            />
+          </view>
+          
+          <view v-if="filteredScripts.length === 0" class="empty-tip">
+            <text>暂无剧本</text>
+          </view>
+        </scroll-view>
+      </view>
+    </uni-popup>
   </view>
 </template>
 
@@ -82,8 +141,18 @@ export default {
         '血染钟楼', '拼车', '剧本', '新手', '攻略',
         '心得', '推荐', '组局', '说书人', '角色'
       ],
-      publishing: false
+      publishing: false,
+      
+      // 剧本选择相关
+      selectedScript: null,
+      scriptList: [],
+      filteredScripts: [],
+      scriptSearchKey: ''
     }
+  },
+  
+  onLoad() {
+    this.loadScripts()
   },
   
   methods: {
@@ -147,8 +216,66 @@ export default {
       }
     },
     
+    // 加载剧本列表
+    async loadScripts() {
+      try {
+        const db = uniCloud.database()
+        const result = await db.collection('botc-scripts')
+          .where({
+            status: 1  // 只显示已发布的剧本
+          })
+          .field('_id,title,author')
+          .orderBy('created_at', 'desc')
+          .limit(100)
+          .get()
+        
+        this.scriptList = result.result?.data || result.data || []
+        this.filteredScripts = this.scriptList
+      } catch (error) {
+        console.error('加载剧本列表失败：', error)
+      }
+    },
+    
+    // 显示剧本选择器
+    showScriptPicker() {
+      this.$refs.scriptPopup.open()
+    },
+    
+    // 关闭剧本选择器
+    closeScriptPicker() {
+      this.$refs.scriptPopup.close()
+    },
+    
+    // 搜索剧本
+    searchScripts() {
+      if (!this.scriptSearchKey.trim()) {
+        this.filteredScripts = this.scriptList
+        return
+      }
+      
+      const key = this.scriptSearchKey.toLowerCase()
+      this.filteredScripts = this.scriptList.filter(script => {
+        return script.title.toLowerCase().includes(key) || 
+               (script.author && script.author.toLowerCase().includes(key))
+      })
+    },
+    
+    // 选择剧本
+    selectScript(script) {
+      this.selectedScript = script
+      this.closeScriptPicker()
+    },
+    
     // 发布帖子
     async publishPost() {
+      if (!this.selectedScript) {
+        uni.showToast({
+          title: '请选择剧本',
+          icon: 'none'
+        })
+        return
+      }
+      
       if (!this.content.trim()) {
         uni.showToast({
           title: '请输入内容',
@@ -174,6 +301,7 @@ export default {
           name: 'post-create',
           data: {
             token: token,
+            script_id: this.selectedScript._id,
             content: this.content.trim(),
             images: this.images,
             tags: this.selectedTags,
@@ -219,6 +347,46 @@ export default {
   min-height: 100vh;
   background: #fff;
   padding-bottom: 120rpx;
+}
+
+/* 剧本选择区域 */
+.script-section {
+  padding: 30rpx;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section-title {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 20rpx;
+  font-weight: 600;
+}
+
+.section-title.required::before {
+  content: '*';
+  color: #f5222d;
+  margin-right: 4rpx;
+}
+
+.script-selector {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25rpx 20rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  min-height: 88rpx;
+}
+
+.selected-script {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.placeholder {
+  font-size: 28rpx;
+  color: #999;
 }
 
 .content-section {
@@ -364,6 +532,99 @@ export default {
 
 .publish-btn[disabled] {
   opacity: 0.5;
+}
+
+/* 剧本选择弹窗 */
+.script-popup {
+  background: white;
+  border-radius: 32rpx 32rpx 0 0;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.popup-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.popup-close {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 30rpx;
+  gap: 15rpx;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  height: 60rpx;
+}
+
+.script-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20rpx 0;
+}
+
+.script-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25rpx 30rpx;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background 0.3s;
+}
+
+.script-item:active {
+  background: #f5f5f5;
+}
+
+.script-item.active {
+  background: rgba(139, 69, 19, 0.05);
+}
+
+.script-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.script-name {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.script-author {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.empty-tip {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #999;
+  font-size: 28rpx;
 }
 </style>
 

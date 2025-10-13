@@ -1,66 +1,57 @@
 {
   "bsonType": "object",
-  "description": "私聊消息表", 
-  "required": ["from_user_id", "to_user_id", "content"],
+  "description": "私聊消息表",
+  "required": ["conversation_id", "sender_id", "receiver_id", "content"],
+  "permission": {
+    "read": "doc.sender_id == auth.uid || doc.receiver_id == auth.uid",
+    "create": "auth.uid != null && doc.sender_id == auth.uid",
+    "update": false,
+    "delete": false
+  },
   "properties": {
     "_id": {
       "description": "消息ID"
     },
-    "from_user_id": {
+    "conversation_id": {
+      "bsonType": "string",
+      "description": "会话ID",
+      "foreignKey": "botc-chat-conversations._id"
+    },
+    "sender_id": {
       "bsonType": "string",
       "description": "发送者ID",
-      "foreignKey": "uni-id-users._id",
-      "errorMessage": {
-        "required": "发送者不能为空"
-      }
+      "foreignKey": "uni-id-users._id"
     },
-    "to_user_id": {
+    "receiver_id": {
       "bsonType": "string",
       "description": "接收者ID",
-      "foreignKey": "uni-id-users._id", 
-      "errorMessage": {
-        "required": "接收者不能为空"
-      }
+      "foreignKey": "uni-id-users._id"
     },
     "content": {
       "bsonType": "string",
       "description": "消息内容",
-      "maxLength": 500,
+      "trim": "both",
+      "minLength": 1,
+      "maxLength": 1000,
       "errorMessage": {
-        "required": "消息内容不能为空",
-        "maxLength": "消息内容不能超过500个字符"
+        "minLength": "消息内容不能为空",
+        "maxLength": "消息内容不能超过1000字"
       }
     },
     "message_type": {
       "bsonType": "int",
-      "description": "消息类型：1-文本，2-图片",
-      "defaultValue": 1,
-      "minimum": 1,
-      "maximum": 2
-    },
-    "media_url": {
-      "bsonType": "string",
-      "description": "媒体文件URL"
+      "description": "消息类型：1-文本 2-图片 3-语音",
+      "enum": [1, 2, 3],
+      "defaultValue": 1
     },
     "is_read": {
       "bsonType": "bool",
       "description": "是否已读",
       "defaultValue": false
     },
-    "read_at": {
-      "bsonType": "timestamp",
-      "description": "阅读时间"
-    },
     "created_at": {
       "bsonType": "timestamp",
-      "description": "创建时间",
-      "forceDefaultValue": {
-        "$env": "now"
-      }
-    },
-    "updated_at": {
-      "bsonType": "timestamp",
-      "description": "更新时间",
+      "description": "发送时间",
       "forceDefaultValue": {
         "$env": "now"
       }

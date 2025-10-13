@@ -1,0 +1,8 @@
+{
+  "name": "script-review-create",
+  "version": "1.0.0",
+  "description": "创建剧本评价",
+  "main": "index.js",
+  "dependencies": {}
+}
+

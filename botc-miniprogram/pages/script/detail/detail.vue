@@ -81,11 +81,57 @@
         <button class="action-btn btn-primary" @click="downloadScript">下载剧本</button>
       </view>
 
+      <!-- 相关帖子 -->
+      <view class="posts-section">
+        <view class="section-header">
+          <text class="section-title">💬 相关讨论</text>
+          <view class="more-btn" @click="goToCreatePost">
+            <text>发帖</text>
+            <uni-icons type="right" size="14" color="#8B4513" />
+          </view>
+        </view>
+        
+        <view v-if="relatedPosts.length > 0" class="posts-list">
+          <view 
+            v-for="post in relatedPosts" 
+            :key="post._id"
+            class="post-item"
+            @click="goToPostDetail(post._id)"
+          >
+            <view class="post-user">
+              <text 
+                class="post-username clickable" 
+                @click.stop="handleUserClick(post.user_id, post.user)"
+              >
+                {{ post.user ? post.user.nickname : '匿名用户' }}
+              </text>
+              <text class="post-time">{{ formatTime(post.created_at) }}</text>
+            </view>
+            <text class="post-content">{{ post.content }}</text>
+            <view class="post-stats">
+              <text class="stat-item">👁 {{ post.view_count || 0 }}</text>
+              <text class="stat-item">❤️ {{ post.like_count || 0 }}</text>
+              <text class="stat-item">💬 {{ post.comment_count || 0 }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <view v-else class="no-posts">
+          <text>暂无相关讨论，快来发表第一个帖子吧~</text>
+        </view>
+      </view>
+
       <!-- 评论区 -->
       <view class="comment-section">
         <view class="comment-header card-header">
           <text class="card-title">用户评价</text>
-          <button class="comment-btn btn-outline" @click="showCommentModal">写评价</button>
+          <button 
+            class="comment-btn btn-outline" 
+            :class="{ 'btn-disabled': hasReviewed }"
+            @click="showCommentModal"
+          >
+            {{ hasReviewed ? '已评价' : '写评价' }}
+          </button>
         </view>
 
         <!-- 评论列表 -->
@@ -94,7 +140,12 @@
             <view class="card-body">
               <view class="comment-header-info flex-between">
                 <view class="user-info">
-                  <text class="user-name">{{ comment.user ? comment.user.nickname : '匿名用户' }}</text>
+                  <text 
+                    class="user-name clickable" 
+                    @click="handleUserClick(comment.user_id, comment.user)"
+                  >
+                    {{ comment.user ? comment.user.nickname : '匿名用户' }}
+                  </text>
                   <view v-if="comment.rating" class="comment-rating">
                     <text class="rating-stars">{{ getStars(comment.rating) }}</text>
                   </view>
@@ -148,6 +199,9 @@
 </template>
 
 <script>
+import Auth from '@/utils/auth.js'
+import UserAction from '@/utils/user-action.js'
+
 export default {
   name: 'ScriptDetail',
   
@@ -162,15 +216,34 @@ export default {
       // 评论相关
       commentRating: 0,
       commentContent: '',
-      submitting: false
+      submitting: false,
+      hasReviewed: false,  // 是否已评论
+      currentUserId: '',    // 当前用户ID
+      
+      // 相关帖子
+      relatedPosts: []
     }
   },
 
   onLoad(options) {
     if (options.id) {
       this.scriptId = options.id
+      
+      // 获取当前用户ID
+      const userInfo = Auth.getUserInfo()
+      console.log('📱 完整的 userInfo：', userInfo)
+      
+      if (userInfo) {
+        // 尝试多种可能的字段
+        this.currentUserId = userInfo.uid || userInfo._id || userInfo.id || userInfo.userId
+        console.log('✅ 当前用户ID：', this.currentUserId)
+      } else {
+        console.log('❌ userInfo 为空')
+      }
+      
       this.loadScriptDetail()
       this.loadComments()
+      this.loadRelatedPosts()
     }
   },
 
@@ -210,21 +283,179 @@ export default {
     // 加载评论
     async loadComments() {
       try {
-        const result = await uniCloud.callFunction({
-          name: 'comment-list',
-          data: { 
-            scriptId: this.scriptId,
-            page: 1,
-            pageSize: 10
-          }
-        })
-
-        if (result.result.code === 0) {
-          this.commentList = result.result.data.list
+        const db = uniCloud.database()
+        
+        // 第一步：查询评价列表
+        const reviewsResult = await db.collection('botc-script-reviews')
+          .where({
+            script_id: this.scriptId,
+            status: 1
+          })
+          .orderBy('created_at', 'desc')
+          .limit(20)
+          .get()
+        
+        console.log('查询评价结果：', reviewsResult)
+        
+        // 兼容不同的数据结构
+        const reviews = reviewsResult.result?.data || reviewsResult.data || []
+        
+        console.log('📝 评论列表数量：', reviews.length)
+        console.log('📝 评论列表详情：', reviews)
+        
+        // ⭐ 重要：先检查当前用户是否已评论（必须在任何 return 之前）
+        if (this.currentUserId) {
+          console.log('🔍 开始检查是否已评论...')
+          console.log('🔍 当前用户ID：', this.currentUserId, '类型：', typeof this.currentUserId)
+          
+          // 打印所有评论的 user_id
+          reviews.forEach((review, index) => {
+            console.log(`🔍 评论${index + 1} user_id：`, review.user_id, '类型：', typeof review.user_id)
+          })
+          
+          this.hasReviewed = reviews.some(review => {
+            const match = review.user_id === this.currentUserId
+            if (match) {
+              console.log('✅ 找到匹配的评论！')
+            }
+            return match
+          })
+          console.log('🎯 最终结果 - 当前用户是否已评论：', this.hasReviewed)
+        } else {
+          console.log('❌ currentUserId 为空，跳过检查')
         }
+        
+        if (reviews.length === 0) {
+          this.commentList = []
+          return
+        }
+        
+        // 第二步：获取所有用户ID
+        const userIds = [...new Set(reviews.map(r => r.user_id).filter(id => id))]
+        
+        if (userIds.length === 0) {
+          // 没有用户ID，直接使用匿名用户
+          this.commentList = reviews.map(review => ({
+            _id: review._id,
+            content: review.content,
+            rating: review.rating,
+            like_count: review.like_count,
+            created_at: review.created_at,
+            user: {
+              nickname: '匿名用户',
+              avatar: ''
+            }
+          }))
+          return
+        }
+        
+        // 第三步：查询用户信息
+        const usersResult = await db.collection('uni-id-users')
+          .where({
+            _id: db.command.in(userIds)
+          })
+          .field('_id,nickname,avatar')
+          .get()
+        
+        console.log('查询用户结果：', usersResult)
+        
+        // 兼容不同的数据结构
+        const users = usersResult.result?.data || usersResult.data || []
+        
+        const usersMap = {}
+        users.forEach(user => {
+          usersMap[user._id] = user
+        })
+        
+        // 第四步：合并数据
+        this.commentList = reviews.map(review => ({
+          _id: review._id,
+          content: review.content,
+          rating: review.rating,
+          like_count: review.like_count,
+          created_at: review.created_at,
+          user: usersMap[review.user_id] || {
+            nickname: '匿名用户',
+            avatar: ''
+          }
+        }))
       } catch (error) {
         console.error('加载评论失败：', error)
+        this.commentList = []
       }
+    },
+    
+    // 加载相关帖子
+    async loadRelatedPosts() {
+      try {
+        const db = uniCloud.database()
+        
+        // 第一步：查询帖子列表
+        const postsResult = await db.collection('botc-posts')
+          .where({
+            script_id: this.scriptId,
+            status: 1
+          })
+          .orderBy('created_at', 'desc')
+          .limit(5)
+          .get()
+        
+        const posts = postsResult.result?.data || postsResult.data || []
+        
+        if (posts.length === 0) {
+          this.relatedPosts = []
+          return
+        }
+        
+        // 第二步：获取所有用户ID
+        const userIds = [...new Set(posts.map(p => p.user_id).filter(id => id))]
+        
+        if (userIds.length === 0) {
+          this.relatedPosts = posts
+          return
+        }
+        
+        // 第三步：查询用户信息
+        const usersResult = await db.collection('uni-id-users')
+          .where({
+            _id: db.command.in(userIds)
+          })
+          .field('_id,nickname,avatar')
+          .get()
+        
+        const users = usersResult.result?.data || usersResult.data || []
+        
+        const usersMap = {}
+        users.forEach(user => {
+          usersMap[user._id] = user
+        })
+        
+        // 第四步：合并数据
+        this.relatedPosts = posts.map(post => ({
+          ...post,
+          user: usersMap[post.user_id] || {
+            nickname: '匿名用户',
+            avatar: ''
+          }
+        }))
+      } catch (error) {
+        console.error('加载相关帖子失败：', error)
+        this.relatedPosts = []
+      }
+    },
+    
+    // 发帖
+    goToCreatePost() {
+      uni.navigateTo({
+        url: '/pages/community/create/create'
+      })
+    },
+    
+    // 查看帖子详情
+    goToPostDetail(postId) {
+      uni.navigateTo({
+        url: `/pages/community/detail/detail?id=${postId}`
+      })
     },
 
     // 下载剧本
@@ -312,6 +543,29 @@ export default {
 
     // 显示评论弹窗
     showCommentModal() {
+      // 检查是否已登录
+      if (!Auth.isLogin()) {
+        uni.showToast({
+          title: '请先登录',
+          icon: 'none'
+        })
+        setTimeout(() => {
+          Auth.toLogin()
+        }, 1500)
+        return
+      }
+      
+      // 检查是否已评论
+      if (this.hasReviewed) {
+        uni.showModal({
+          title: '提示',
+          content: '您已经评价过该剧本了，每个剧本只能评价一次哦~',
+          showCancel: false,
+          confirmText: '知道了'
+        })
+        return
+      }
+      
       this.$refs.commentPopup.open()
     },
 
@@ -342,11 +596,12 @@ export default {
 
       try {
         const result = await uniCloud.callFunction({
-          name: 'comment-add',
+          name: 'script-review-create',
           data: {
             scriptId: this.scriptId,
             content: this.commentContent.trim(),
-            rating: this.commentRating
+            rating: this.commentRating,
+            token: Auth.getToken()
           }
         })
 
@@ -356,6 +611,9 @@ export default {
             icon: 'success'
           })
           
+          // 标记已评论
+          this.hasReviewed = true
+          
           // 清空表单
           this.commentRating = 0
           this.commentContent = ''
@@ -363,6 +621,9 @@ export default {
           
           // 重新加载评论
           this.loadComments()
+          
+          // 重新加载剧本详情（更新评分）
+          this.loadScriptDetail()
         } else {
           throw new Error(result.result.message)
         }
@@ -406,6 +667,16 @@ export default {
 
     getStars(rating) {
       return '⭐'.repeat(rating)
+    },
+    
+    // 处理用户点击事件
+    handleUserClick(userId, userInfo = {}) {
+      console.log('handleUserClick triggered:', userId, userInfo)
+      if (!userId) {
+        console.warn('userId is empty in handleUserClick')
+        return
+      }
+      UserAction.showUserMenu(userId, userInfo)
     }
   },
 
@@ -420,50 +691,102 @@ export default {
 </script>
 
 <style scoped>
+/* 页面背景 */
+.page {
+  background: linear-gradient(180deg, #f5f5f5 0%, #ffffff 100%);
+  min-height: 100vh;
+}
+
+/* 头部区域 - 立体渐变卡片 */
 .script-header {
-  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #D2691E 100%);
   color: white;
-  padding: 40rpx 30rpx;
+  padding: 50rpx 30rpx;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8rpx 24rpx rgba(139, 69, 19, 0.3);
+}
+
+.script-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(10%, 10%); }
 }
 
 .script-title {
   display: block;
-  font-size: 36rpx;
+  font-size: 40rpx;
   font-weight: bold;
-  margin-bottom: 10rpx;
+  margin-bottom: 15rpx;
+  text-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .script-subtitle {
   display: block;
-  font-size: 26rpx;
-  opacity: 0.9;
-  margin-bottom: 20rpx;
+  font-size: 28rpx;
+  opacity: 0.95;
+  margin-bottom: 25rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
 }
 
 .script-rating {
-  margin-top: 20rpx;
+  margin-top: 25rpx;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10rpx);
+  padding: 20rpx 30rpx;
+  border-radius: 50rpx;
+  display: inline-block;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
 }
 
 .rating-score {
-  font-size: 32rpx;
+  font-size: 36rpx;
   font-weight: bold;
-  margin-right: 10rpx;
+  margin-right: 15rpx;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.2);
 }
 
 .rating-count {
-  font-size: 24rpx;
-  opacity: 0.8;
+  font-size: 26rpx;
+  opacity: 0.9;
 }
 
+/* 信息卡片 - 立体效果 */
 .info-card {
-  margin: 20rpx;
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  transform: translateZ(0);
+  transition: all 0.3s ease;
 }
 
 .info-row {
   display: flex;
   align-items: center;
-  margin-bottom: 20rpx;
+  margin-bottom: 25rpx;
+  padding: 15rpx;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-radius: 12rpx;
+  border-left: 4rpx solid #8B4513;
 }
 
 .info-row:last-child {
@@ -473,6 +796,7 @@ export default {
 .info-label {
   font-size: 28rpx;
   color: #666666;
+  font-weight: 600;
   width: 120rpx;
   flex-shrink: 0;
 }
@@ -481,196 +805,451 @@ export default {
   font-size: 28rpx;
   color: #333333;
   flex: 1;
+  font-weight: 500;
 }
 
+/* 难度标签 - 3D效果 */
 .difficulty {
-  padding: 4rpx 12rpx;
-  border-radius: 8rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
   color: white !important;
   font-weight: bold;
   font-size: 24rpx !important;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2),
+              inset 0 -2rpx 4rpx rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
 }
 
-.difficulty-easy { background-color: #52c41a; }
-.difficulty-normal { background-color: #1890ff; }
-.difficulty-hard { background-color: #faad14; }
-.difficulty-expert { background-color: #f5222d; }
-.difficulty-unknown { background-color: #d9d9d9; color: #666666 !important; }
+.difficulty-easy { 
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+}
+.difficulty-normal { 
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+}
+.difficulty-hard { 
+  background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+}
+.difficulty-expert { 
+  background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%);
+}
+.difficulty-unknown { 
+  background: linear-gradient(135deg, #d9d9d9 0%, #e8e8e8 100%);
+  color: #666666 !important; 
+}
 
+/* 描述卡片 */
 .desc-card {
-  margin: 20rpx;
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
 }
 
 .script-desc {
   font-size: 28rpx;
   color: #333333;
-  line-height: 1.6;
+  line-height: 1.8;
   white-space: pre-line;
 }
 
+/* 标签卡片 */
 .tags-card {
-  margin: 20rpx;
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
+  gap: 15rpx;
 }
 
 .tag {
   font-size: 24rpx;
   color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.1);
-  padding: 8rpx 16rpx;
-  border-radius: 12rpx;
-  margin-right: 12rpx;
-  margin-bottom: 12rpx;
+  background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(139, 69, 19, 0.15) 100%);
+  padding: 12rpx 24rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(139, 69, 19, 0.2);
+  box-shadow: 0 2rpx 8rpx rgba(139, 69, 19, 0.1);
+  transition: all 0.3s ease;
 }
 
+/* 操作栏 - 正常排列 */
 .action-bar {
   display: flex;
-  padding: 20rpx;
+  padding: 25rpx 20rpx;
   gap: 20rpx;
   background: white;
-  border-top: 1rpx solid #f0f0f0;
+  margin: 30rpx 20rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
 }
 
 .action-btn {
   flex: 1;
-  height: 80rpx;
-  line-height: 80rpx;
-  border-radius: 40rpx;
-  font-size: 30rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  box-shadow: 0 6rpx 20rpx rgba(139, 69, 19, 0.3);
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
 }
 
+.action-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 12rpx rgba(139, 69, 19, 0.2);
+}
+
+/* 相关帖子区 */
+.posts-section {
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.more-btn {
+  display: flex;
+  align-items: center;
+  gap: 5rpx;
+  font-size: 26rpx;
+  color: #8B4513;
+  padding: 8rpx 16rpx;
+  background: rgba(139, 69, 19, 0.1);
+  border-radius: 20rpx;
+}
+
+.posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.post-item {
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  border-left: 4rpx solid #8B4513;
+  transition: all 0.3s ease;
+}
+
+.post-item:active {
+  transform: translateX(4rpx);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+}
+
+.post-user {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15rpx;
+}
+
+.post-username {
+  font-size: 26rpx;
+  color: #8B4513;
+  font-weight: 600;
+}
+
+.post-time {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.post-content {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 15rpx;
+}
+
+.post-stats {
+  display: flex;
+  gap: 30rpx;
+}
+
+.stat-item {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.no-posts {
+  text-align: center;
+  padding: 80rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* 评论区 - 立体卡片 */
 .comment-section {
-  margin: 20rpx;
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
 }
 
 .comment-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 25rpx;
 }
 
+.comment-header .card-title {
+  flex: 1;
+}
+
+.comment-header .comment-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* 评价按钮 - 立体按钮 */
 .comment-btn {
   font-size: 26rpx;
-  padding: 8rpx 16rpx;
+  padding: 12rpx 24rpx;
   height: auto;
   line-height: auto;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(139, 69, 19, 0.3);
+  transition: all 0.3s ease;
+}
+
+.comment-btn:active {
+  transform: scale(0.95);
+}
+
+/* 已评价状态 */
+.comment-btn.btn-disabled {
+  background: #f5f5f5;
+  color: #999999;
+  border-color: #e8e8e8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.comment-btn.btn-disabled:active {
+  transform: none;
 }
 
 .comment-list {
-  margin-top: 20rpx;
+  margin-top: 25rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
 }
 
+/* 评论卡片 - 3D效果 */
 .comment-item {
-  margin-bottom: 16rpx;
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  border-left: 4rpx solid #8B4513;
+  transition: all 0.3s ease;
+}
+
+.comment-item:hover {
+  transform: translateX(4rpx);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
 }
 
 .comment-header-info {
-  margin-bottom: 12rpx;
+  margin-bottom: 15rpx;
 }
 
 .user-name {
-  font-size: 26rpx;
+  font-size: 28rpx;
   color: #8B4513;
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.clickable:active {
+  opacity: 0.6;
 }
 
 .comment-rating {
-  margin-top: 4rpx;
+  margin-top: 8rpx;
+  padding: 4rpx 12rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+  border-radius: 12rpx;
+  display: inline-block;
 }
 
 .rating-stars {
-  font-size: 20rpx;
+  font-size: 22rpx;
 }
 
 .comment-time {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #999999;
 }
 
 .comment-content {
-  font-size: 26rpx;
+  font-size: 28rpx;
   color: #333333;
-  line-height: 1.5;
+  line-height: 1.6;
+  padding: 12rpx 0;
 }
 
 .no-comment {
   text-align: center;
-  padding: 60rpx 0;
+  padding: 80rpx 0;
   color: #999999;
+  font-size: 28rpx;
 }
 
-/* 弹窗样式 */
+.no-comment-text {
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+/* 弹窗样式 - 毛玻璃效果 */
 .comment-popup {
   background: white;
-  border-radius: 24rpx 24rpx 0 0;
+  border-radius: 32rpx 32rpx 0 0;
   max-height: 80vh;
+  box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.15);
 }
 
 .popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 35rpx 30rpx;
+  border-bottom: none;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  border-radius: 32rpx 32rpx 0 0;
 }
 
 .popup-title {
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: bold;
 }
 
 .popup-close {
-  font-size: 40rpx;
-  color: #999999;
+  font-size: 44rpx;
+  color: white;
+  opacity: 0.9;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .popup-body {
-  padding: 30rpx;
+  padding: 35rpx 30rpx;
 }
 
+/* 评分区域 - 立体卡片 */
 .rating-section {
   display: flex;
   align-items: center;
-  margin-bottom: 30rpx;
+  margin-bottom: 35rpx;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 25rpx;
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(139, 69, 19, 0.1);
 }
 
 .rating-label {
-  font-size: 28rpx;
-  margin-right: 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-right: 25rpx;
 }
 
+/* 输入框 - 3D效果 */
 .comment-textarea {
   width: 100%;
-  min-height: 200rpx;
-  padding: 20rpx;
-  border: 1rpx solid #e8e8e8;
-  border-radius: 8rpx;
+  min-height: 240rpx;
+  padding: 25rpx;
+  border: 2rpx solid #e8e8e8;
+  border-radius: 16rpx;
   font-size: 28rpx;
-  line-height: 1.5;
+  line-height: 1.6;
+  background: white;
+  box-shadow: inset 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
+.comment-textarea:focus {
+  border-color: #8B4513;
+  box-shadow: 0 0 0 4rpx rgba(139, 69, 19, 0.1),
+              inset 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 弹窗底部 */
 .popup-footer {
-  padding: 20rpx 30rpx;
-  border-top: 1rpx solid #f0f0f0;
+  padding: 25rpx 30rpx 35rpx;
+  border-top: none;
+  background: linear-gradient(180deg, transparent 0%, #fafafa 100%);
 }
 
+/* 提交按钮 - 3D渐变按钮 */
 .submit-btn {
   width: 100%;
-  height: 80rpx;
-  line-height: 80rpx;
-  border-radius: 40rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  box-shadow: 0 6rpx 20rpx rgba(139, 69, 19, 0.3);
+  transition: all 0.3s ease;
 }
 
+.submit-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(139, 69, 19, 0.2);
+}
+
+/* 加载和错误状态 */
 .loading-container, .error-state {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 60vh;
+  gap: 20rpx;
 }
 
 .error-text {

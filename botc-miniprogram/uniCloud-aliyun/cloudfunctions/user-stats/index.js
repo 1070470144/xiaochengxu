@@ -37,7 +37,8 @@ exports.main = async (event, context) => {
       postCount,        // 发布帖子数
       commentCount,     // 发表评论数
       likeCount,        // 获得点赞数
-      viewCount         // 获得浏览数
+      viewCount,        // 获得浏览数
+      chatCount         // 私聊会话数
     ] = await Promise.all([
       // 上传剧本数（假设有botc-scripts表）
       db.collection('botc-scripts').where({
@@ -91,7 +92,15 @@ exports.main = async (event, context) => {
         view_count: true
       }).get().then(res => {
         return { total: res.data.reduce((sum, item) => sum + (item.view_count || 0), 0) }
-      })
+      }),
+      
+      // 私聊会话数
+      db.collection('botc-chat-conversations').where(
+        db.command.or([
+          { user1_id: userId },
+          { user2_id: userId }
+        ])
+      ).count().catch(() => ({ total: 0 }))
     ])
     
     return {
@@ -105,7 +114,8 @@ exports.main = async (event, context) => {
         postCount: postCount.total || 0,
         commentCount: commentCount.total || 0,
         likeCount: likeCount.total || 0,
-        viewCount: viewCount.total || 0
+        viewCount: viewCount.total || 0,
+        chatCount: chatCount.total || 0
       }
     }
     

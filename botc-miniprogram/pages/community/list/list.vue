@@ -32,12 +32,13 @@
           <!-- 用户信息 -->
           <view class="post-header">
             <image 
-              class="avatar" 
+              class="avatar clickable" 
               :src="post.user?.avatar || '/static/default-avatar.png'"
               mode="aspectFill"
+              @click.stop="handleUserClick(post.user_id, post.user)"
             />
-            <view class="user-info">
-              <view class="nickname">{{ post.user?.nickname || '匿名用户' }}</view>
+            <view class="user-info" @click.stop="handleUserClick(post.user_id, post.user)">
+              <view class="nickname clickable">{{ post.user?.nickname || '匿名用户' }}</view>
               <view class="time">{{ formatTime(post.created_at) }}</view>
             </view>
             <view v-if="post.is_top" class="top-tag">置顶</view>
@@ -112,6 +113,7 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import UserAction from '@/utils/user-action.js'
 
 export default {
   name: 'CommunityList',
@@ -265,6 +267,16 @@ export default {
         const date = new Date(timestamp)
         return `${date.getMonth() + 1}-${date.getDate()}`
       }
+    },
+    
+    // 处理用户点击事件
+    handleUserClick(userId, userInfo = {}) {
+      console.log('handleUserClick triggered:', userId, userInfo)
+      if (!userId) {
+        console.warn('userId is empty in handleUserClick')
+        return
+      }
+      UserAction.showUserMenu(userId, userInfo)
     }
   }
 }
@@ -349,6 +361,15 @@ export default {
   font-weight: bold;
   color: #333;
   margin-bottom: 5rpx;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.clickable:active {
+  opacity: 0.6;
 }
 
 .time {

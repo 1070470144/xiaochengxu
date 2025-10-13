@@ -1,7 +1,7 @@
 {
   "bsonType": "object",
   "description": "血染钟楼剧本表",
-  "required": ["title", "creator_id", "status"],
+  "required": ["title", "status"],
   "properties": {
     "_id": {
       "description": "剧本ID"
@@ -69,8 +69,7 @@
       "description": "剧本JSON文件URL"
     },
     "json_data": {
-      "bsonType": "object",
-      "description": "剧本JSON内容"
+      "description": "剧本JSON内容（JSON字符串格式）"
     },
     "creator_id": {
       "bsonType": "string",
@@ -137,6 +136,16 @@
       "bsonType": "bool",
       "description": "是否精选",
       "defaultValue": false
+    },
+    "heat_score": {
+      "bsonType": "int",
+      "description": "热度分数（基于帖子、评论、点赞等计算）",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "heat_updated_at": {
+      "bsonType": "timestamp",
+      "description": "热度更新时间"
     },
     "published_at": {
       "bsonType": "timestamp",

@@ -184,7 +184,7 @@ export default {
         let orderByDirection = 'desc'
         
         if (this.currentType === 'hot') {
-          orderByField = 'view_count'
+          orderByField = 'heat_score'  // 使用热度分数排序
         } else if (this.currentType === 'rating') {
           orderByField = 'rating'
         } else if (this.currentType === 'new') {

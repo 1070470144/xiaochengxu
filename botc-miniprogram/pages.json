@@ -98,6 +98,31 @@
 			}
 		},
 		{
+			"path": "pages/chat/list/list",
+			"style": {
+				"navigationBarTitleText": "私聊",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/chat/detail/detail",
+			"style": {
+				"navigationBarTitleText": "私聊",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/test/user-click-test",
+			"style": {
+				"navigationBarTitleText": "用户点击测试",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/shop/list/list",
 			"style": {
 				"navigationBarTitleText": "血染店铺",

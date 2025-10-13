@@ -574,5 +574,17 @@
 		"enable": true,
 		"create_date": 1702800000000,
 		"_id": "botc-post-audit"
+	},
+	{
+		"menu_id": "botc-script-manage",
+		"name": "剧本管理",
+		"icon": "admin-icons-book",
+		"url": "/pages/botc/script/list",
+		"sort": 104,
+		"parent_id": "botc-manage",
+		"permission": [],
+		"enable": true,
+		"create_date": 1702800000000,
+		"_id": "botc-script-manage"
 	}
 ]

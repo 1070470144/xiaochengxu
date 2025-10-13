@@ -303,6 +303,18 @@
 					"style": {
 						"navigationBarTitleText": "帖子审核"
 					}
+				},
+				{
+					"path": "script/list",
+					"style": {
+						"navigationBarTitleText": "剧本管理"
+					}
+				},
+				{
+					"path": "script/edit",
+					"style": {
+						"navigationBarTitleText": "编辑剧本"
+					}
 				}
 			]
 		},
