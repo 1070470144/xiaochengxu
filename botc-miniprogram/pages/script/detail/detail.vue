@@ -264,9 +264,15 @@ export default {
       this.loading = true
       
       try {
+        // 获取用户token（用于验证是否可以查看待审核剧本）
+        const token = uni.getStorageSync('uni_id_token') || uni.getStorageSync('userInfo')?._id || ''
+        
         const result = await uniCloud.callFunction({
           name: 'script-detail',
-          data: { id: this.scriptId }
+          data: { 
+            id: this.scriptId,
+            token: token  // 传递token，用于权限验证
+          }
         })
 
         if (result.result.code === 0) {

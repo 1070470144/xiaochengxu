@@ -127,6 +127,16 @@
           <text class="card-title">📚 内容管理</text>
         </view>
         <view class="function-list">
+          <view class="function-row" @click="goToMyUploads">
+            <view class="row-left">
+              <view class="row-icon">📄</view>
+              <text class="row-title">我的上传</text>
+            </view>
+            <view class="row-right">
+              <text class="row-count" v-if="userStats.uploadCount > 0">{{ userStats.uploadCount }}</text>
+              <text class="row-arrow">›</text>
+            </view>
+          </view>
           <view class="function-row" @click="goToFavorites">
             <view class="row-left">
               <view class="row-icon">⭐</view>
@@ -422,6 +432,12 @@ export default {
     },
 
     // 页面跳转方法
+    goToMyUploads() {
+      uni.navigateTo({
+        url: '/pages/user/my-uploads/my-uploads'
+      })
+    },
+    
     goToFavorites() {
       uni.navigateTo({
         url: '/pages/user/favorites/favorites'

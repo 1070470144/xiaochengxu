@@ -1,125 +1,121 @@
 'use strict';
 
-// 上传剧本云函数
+/**
+ * 剧本上传云函数
+ * 功能：接收剧本JSON，自动生成预览图，保存到数据库
+ */
+
+// 导入预览图生成器
+const { generateScriptPreviewSVG, extractScriptInfo } = require('./preview-generator')
+
 exports.main = async (event, context) => {
-  console.log('上传剧本，参数：', event)
+  const { title, author, description, json, token } = event
   
-  const { 
-    title, 
-    subtitle = '',
-    author = '',
-    description = '',
-    playerCount = '',
-    difficulty = 2,
-    duration = 0,
-    tags = [],
-    jsonData = null,
-    jsonUrl = '',
-    token
-  } = event
-  
-  if (!title) {
+  // 参数验证
+  if (!title || !author || !json) {
     return {
       code: 400,
-      message: '剧本标题不能为空',
-      data: null
+      message: '缺少必要参数'
     }
   }
   
-  // 验证token并获取用户ID
+  // 解析JSON
+  let parsedJson
+  try {
+    parsedJson = typeof json === 'string' ? JSON.parse(json) : json
+  } catch (error) {
+    return {
+      code: 400,
+      message: 'JSON格式错误'
+    }
+  }
+  
+  // 验证token并获取用户ID（参考项目现有方式）
   if (!token) {
     return {
       code: 401,
-      message: '请先登录',
-      data: null
+      message: '请先登录'
     }
   }
   
-  const uid = token.split('_')[0]
+  const userId = token.split('_')[0]
   
-  if (!uid) {
+  if (!userId) {
     return {
       code: 401,
-      message: 'Token无效',
-      data: null
+      message: 'Token无效'
     }
   }
   
-  const db = uniCloud.database()
-  const collection = db.collection('botc-scripts')
-  
   try {
-    // 检查标题是否重复
-    const existingScript = await collection.where({
-      title: title.trim(),
-      status: db.command.neq(-1) // 排除已删除的
-    }).get()
-    
-    if (existingScript.data.length > 0) {
-      return {
-        code: 400,
-        message: '剧本标题已存在，请换一个标题',
-        data: null
-      }
+    // 生成剧本预览图SVG
+    const scriptData = {
+      id: generateScriptId(),
+      title,
+      author,
+      json: parsedJson
     }
     
-    // 创建剧本数据
-    const scriptData = {
-      title: title.trim(),
-      subtitle: subtitle.trim(),
-      author: author.trim(),
-      description: description.trim(),
-      player_count: playerCount.trim(),
-      difficulty: parseInt(difficulty),
-      duration: parseInt(duration) || null,
-      tags: tags.filter(tag => tag.trim()),
-      json_url: jsonUrl.trim(),
-      json_data: jsonData,
-      creator_id: uid,
-      status: 0, // 待审核
+    console.log('[SCRIPT-UPLOAD] Generating preview for:', title)
+    const svgContent = generateScriptPreviewSVG(scriptData)
+    
+    // 将SVG转为base64（用于存储）
+    const svgBase64 = Buffer.from(svgContent, 'utf-8').toString('base64')
+    const previewDataUrl = `data:image/svg+xml;base64,${svgBase64}`
+    
+    // 提取剧本信息用于展示
+    const scriptInfo = extractScriptInfo(scriptData)
+    
+    // 保存到数据库
+    const db = uniCloud.database()
+    const scriptsCollection = db.collection('botc-scripts')
+    
+    const scriptDoc = {
+      title,
+      author,
+      description: description || scriptInfo.description || '',
+      json_data: parsedJson, // 保存原始JSON
+      preview_image: previewDataUrl, // 保存SVG预览图（base64）
+      player_count: scriptInfo.playerCount,
+      total_characters: scriptInfo.totalCharacters,
+      difficulty: scriptInfo.difficulty,
+      script_type: scriptInfo.scriptType,
+      tags: scriptInfo.tags || [],
+      creator_id: userId,
+      status: 0, // 0-待审核
       view_count: 0,
       download_count: 0,
-      share_count: 0,
       favorite_count: 0,
       comment_count: 0,
       rating: 0,
       rating_count: 0,
-      is_featured: false,
-      created_at: new Date()
+      created_at: Date.now(),
+      updated_at: Date.now()
     }
     
-    const result = await collection.add(scriptData)
+    const insertRes = await scriptsCollection.add(scriptDoc)
     
-    // 增加用户经验值（上传剧本）
-    try {
-      await uniCloud.callFunction({
-        name: 'user-add-exp',
-        data: {
-          userId: uid,
-          expType: 'UPLOAD_SCRIPT',
-          amount: 20
-        }
-      })
-    } catch (error) {
-      console.error('增加经验值失败：', error)
-      // 不影响主流程
-    }
+    console.log('[SCRIPT-UPLOAD] Script saved:', insertRes.id)
     
     return {
       code: 0,
-      message: '剧本上传成功，等待审核',
+      message: '上传成功',
       data: {
-        script_id: result.id,
-        status: 0
+        scriptId: insertRes.id,
+        previewGenerated: true,
+        previewImage: previewDataUrl  // 返回预览图URL
       }
     }
-    
   } catch (error) {
-    console.error('上传剧本失败：', error)
+    console.error('[SCRIPT-UPLOAD] Error:', error)
     return {
       code: 500,
-      message: '上传失败，请重试',
-      data: null
+      message: '上传失败：' + error.message
     }
   }
+}
+
+// 生成唯一的剧本ID
+function generateScriptId() {
+  return 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)
 }

@@ -50,6 +50,30 @@
 			}
 		},
 		{
+			"path": "pages/tools/index/index",
+			"style": {
+				"navigationBarTitleText": "工具箱",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/tools/upload-json/upload-json",
+			"style": {
+				"navigationBarTitleText": "剧本上传",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/tools/wiki/wiki",
+			"style": {
+				"navigationBarTitleText": "血染百科",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/user/profile/profile",
 			"style": {
 				"navigationBarTitleText": "我的",
@@ -105,6 +129,15 @@
 				"navigationBarTitleText": "我的拼车",
 				"navigationBarBackgroundColor": "#8B4513",
 				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/user/my-uploads/my-uploads",
+			"style": {
+				"navigationBarTitleText": "我的上传",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
 			}
 		},
 		{
@@ -560,10 +593,10 @@
 			"selectedIconPath": "static/tabbar/script_active.png",
 			"text": "剧本"
 		}, {
-			"pagePath": "pages/carpool/list/list",
+			"pagePath": "pages/tools/index/index",
 			"iconPath": "static/tabbar/carpool.png", 
 			"selectedIconPath": "static/tabbar/carpool_active.png",
-			"text": "拼车"
+			"text": "工具"
 		}, {
 			"pagePath": "pages/community/list/list",
 			"iconPath": "static/tabbar/community.png", 
