@@ -299,20 +299,44 @@ function generateScriptPreviewSVG(scriptData) {
         const name = char.name || char.id || '未知'
         const ability = char.ability || char.description || ''
         const initial = name.charAt(0) || '?'
+        const imageUrl = char.image || ''  // 获取图片URL
         
         const abilityLines = ability ? splitTextToLines(ability, 19, 5) : []
         const currentHeight = abilityLines.length > 0 ? 20 + (abilityLines.length - 1) * 8 : 14
         
-        // Logo（使用首字母，云函数环境不处理图片）
-        roleElements.push(`
-          <circle cx="${logoX}" cy="${y - 3}" r="${logoSize / 2 + 1}" fill="${teamColor}" opacity="0.15"/>
-          <circle cx="${logoX}" cy="${y - 3}" r="${logoSize / 2}" fill="${teamColor}" opacity="0.25"/>
-          <text x="${logoX}" y="${y + 2}" font-size="11" font-weight="bold" fill="${teamColor}" text-anchor="middle">${initial}</text>
-        `)
+        // Logo - 优先使用图片，图片不可用时使用首字母
+        if (imageUrl) {
+          // 使用真实图片（SVG image标签 + clipPath裁剪成圆形）
+          const clipId = `clip-${char.id || index}-${team}`
+          roleElements.push(`
+            <defs>
+              <clipPath id="${clipId}">
+                <circle cx="${logoX}" cy="${y - 3}" r="${logoSize / 2}"/>
+              </clipPath>
+            </defs>
+            <circle cx="${logoX}" cy="${y - 3}" r="${logoSize / 2 + 1}" fill="${teamColor}" opacity="0.2"/>
+            <image 
+              href="${imageUrl}" 
+              x="${logoX - logoSize / 2}" 
+              y="${y - 3 - logoSize / 2}" 
+              width="${logoSize}" 
+              height="${logoSize}" 
+              clip-path="url(#${clipId})" 
+              preserveAspectRatio="xMidYMid slice"
+            />
+          `)
+        } else {
+          // 备用：使用首字母
+          roleElements.push(`
+            <circle cx="${logoX}" cy="${y - 3}" r="${logoSize / 2 + 1}" fill="${teamColor}" opacity="0.15"/>
+            <circle cx="${logoX}" cy="${y - 3}" r="${logoSize / 2}" fill="${teamColor}" opacity="0.25"/>
+            <text x="${logoX}" y="${y + 2}" font-size="11" font-weight="bold" fill="${teamColor}" text-anchor="middle">${initial}</text>
+          `)
+        }
         
         // 角色名字
         roleElements.push(`
-          <text x="${textX}" y="${y}" font-size="8" font-weight="bold" fill="#ffffff">${name}</text>
+          <text x="${textX}" y="${y}" font-size="8" font-weight="bold" fill="#ffffff">${escapeXml(name)}</text>
         `)
         
         // 角色技能
@@ -411,12 +435,36 @@ function generateScriptPreviewSVG(scriptData) {
         const y = startY + (index + 2) * logoSpacing + logoSize / 2
         const initial = action.name.charAt(0) || '?'
         const charFontSize = Math.max(10, logoSize * 0.4)
+        const imageUrl = action.image || ''
         
-        nightElements.push(`
-          <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}" fill="#8b5cf6" opacity="0.15"/>
-          <text x="${centerX}" y="${y + charFontSize * 0.35}" font-size="${charFontSize}" font-weight="bold" 
-                fill="#8b5cf6" text-anchor="middle">${initial}</text>
-        `)
+        if (imageUrl) {
+          // 使用角色图片
+          const clipId = `clip-first-${index}`
+          nightElements.push(`
+            <defs>
+              <clipPath id="${clipId}">
+                <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}"/>
+              </clipPath>
+            </defs>
+            <circle cx="${centerX}" cy="${y}" r="${logoSize / 2 + 1}" fill="#8b5cf6" opacity="0.2"/>
+            <image 
+              href="${imageUrl}" 
+              x="${centerX - logoSize / 2}" 
+              y="${y - logoSize / 2}" 
+              width="${logoSize}" 
+              height="${logoSize}" 
+              clip-path="url(#${clipId})" 
+              preserveAspectRatio="xMidYMid slice"
+            />
+          `)
+        } else {
+          // 备用：使用首字母
+          nightElements.push(`
+            <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}" fill="#8b5cf6" opacity="0.15"/>
+            <text x="${centerX}" y="${y + charFontSize * 0.35}" font-size="${charFontSize}" font-weight="bold" 
+                  fill="#8b5cf6" text-anchor="middle">${initial}</text>
+          `)
+        }
       })
     }
     
@@ -428,12 +476,36 @@ function generateScriptPreviewSVG(scriptData) {
         const y = startY + index * logoSpacing + logoSize / 2
         const initial = action.name.charAt(0) || '?'
         const fontSize = Math.max(10, logoSize * 0.4)
+        const imageUrl = action.image || ''
         
-        nightElements.push(`
-          <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}" fill="#8b5cf6" opacity="0.15"/>
-          <text x="${centerX}" y="${y + fontSize * 0.35}" font-size="${fontSize}" font-weight="bold" 
-                fill="#8b5cf6" text-anchor="middle">${initial}</text>
-        `)
+        if (imageUrl) {
+          // 使用角色图片
+          const clipId = `clip-other-${index}`
+          nightElements.push(`
+            <defs>
+              <clipPath id="${clipId}">
+                <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}"/>
+              </clipPath>
+            </defs>
+            <circle cx="${centerX}" cy="${y}" r="${logoSize / 2 + 1}" fill="#8b5cf6" opacity="0.2"/>
+            <image 
+              href="${imageUrl}" 
+              x="${centerX - logoSize / 2}" 
+              y="${y - logoSize / 2}" 
+              width="${logoSize}" 
+              height="${logoSize}" 
+              clip-path="url(#${clipId})" 
+              preserveAspectRatio="xMidYMid slice"
+            />
+          `)
+        } else {
+          // 备用：使用首字母
+          nightElements.push(`
+            <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}" fill="#8b5cf6" opacity="0.15"/>
+            <text x="${centerX}" y="${y + fontSize * 0.35}" font-size="${fontSize}" font-weight="bold" 
+                  fill="#8b5cf6" text-anchor="middle">${initial}</text>
+          `)
+        }
       })
     }
     

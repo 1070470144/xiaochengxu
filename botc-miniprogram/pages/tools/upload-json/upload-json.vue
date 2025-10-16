@@ -158,13 +158,31 @@
       </view>
     </view>
 
-    <!-- 预览图提示 -->
-    <view v-if="parsedInfo" class="card section preview-tip-section">
+    <!-- 预览图展示（上传成功后） -->
+    <view v-if="uploadedPreviewImage" class="card section preview-display-section">
+      <view class="section-header">
+        <text class="section-title">生成的预览图</text>
+        <text class="preview-success">✓ 已生成</text>
+      </view>
+      
+      <view class="preview-display">
+        <image 
+          class="preview-img" 
+          :src="uploadedPreviewImage" 
+          mode="widthFix"
+          @click="previewImage"
+        />
+        <text class="preview-hint">点击图片可放大查看</text>
+      </view>
+    </view>
+
+    <!-- 预览图提示（未上传时） -->
+    <view v-if="parsedInfo && !uploadedPreviewImage" class="card section preview-tip-section">
       <view class="preview-tip-box">
         <text class="tip-icon">🖼️</text>
         <view class="tip-content">
           <text class="tip-title">自动生成预览图</text>
-          <text class="tip-desc">提交后将根据您的剧本JSON自动生成精美的SVG预览图</text>
+          <text class="tip-desc">提交后将根据您的剧本JSON自动生成精美的SVG预览图，包含角色分类、夜晚行动顺序等</text>
         </view>
       </view>
     </view>
@@ -210,7 +228,8 @@ export default {
         customAuthor: '',
         description: ''
       },
-      uploading: false
+      uploading: false,
+      uploadedPreviewImage: ''  // 上传成功后的预览图
     }
   },
   
@@ -508,16 +527,29 @@ export default {
         })
         
         if (res.result.code === 0) {
-          uni.showModal({
-            title: '上传成功',
-            content: `剧本已提交审核\n预览图已自动生成\n\n使用信息：\n标题：${finalTitle}\n作者：${finalAuthor}`,
-            showCancel: false,
-            success: () => {
-              uni.redirectTo({
-                url: '/pages/user/my-uploads/my-uploads'
-              })
-            }
-          })
+          // 保存生成的预览图
+          this.uploadedPreviewImage = res.result.data.previewImage || ''
+          this.currentStep = 3
+          
+          // 延迟显示成功提示，让用户先看到预览图
+          setTimeout(() => {
+            uni.showModal({
+              title: '上传成功',
+              content: `剧本已提交审核\n预览图已自动生成\n\n使用信息：\n标题：${finalTitle}\n作者：${finalAuthor}`,
+              confirmText: '查看我的上传',
+              cancelText: '继续上传',
+              success: (modalRes) => {
+                if (modalRes.confirm) {
+                  uni.redirectTo({
+                    url: '/pages/user/my-uploads/my-uploads'
+                  })
+                } else {
+                  // 重置表单，允许继续上传
+                  this.reset()
+                }
+              }
+            })
+          }, 1000)
         } else {
           throw new Error(res.result.message || '上传失败')
         }
@@ -557,6 +589,49 @@ export default {
         fabled: '传奇角色'
       }
       return names[team] || '未知'
+    },
+    
+    // 预览图片（点击放大）
+    previewImage() {
+      if (!this.uploadedPreviewImage) return
+      
+      uni.previewImage({
+        urls: [this.uploadedPreviewImage],
+        current: this.uploadedPreviewImage,
+        longPressActions: {
+          itemList: ['保存图片'],
+          success: (data) => {
+            if (data.tapIndex === 0) {
+              this.savePreviewImage()
+            }
+          }
+        }
+      })
+    },
+    
+    // 保存预览图
+    async savePreviewImage() {
+      try {
+        uni.showLoading({ title: '保存中...' })
+        
+        // 保存到相册
+        await uni.saveImageToPhotosAlbum({
+          filePath: this.uploadedPreviewImage
+        })
+        
+        uni.showToast({
+          title: '预览图已保存',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('保存失败:', error)
+        uni.showToast({
+          title: '保存失败',
+          icon: 'none'
+        })
+      } finally {
+        uni.hideLoading()
+      }
     }
   }
 }
@@ -896,6 +971,41 @@ export default {
   font-size: 28rpx;
   line-height: 1.6;
   border: 2rpx solid #e0e0e0;
+}
+
+/* 预览图展示区 */
+.preview-display-section {
+  background: linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%);
+  border-left: 6rpx solid #52c41a;
+}
+
+.preview-success {
+  font-size: 22rpx;
+  color: #52c41a;
+  padding: 6rpx 16rpx;
+  background: #f6ffed;
+  border-radius: 20rpx;
+}
+
+.preview-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.preview-img {
+  width: 100%;
+  max-width: 520rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.preview-hint {
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
 }
 
 /* 预览提示 */

@@ -50,6 +50,36 @@
         </view>
       </view>
 
+      <!-- 剧本预览图 -->
+      <view v-if="scriptDetail.preview_image" class="preview-card card">
+        <view class="card-header">
+          <text class="card-title">剧本预览图</text>
+          <view class="download-options">
+            <text class="download-tip">点击图片可放大查看</text>
+          </view>
+        </view>
+        <view class="card-body">
+          <image 
+            class="preview-image" 
+            :src="scriptDetail.preview_image" 
+            mode="widthFix"
+            @click="previewImage"
+          />
+          
+          <!-- 下载按钮 -->
+          <view class="preview-actions">
+            <button class="preview-btn btn-normal" @click="downloadPreviewNormal">
+              <text class="btn-icon">📥</text>
+              <text class="btn-text">普通下载</text>
+            </button>
+            <button class="preview-btn btn-hd" @click="downloadPreviewHD">
+              <text class="btn-icon">🖼️</text>
+              <text class="btn-text">超高清打印</text>
+            </button>
+          </view>
+        </view>
+      </view>
+
       <!-- 剧本描述 -->
       <view class="desc-card card">
         <view class="card-header">
@@ -476,6 +506,118 @@ export default {
     },
 
     // 下载剧本
+    // 预览图片（点击放大）
+    previewImage() {
+      if (!this.scriptDetail.preview_image) return
+      
+      uni.previewImage({
+        urls: [this.scriptDetail.preview_image],
+        current: this.scriptDetail.preview_image,
+        longPressActions: {
+          itemList: ['保存图片'],
+          success: (data) => {
+            if (data.tapIndex === 0) {
+              this.saveImageToAlbum(this.scriptDetail.preview_image)
+            }
+          }
+        }
+      })
+    },
+    
+    // 下载预览图（普通版）
+    async downloadPreviewNormal() {
+      if (!this.scriptDetail.preview_image) return
+      
+      uni.showLoading({ title: '准备下载...' })
+      
+      try {
+        // SVG图片可以直接保存
+        await this.saveImageToAlbum(this.scriptDetail.preview_image)
+        
+        uni.showToast({
+          title: '预览图已保存',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('下载失败:', error)
+        uni.showToast({
+          title: '下载失败',
+          icon: 'none'
+        })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+    
+    // 下载预览图（超高清打印版）
+    async downloadPreviewHD() {
+      uni.showLoading({ title: '准备生成高清版...' })
+      
+      try {
+        // 调用云函数生成高清版（可选功能）
+        const res = await uniCloud.callFunction({
+          name: 'script-generate-hd-preview',
+          data: {
+            scriptId: this.scriptId,
+            quality: 'ultra'
+          }
+        })
+        
+        if (res.result.code === 0) {
+          await this.saveImageToAlbum(res.result.data.hdImageUrl)
+          uni.showToast({
+            title: '超高清版已保存',
+            icon: 'success'
+          })
+        } else {
+          throw new Error(res.result.message)
+        }
+      } catch (error) {
+        console.error('生成高清版失败:', error)
+        
+        // 降级方案：直接保存普通版
+        uni.showModal({
+          title: '提示',
+          content: '超高清版生成失败，是否保存普通版？',
+          success: (res) => {
+            if (res.confirm) {
+              this.downloadPreviewNormal()
+            }
+          }
+        })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+    
+    // 保存图片到相册
+    async saveImageToAlbum(imageUrl) {
+      return new Promise((resolve, reject) => {
+        // 如果是base64图片，需要先转换
+        if (imageUrl.startsWith('data:image')) {
+          // base64图片直接保存
+          uni.saveImageToPhotosAlbum({
+            filePath: imageUrl,
+            success: resolve,
+            fail: reject
+          })
+        } else {
+          // 网络图片先下载再保存
+          uni.downloadFile({
+            url: imageUrl,
+            success: (downloadRes) => {
+              uni.saveImageToPhotosAlbum({
+                filePath: downloadRes.tempFilePath,
+                success: resolve,
+                fail: reject
+              })
+            },
+            fail: reject
+          })
+        }
+      })
+    },
+    
     async downloadScript() {
       try {
         uni.showLoading({ title: '准备下载...' })
@@ -905,6 +1047,72 @@ export default {
 }
 
 /* 描述卡片 */
+/* 预览图卡片 */
+.preview-card {
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.download-options {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.download-tip {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.preview-image {
+  width: 100%;
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.preview-btn {
+  flex: 1;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
+}
+
+.preview-btn.btn-normal {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  box-shadow: 0 4rpx 16rpx rgba(79, 172, 254, 0.3);
+}
+
+.preview-btn.btn-hd {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  box-shadow: 0 4rpx 16rpx rgba(245, 87, 108, 0.3);
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.btn-text {
+  font-size: 28rpx;
+}
+
 .desc-card {
   margin: 30rpx 20rpx;
   background: white;
