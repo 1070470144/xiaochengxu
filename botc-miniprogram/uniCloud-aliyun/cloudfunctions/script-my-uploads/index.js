@@ -27,22 +27,25 @@ exports.main = async (event, context) => {
   
   try {
     const db = uniCloud.database()
+    const $ = db.command
     const scriptsCollection = db.collection('botc-scripts')
+    
+    // 构建查询条件：只查询未删除的记录
+    const whereCondition = {
+      creator_id: userId,
+      deleted_at: $.or($.eq(null), $.not($.exists(true)))  // deleted_at为null或不存在
+    }
     
     // 查询该用户上传的剧本
     const countRes = await scriptsCollection
-      .where({
-        creator_id: userId
-      })
+      .where(whereCondition)
       .count()
     
     const total = countRes.total
     
     // 分页查询
     const listRes = await scriptsCollection
-      .where({
-        creator_id: userId
-      })
+      .where(whereCondition)
       .orderBy('created_at', 'desc')
       .skip((page - 1) * pageSize)
       .limit(pageSize)

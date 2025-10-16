@@ -1,23 +1,20 @@
 <template>
   <view class="page">
-    <!-- 统计栏 -->
-    <view class="stats-bar">
-      <view class="stat-item" :class="{ active: filterStatus === 'all' }" @click="filterStatus = 'all'">
-        <text class="stat-label">全部</text>
-        <text class="stat-number">{{ totalCount }}</text>
-      </view>
-      <view class="stat-item" :class="{ active: filterStatus === 0 }" @click="filterStatus = 0">
-        <text class="stat-label">待审核</text>
-        <text class="stat-number">{{ pendingCount }}</text>
-      </view>
-      <view class="stat-item" :class="{ active: filterStatus === 1 }" @click="filterStatus = 1">
-        <text class="stat-label">已发布</text>
-        <text class="stat-number">{{ publishedCount }}</text>
-      </view>
-      <view class="stat-item" :class="{ active: filterStatus === 2 }" @click="filterStatus = 2">
-        <text class="stat-label">已拒绝</text>
-        <text class="stat-number">{{ rejectedCount }}</text>
-      </view>
+    <!-- 筛选栏 -->
+    <view class="filter-bar">
+      <scroll-view scroll-x="true" class="filter-scroll" :show-scrollbar="false">
+        <view class="filter-items">
+          <text 
+            v-for="category in categories" 
+            :key="category.type"
+            :class="['filter-item', filterStatus === category.type ? 'active' : '']"
+            @click="filterStatus = category.type"
+          >
+            {{ category.icon }} {{ category.name }}
+            <text v-if="category.count > 0" class="count-badge">{{ category.count }}</text>
+          </text>
+        </view>
+      </scroll-view>
     </view>
 
     <!-- 快捷上传按钮 -->
@@ -113,29 +110,27 @@ export default {
   },
   
   computed: {
+    // 分类标签
+    categories() {
+      const totalCount = this.uploadList.length
+      const pendingCount = this.uploadList.filter(item => item.status === 0).length
+      const publishedCount = this.uploadList.filter(item => item.status === 1).length
+      const rejectedCount = this.uploadList.filter(item => item.status === 2).length
+      
+      return [
+        { type: 'all', name: '全部', icon: '📚', count: totalCount },
+        { type: 0, name: '待审核', icon: '🟡', count: pendingCount },
+        { type: 1, name: '已发布', icon: '🟢', count: publishedCount },
+        { type: 2, name: '已拒绝', icon: '🔴', count: rejectedCount }
+      ]
+    },
+    
     // 过滤后的列表
     filteredList() {
       if (this.filterStatus === 'all') {
         return this.uploadList
       }
       return this.uploadList.filter(item => item.status === this.filterStatus)
-    },
-    
-    // 各状态数量统计
-    totalCount() {
-      return this.uploadList.length
-    },
-    
-    pendingCount() {
-      return this.uploadList.filter(item => item.status === 0).length
-    },
-    
-    publishedCount() {
-      return this.uploadList.filter(item => item.status === 1).length
-    },
-    
-    rejectedCount() {
-      return this.uploadList.filter(item => item.status === 2).length
     },
     
     // 空状态提示文本
@@ -338,53 +333,70 @@ export default {
   padding-bottom: 40rpx;
 }
 
-/* 统计栏 */
-.stats-bar {
-  display: flex;
-  background: white;
+/* 筛选栏 */
+.filter-bar {
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.filter-scroll {
+  white-space: nowrap;
   padding: 24rpx 0;
-  margin-bottom: 20rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.stat-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 0;
-  transition: all 0.3s ease;
+/* 隐藏横向滚动条 */
+.filter-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-.stat-item.active {
-  background: linear-gradient(135deg, rgba(245, 87, 108, 0.1) 0%, rgba(240, 147, 251, 0.1) 100%);
-  border-bottom: 4rpx solid #f5576c;
+.filter-items {
+  display: inline-flex;
+  padding: 0 24rpx;
 }
 
-.stat-label {
-  font-size: 24rpx;
-  color: #999;
+.filter-item {
+  display: inline-block;
+  padding: 16rpx 24rpx;
+  margin-right: 16rpx;
+  font-size: 28rpx;
+  color: #666;
+  background: #f5f5f5;
+  border-radius: 16rpx;
+  white-space: nowrap;
+  transition: all 0.2s;
+  position: relative;
 }
 
-.stat-item.active .stat-label {
-  color: #f5576c;
-  font-weight: bold;
+.filter-item.active {
+  background: #8b4513;
+  color: #fff;
+  font-weight: 500;
 }
 
-.stat-number {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
+.count-badge {
+  display: inline-block;
+  margin-left: 8rpx;
+  padding: 2rpx 10rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 20rpx;
+  font-size: 22rpx;
 }
 
-.stat-item.active .stat-number {
-  color: #f5576c;
+.filter-item.active .count-badge {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* 快捷上传 */
 .quick-upload {
-  padding: 0 24rpx 24rpx;
+  padding: 24rpx;
+  background: #f5f5f5;
 }
 
 .upload-btn {
@@ -445,7 +457,7 @@ export default {
 
 /* 上传列表 */
 .upload-list {
-  padding: 0 24rpx;
+  padding: 24rpx;
 }
 
 .upload-card {
