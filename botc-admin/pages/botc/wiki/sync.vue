@@ -202,26 +202,39 @@
     </view>
     
     <view v-if="lastSync" class="last-sync-section card">
-      <view class="section-title">最后同步</view>
+      <view class="section-title">
+        最后同步
+        <text class="sync-type-badge" :class="'badge-' + lastSync.sync_type">
+          {{ getSyncTypeText(lastSync.sync_type) }}
+        </text>
+      </view>
       <view class="sync-info">
         <view class="info-row">
-          <text class="info-label">同步时间：</text>
+          <text class="info-label">同步时间</text>
           <text class="info-value">{{ formatTime(lastSync.start_time) }}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">同步类型：</text>
-          <text class="info-value">{{ getSyncTypeText(lastSync.sync_type) }}</text>
+          <text class="info-label">同步数量</text>
+          <text class="info-value">共 {{ lastSync.total_count || 0 }} 个</text>
         </view>
         <view class="info-row">
-          <text class="info-label">同步结果：</text>
-          <text class="info-value success">成功 {{ lastSync.success_count }}</text>
-          <text class="info-value failed">失败 {{ lastSync.failed_count }}</text>
+          <text class="info-label">同步结果</text>
+          <view class="result-badges">
+            <text class="result-badge success">✓ 成功 {{ lastSync.success_count || 0 }}</text>
+            <text v-if="lastSync.failed_count > 0" class="result-badge failed">✗ 失败 {{ lastSync.failed_count }}</text>
+          </view>
         </view>
         <view class="info-row">
-          <text class="info-label">耗时：</text>
-          <text class="info-value">{{ lastSync.duration }}秒</text>
+          <text class="info-label">耗时</text>
+          <text class="info-value">{{ lastSync.duration || 0 }} 秒</text>
         </view>
       </view>
+    </view>
+    
+    <view v-else class="last-sync-section card empty-state">
+      <view class="empty-icon">📋</view>
+      <text class="empty-text">暂无同步记录</text>
+      <text class="empty-hint">请先添加并同步角色</text>
     </view>
     
     <view class="logs-section card">
@@ -334,25 +347,31 @@ export default {
       try {
         const db = uniCloud.database();
         const res = await db.collection('wiki_sync_logs')
-          .orderBy('start_time', 'desc')
+          .orderBy('created_at', 'desc')
           .limit(10)
           .get();
         
-        console.log('同步日志原始结果:', res);
-        console.log('res.result:', res.result);
-        console.log('res.data:', res.data);
+        console.log('[loadSyncLogs] 同步日志原始结果:', res);
         
         // 兼容不同的返回格式
         const data = res.result?.data || res.data || [];
-        console.log('实际日志数据:', data);
+        console.log('[loadSyncLogs] 获取到', data.length, '条日志');
         
         this.syncLogs = data;
         if (this.syncLogs.length > 0) {
           this.lastSync = this.syncLogs[0];
-          console.log('最后一次同步:', this.lastSync);
+          console.log('[loadSyncLogs] 最后一次同步:', {
+            type: this.lastSync.sync_type,
+            time: this.formatTime(this.lastSync.start_time),
+            success: this.lastSync.success_count,
+            failed: this.lastSync.failed_count
+          });
+        } else {
+          this.lastSync = null;
+          console.log('[loadSyncLogs] 暂无同步日志');
         }
       } catch (error) {
-        console.error('加载日志失败', error);
+        console.error('[loadSyncLogs] 加载日志失败:', error);
         uni.showToast({
           title: '加载日志失败: ' + error.message,
           icon: 'none'
@@ -1073,12 +1092,98 @@ export default {
   color: #999;
 }
 
-/* 旧样式保留 */
-.sync-info { display: flex; flex-direction: column; gap: 12px; }
-.info-row { display: flex; align-items: center; font-size: 14px; }
-.info-label { color: #666; margin-right: 8px; min-width: 80px; }
-.info-value { color: #333; margin-right: 16px; }
-.info-value.success { color: #52c41a; }
-.info-value.failed { color: #f5222d; }
+/* 最后同步样式 */
+.last-sync-section { }
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sync-type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.sync-type-badge.badge-roles {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+.sync-type-badge.badge-all {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+.sync-info { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 16px;
+  margin-top: 8px;
+}
+.info-row { 
+  display: flex; 
+  align-items: center; 
+  font-size: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.info-row:last-child {
+  border-bottom: none;
+}
+.info-label { 
+  color: #999; 
+  min-width: 90px;
+  font-size: 13px;
+}
+.info-value { 
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+.result-badges {
+  display: flex;
+  gap: 8px;
+}
+.result-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.result-badge.success { 
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+.result-badge.failed { 
+  background: #fff1f0;
+  color: #f5222d;
+  border: 1px solid #ffa39e;
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+.empty-text {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.empty-hint {
+  font-size: 13px;
+  color: #999;
+}
 </style>
 
