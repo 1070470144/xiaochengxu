@@ -113,7 +113,10 @@ exports.main = async (event, context) => {
       },
       role_info: { team: null, team_name: null, ability: null },
       role_detail: role_detail,  // 🆕 v2.1: 详细内容
-      media: { icon_url: null, images: [] },
+      media: { 
+        icon_url: role_detail ? role_detail.icon_url : null,  // 🆕 使用解析的图标
+        images: [] 
+      },
       category: '角色',
       tags: [],
       keywords: [title],

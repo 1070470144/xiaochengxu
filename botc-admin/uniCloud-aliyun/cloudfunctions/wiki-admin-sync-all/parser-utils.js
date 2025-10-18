@@ -469,6 +469,70 @@ function getTokenIcon(tokenName) {
 }
 
 /**
+ * 提取角色图标
+ * 提取页面中的角色图片URL
+ */
+function parseRoleIcon(html) {
+  try {
+    // 在 mw-parser-output 区域内查找图片
+    const contentMatch = html.match(/<div[^>]*class="mw-parser-output"[^>]*>([\s\S]*?)<\/div>/i);
+    const searchArea = contentMatch ? contentMatch[1] : html;
+    
+    // 优先从srcset提取高清图片
+    const srcsetPattern = /srcset="([^"]+)"/i;
+    const srcsetMatch = searchArea.match(srcsetPattern);
+    
+    if (srcsetMatch) {
+      // srcset="/images/thumb/5/55/Librarian.png/300px-Librarian.png 1.5x, /images/thumb/5/55/Librarian.png/400px-Librarian.png 2x"
+      const urls = srcsetMatch[1].split(',');
+      
+      // 取最后一个（通常是2x，最高清）
+      let iconUrl = urls[urls.length - 1].trim().split(' ')[0];
+      
+      if (iconUrl.startsWith('/')) {
+        iconUrl = 'https://clocktower-wiki.gstonegames.com' + iconUrl;
+      }
+      
+      console.log('[parseRoleIcon] 从srcset提取高清图:', iconUrl);
+      return iconUrl;
+    }
+    
+    // 备用：查找包含角色信息的img标签
+    const imgPattern = /<img[^>]+alt="[^"]*"[^>]+src="([^"]+)"[^>]*>/i;
+    const match = searchArea.match(imgPattern);
+    
+    if (match) {
+      let iconUrl = match[1];
+      
+      // 跳过装饰图片（top_lace, flower等）
+      if (iconUrl.includes('lace') || iconUrl.includes('flower')) {
+        console.log('[parseRoleIcon] 跳过装饰图片');
+        return null;
+      }
+      
+      // 处理相对路径
+      if (iconUrl.startsWith('./')) {
+        const fileMatch = iconUrl.match(/\/([\w-]+\.png)$/i);
+        if (fileMatch) {
+          iconUrl = 'https://clocktower-wiki.gstonegames.com/images/' + fileMatch[1];
+        }
+      } else if (iconUrl.startsWith('/')) {
+        iconUrl = 'https://clocktower-wiki.gstonegames.com' + iconUrl;
+      }
+      
+      console.log('[parseRoleIcon] 提取图标URL:', iconUrl);
+      return iconUrl;
+    }
+    
+    console.log('[parseRoleIcon] 未找到图标');
+    return null;
+  } catch (error) {
+    console.error('[parseRoleIcon] 失败:', error);
+    return null;
+  }
+}
+
+/**
  * 主解析函数：整合所有解析
  */
 function parseRoleDetail(html) {
@@ -484,7 +548,8 @@ function parseRoleDetail(html) {
     rule_details: parseRuleDetails(html),
     tips_and_tricks: parseTipsAndTricks(html),
     bluff_tips: parseBluffTips(html),
-    character_info: parseCharacterInfo(html)
+    character_info: parseCharacterInfo(html),
+    icon_url: parseRoleIcon(html)  // 🆕 角色图标
   };
   
   console.log('[parseRoleDetail] 解析完成');
@@ -497,6 +562,7 @@ function parseRoleDetail(html) {
   console.log('- 规则细节:', detail.rule_details.length, '条');
   console.log('- 提示技巧:', detail.tips_and_tricks.length, '条');
   console.log('- 伪装方法:', detail.bluff_tips.length, '条');
+  console.log('- 角色图标:', detail.icon_url ? '✓' : '✗');
   
   return detail;
 }
@@ -514,6 +580,7 @@ module.exports = {
   parseTipsAndTricks,
   parseBluffTips,
   parseCharacterInfo,
+  parseRoleIcon,
   parseRoleDetail
 };
 

@@ -286,7 +286,7 @@ function parseMediaWikiPage(html, url) {
     role_info: roleInfo,
     role_detail: role_detail,  // 🆕 v2.1: 详细内容
     media: {
-      icon_url: extractRoleIcon(html),
+      icon_url: role_detail ? role_detail.icon_url : extractRoleIcon(html),  // 优先使用详细解析的图标
       images: images.slice(0, 15)
     },
     category: getCategoryByType(entryType),
