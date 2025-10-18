@@ -1,0 +1,85 @@
+{
+  "bsonType": "object",
+  "description": "百科同步日志表",
+  "required": ["sync_type"],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "日志ID"
+    },
+    "sync_type": {
+      "bsonType": "string",
+      "description": "同步类型",
+      "title": "同步类型",
+      "enum": ["all", "roles", "scripts", "rules"]
+    },
+    "start_time": {
+      "bsonType": "timestamp",
+      "description": "开始时间",
+      "title": "开始时间"
+    },
+    "end_time": {
+      "bsonType": "timestamp",
+      "description": "结束时间",
+      "title": "结束时间"
+    },
+    "duration": {
+      "bsonType": "int",
+      "description": "耗时（秒）",
+      "title": "耗时"
+    },
+    "total_count": {
+      "bsonType": "int",
+      "description": "总数",
+      "defaultValue": 0,
+      "title": "总数"
+    },
+    "success_count": {
+      "bsonType": "int",
+      "description": "成功数",
+      "defaultValue": 0,
+      "title": "成功数"
+    },
+    "failed_count": {
+      "bsonType": "int",
+      "description": "失败数",
+      "defaultValue": 0,
+      "title": "失败数"
+    },
+    "error_list": {
+      "bsonType": "array",
+      "description": "错误列表",
+      "title": "错误列表"
+    },
+    "status": {
+      "bsonType": "string",
+      "description": "状态",
+      "enum": ["running", "success", "partial_success", "failed"],
+      "title": "状态"
+    },
+    "triggered_by": {
+      "bsonType": "string",
+      "description": "触发方式",
+      "title": "触发方式"
+    },
+    "admin_id": {
+      "bsonType": "string",
+      "description": "管理员ID",
+      "title": "管理员ID"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      },
+      "title": "创建时间"
+    }
+  }
+}
+

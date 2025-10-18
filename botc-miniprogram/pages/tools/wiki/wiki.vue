@@ -6,6 +6,51 @@
       <text class="header-subtitle">Blood on the Clocktower Encyclopedia</text>
     </view>
 
+    <!-- 🆕 导入百科功能区 -->
+    <view class="import-section">
+      <view class="import-card card">
+        <view class="import-header">
+          <text class="import-title">📚 从钟楼百科导入</text>
+          <text class="import-desc">复制百科页面链接，一键导入官方内容</text>
+        </view>
+        <button class="import-btn" @click="showImportDialog">
+          🔗 导入百科链接
+        </button>
+      </view>
+    </view>
+
+    <!-- 🆕 最近导入 -->
+    <view v-if="recentImports.length > 0" class="recent-section">
+      <view class="section-header">
+        <text class="section-title">最近导入</text>
+      </view>
+      <scroll-view scroll-x class="recent-scroll" show-scrollbar="false">
+        <view class="recent-list">
+          <view 
+            v-for="item in recentImports" 
+            :key="item._id"
+            class="recent-item card"
+            @click="viewDetail(item._id)"
+          >
+            <view v-if="item.media && item.media.icon_url" class="recent-icon-wrapper">
+              <image 
+                class="recent-icon"
+                :src="item.media.icon_url"
+                mode="aspectFit"
+              />
+            </view>
+            <view v-else class="recent-icon-placeholder">
+              {{ getTypeIcon(item.entry_type) }}
+            </view>
+            <text class="recent-title">{{ item.title }}</text>
+            <text v-if="item.role_info && item.role_info.team_name" class="recent-team">
+              {{ item.role_info.team_name }}
+            </text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
     <!-- 搜索栏 -->
     <view class="search-section">
       <view class="search-box">
@@ -121,6 +166,53 @@
         </view>
       </view>
     </view>
+    
+    <!-- 🆕 导入弹窗 -->
+    <uni-popup ref="importPopup" type="center" :mask-click="false">
+      <view class="import-dialog">
+        <view class="dialog-header">
+          <text class="dialog-title">导入百科内容</text>
+          <text class="dialog-close" @click="closeImportDialog">✕</text>
+        </view>
+        
+        <view class="dialog-body">
+          <view class="input-label">钟楼百科页面链接</view>
+          <textarea 
+            class="url-input"
+            v-model="importUrl"
+            placeholder="粘贴链接，例如：&#10;https://clocktower-wiki.gstonegames.com/index.php?title=洗衣妇"
+            placeholder-class="placeholder"
+            :auto-height="true"
+            :maxlength="500"
+          />
+          
+          <view class="input-actions">
+            <text class="char-count">{{ importUrl.length }}/500</text>
+            <button class="paste-btn" size="mini" @click="pasteUrl">
+              📋 粘贴
+            </button>
+          </view>
+          
+          <view class="help-text">
+            💡 提示：在钟楼百科网页中复制页面链接即可
+          </view>
+        </view>
+        
+        <view class="dialog-footer">
+          <button class="btn-secondary" @click="closeImportDialog">
+            取消
+          </button>
+          <button 
+            class="btn-primary" 
+            :loading="importing"
+            :disabled="!importUrl.trim()"
+            @click="importWiki"
+          >
+            {{ importing ? '解析中...' : '开始导入' }}
+          </button>
+        </view>
+      </view>
+    </uni-popup>
   </view>
 </template>
 
@@ -130,6 +222,11 @@ export default {
   
   data() {
     return {
+      // 🆕 新增数据
+      importUrl: '',
+      importing: false,
+      recentImports: [],
+      
       searchKeyword: '',
       currentCategory: 0,
       currentRoleTab: 0,
@@ -201,14 +298,192 @@ export default {
     }
   },
   
+  onLoad() {
+    this.loadRecentImports();
+  },
+  
   methods: {
+    // 🆕 加载最近导入
+    async loadRecentImports() {
+      try {
+        const db = uniCloud.database();
+        const res = await db.collection('wiki_entries')
+          .orderBy('created_at', 'desc')
+          .limit(10)
+          .field({
+            _id: true,
+            title: true,
+            entry_type: true,
+            'media.icon_url': true,
+            'role_info.team_name': true
+          })
+          .get();
+        
+        this.recentImports = res.result.data || [];
+      } catch (error) {
+        console.error('加载最近导入失败', error);
+      }
+    },
+    
+    // 🆕 显示导入弹窗
+    showImportDialog() {
+      this.$refs.importPopup.open();
+    },
+    
+    // 🆕 关闭导入弹窗
+    closeImportDialog() {
+      this.importUrl = '';
+      this.$refs.importPopup.close();
+    },
+    
+    // 🆕 粘贴URL
+    async pasteUrl() {
+      try {
+        const res = await uni.getClipboardData();
+        this.importUrl = res.data;
+        uni.showToast({
+          title: '粘贴成功',
+          icon: 'success',
+          duration: 1000
+        });
+      } catch (error) {
+        uni.showToast({
+          title: '粘贴失败',
+          icon: 'none'
+        });
+      }
+    },
+    
+    // 🆕 导入百科
+    async importWiki() {
+      if (!this.importUrl.trim()) {
+        uni.showToast({
+          title: '请输入百科链接',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      // 验证URL
+      if (!this.importUrl.includes('clocktower-wiki.gstonegames.com')) {
+        uni.showToast({
+          title: '请输入钟楼百科的页面链接',
+          icon: 'none',
+          duration: 2000
+        });
+        return;
+      }
+      
+      this.importing = true;
+      
+      try {
+        uni.showLoading({
+          title: '解析中...',
+          mask: true
+        });
+        
+        const res = await uniCloud.callFunction({
+          name: 'wiki-parse-url',
+          data: {
+            url: this.importUrl.trim(),
+            userId: getApp().globalData.userId
+          }
+        });
+        
+        uni.hideLoading();
+        
+        if (res.result.code === 0) {
+          uni.showToast({
+            title: res.result.from_cache ? '已加载' : '导入成功',
+            icon: 'success'
+          });
+          
+          // 关闭弹窗
+          this.closeImportDialog();
+          
+          // 刷新最近导入
+          this.loadRecentImports();
+          
+          // 跳转到详情页
+          setTimeout(() => {
+            this.viewDetail(res.result.data._id);
+          }, 800);
+        } else {
+          uni.showModal({
+            title: '导入失败',
+            content: res.result.message || '请检查链接是否正确',
+            showCancel: false
+          });
+        }
+      } catch (error) {
+        uni.hideLoading();
+        console.error('导入失败', error);
+        uni.showModal({
+          title: '导入失败',
+          content: '网络错误，请稍后重试',
+          showCancel: false
+        });
+      } finally {
+        this.importing = false;
+      }
+    },
+    
+    // 🆕 查看详情
+    viewDetail(entryId) {
+      uni.navigateTo({
+        url: `/pages/tools/wiki/detail?id=${entryId}`
+      });
+    },
+    
+    // 🆕 获取类型图标
+    getTypeIcon(type) {
+      const icons = {
+        role: '👤',
+        script: '📜',
+        rule: '📋',
+        guide: '📖',
+        term: '💬'
+      };
+      return icons[type] || '📄';
+    },
+    
     // 搜索
-    handleSearch() {
-      if (!this.searchKeyword.trim()) return
-      uni.showToast({
-        title: '搜索功能待完善',
-        icon: 'none'
-      })
+    async handleSearch() {
+      if (!this.searchKeyword.trim()) return;
+      
+      try {
+        uni.showLoading({ title: '搜索中...' });
+        
+        const res = await uniCloud.callFunction({
+          name: 'wiki-search',
+          data: {
+            keyword: this.searchKeyword.trim(),
+            userId: getApp().globalData.userId
+          }
+        });
+        
+        uni.hideLoading();
+        
+        if (res.result.code === 0) {
+          const results = res.result.data.list;
+          if (results.length > 0) {
+            // 显示搜索结果，这里简化为跳转到第一个结果
+            this.viewDetail(results[0]._id);
+          } else {
+            uni.showToast({
+              title: '未找到相关内容',
+              icon: 'none'
+            });
+          }
+        }
+      } catch (error) {
+        uni.hideLoading();
+        console.error('搜索失败', error);
+        uni.showToast({
+          title: '搜索失败',
+          icon: 'none'
+        });
+      }
     },
     
     // 切换分类
@@ -526,6 +801,245 @@ export default {
   background: #FFFFFF;
   border-radius: 16rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 🆕 导入功能区 */
+.import-section {
+  padding: 0 24rpx 24rpx;
+}
+
+.import-card {
+  padding: 32rpx;
+}
+
+.import-header {
+  margin-bottom: 24rpx;
+}
+
+.import-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1A1A1A;
+  margin-bottom: 8rpx;
+}
+
+.import-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  line-height: 1.5;
+}
+
+.import-btn {
+  width: 100%;
+  height: 88rpx;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 12rpx;
+  border: none;
+  box-shadow: 0 8rpx 24rpx rgba(79, 172, 254, 0.3);
+}
+
+/* 🆕 最近导入 */
+.recent-section {
+  padding: 0 24rpx 24rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1A1A1A;
+}
+
+.recent-scroll {
+  white-space: nowrap;
+}
+
+.recent-list {
+  display: inline-flex;
+  gap: 16rpx;
+  padding-bottom: 8rpx;
+}
+
+.recent-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 160rpx;
+  padding: 20rpx 12rpx;
+}
+
+.recent-item:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.recent-icon-wrapper {
+  width: 96rpx;
+  height: 96rpx;
+  margin-bottom: 12rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+  background: #F5F5F5;
+}
+
+.recent-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.recent-icon-placeholder {
+  width: 96rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  margin-bottom: 12rpx;
+}
+
+.recent-title {
+  font-size: 26rpx;
+  color: #333;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  margin-bottom: 4rpx;
+}
+
+.recent-team {
+  font-size: 22rpx;
+  color: #999;
+}
+
+/* 🆕 导入弹窗 */
+.import-dialog {
+  width: 640rpx;
+  background: white;
+  border-radius: 24rpx;
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+
+.dialog-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #1A1A1A;
+}
+
+.dialog-close {
+  font-size: 40rpx;
+  color: #999;
+  padding: 8rpx;
+  line-height: 1;
+}
+
+.dialog-body {
+  padding: 32rpx;
+}
+
+.input-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+.url-input {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 20rpx;
+  background: #F8F8F8;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #333;
+}
+
+.placeholder {
+  color: #BBB;
+}
+
+.input-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.char-count {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.paste-btn {
+  padding: 8rpx 20rpx;
+  background: #4facfe;
+  color: white;
+  font-size: 24rpx;
+  border-radius: 8rpx;
+  border: none;
+}
+
+.help-text {
+  margin-top: 24rpx;
+  padding: 16rpx;
+  background: #E8F4FD;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #4facfe;
+  line-height: 1.6;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx 32rpx;
+  border-top: 1rpx solid #F0F0F0;
+}
+
+.btn-secondary,
+.btn-primary {
+  flex: 1;
+  height: 80rpx;
+  font-size: 28rpx;
+  border-radius: 12rpx;
+  border: none;
+}
+
+.btn-secondary {
+  background: #F5F5F5;
+  color: #666;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.btn-primary[disabled] {
+  opacity: 0.5;
 }
 </style>
 

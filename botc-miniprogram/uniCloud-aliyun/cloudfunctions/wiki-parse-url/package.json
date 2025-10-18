@@ -1,0 +1,12 @@
+{
+  "name": "wiki-parse-url",
+  "version": "1.0.0",
+  "description": "解析钟楼百科页面URL，提取并存储结构化内容",
+  "main": "index.js",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

@@ -1,0 +1,10 @@
+{
+  "name": "wiki-detail",
+  "version": "1.0.0",
+  "description": "获取钟楼百科词条详情",
+  "main": "index.js",
+  "dependencies": {},
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

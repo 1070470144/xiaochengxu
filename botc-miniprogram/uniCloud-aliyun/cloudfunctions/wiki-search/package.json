@@ -1,0 +1,10 @@
+{
+  "name": "wiki-search",
+  "version": "1.0.0",
+  "description": "搜索钟楼百科词条",
+  "main": "index.js",
+  "dependencies": {},
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

@@ -1,0 +1,10 @@
+{
+  "name": "wiki-list",
+  "version": "2.0.0",
+  "description": "获取百科词条列表（小程序端）",
+  "main": "index.js",
+  "dependencies": {},
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

@@ -1,0 +1,153 @@
+{
+  "bsonType": "object",
+  "description": "钟楼百科词条表",
+  "required": ["entry_type", "title", "source_url"],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "词条ID"
+    },
+    "entry_type": {
+      "bsonType": "string",
+      "description": "词条类型",
+      "enum": ["role", "script", "rule", "guide", "term"],
+      "title": "词条类型"
+    },
+    "title": {
+      "bsonType": "string",
+      "description": "标题",
+      "title": "标题"
+    },
+    "slug": {
+      "bsonType": "string",
+      "description": "URL友好标识",
+      "title": "标识"
+    },
+    "source_url": {
+      "bsonType": "string",
+      "description": "来源URL",
+      "title": "来源URL"
+    },
+    "source_page_id": {
+      "bsonType": "string",
+      "description": "页面ID",
+      "title": "页面ID"
+    },
+    "source_type": {
+      "bsonType": "string",
+      "description": "来源类型",
+      "defaultValue": "official_wiki_cn",
+      "title": "来源类型"
+    },
+    "source_name": {
+      "bsonType": "string",
+      "description": "来源名称",
+      "defaultValue": "钟楼百科",
+      "title": "来源名称"
+    },
+    "content": {
+      "bsonType": "object",
+      "description": "内容",
+      "properties": {
+        "text": {
+          "bsonType": "string",
+          "description": "纯文本内容"
+        },
+        "sections": {
+          "bsonType": "array",
+          "description": "分段内容"
+        },
+        "summary": {
+          "bsonType": "string",
+          "description": "摘要"
+        }
+      }
+    },
+    "role_info": {
+      "bsonType": "object",
+      "description": "角色信息"
+    },
+    "media": {
+      "bsonType": "object",
+      "description": "媒体资源"
+    },
+    "category": {
+      "bsonType": "string",
+      "description": "分类",
+      "title": "分类"
+    },
+    "tags": {
+      "bsonType": "array",
+      "description": "标签"
+    },
+    "keywords": {
+      "bsonType": "array",
+      "description": "关键词"
+    },
+    "stats": {
+      "bsonType": "object",
+      "description": "统计数据",
+      "properties": {
+        "view_count": {
+          "bsonType": "int",
+          "description": "浏览次数",
+          "defaultValue": 0
+        },
+        "search_count": {
+          "bsonType": "int",
+          "description": "搜索次数",
+          "defaultValue": 0
+        },
+        "favorite_count": {
+          "bsonType": "int",
+          "description": "收藏次数",
+          "defaultValue": 0
+        }
+      }
+    },
+    "status": {
+      "bsonType": "int",
+      "description": "状态：0-草稿，1-已发布，2-已下架",
+      "defaultValue": 1,
+      "title": "状态"
+    },
+    "is_featured": {
+      "bsonType": "bool",
+      "description": "是否精选",
+      "defaultValue": false,
+      "title": "精选"
+    },
+    "quality_score": {
+      "bsonType": "int",
+      "description": "质量分数",
+      "defaultValue": 0,
+      "title": "质量分数"
+    },
+    "sync_info": {
+      "bsonType": "object",
+      "description": "同步信息"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      },
+      "title": "创建时间"
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      },
+      "title": "更新时间"
+    }
+  }
+}
+

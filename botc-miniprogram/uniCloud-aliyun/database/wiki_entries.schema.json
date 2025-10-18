@@ -1,0 +1,182 @@
+{
+  "bsonType": "object",
+  "description": "钟楼百科词条表",
+  "required": ["entry_type", "title", "source_url"],
+  "properties": {
+    "_id": {
+      "description": "词条ID"
+    },
+    "entry_type": {
+      "bsonType": "string",
+      "description": "词条类型",
+      "enum": ["role", "script", "rule", "guide", "term"],
+      "title": "词条类型"
+    },
+    "title": {
+      "bsonType": "string",
+      "description": "标题",
+      "title": "标题"
+    },
+    "source_url": {
+      "bsonType": "string",
+      "description": "来源URL",
+      "title": "来源URL"
+    },
+    "source_type": {
+      "bsonType": "string",
+      "description": "来源类型",
+      "defaultValue": "official_wiki_cn",
+      "title": "来源类型"
+    },
+    "source_name": {
+      "bsonType": "string",
+      "description": "来源名称",
+      "defaultValue": "钟楼百科",
+      "title": "来源名称"
+    },
+    "content": {
+      "bsonType": "object",
+      "description": "内容",
+      "properties": {
+        "text": {
+          "bsonType": "string",
+          "description": "纯文本内容"
+        },
+        "sections": {
+          "bsonType": "array",
+          "description": "分段内容",
+          "items": {
+            "bsonType": "object",
+            "properties": {
+              "heading": {
+                "bsonType": "string"
+              },
+              "content": {
+                "bsonType": "string"
+              },
+              "level": {
+                "bsonType": "int"
+              }
+            }
+          }
+        },
+        "summary": {
+          "bsonType": "string",
+          "description": "摘要"
+        }
+      }
+    },
+    "role_info": {
+      "bsonType": "object",
+      "description": "角色信息",
+      "properties": {
+        "team": {
+          "bsonType": "string",
+          "description": "阵营",
+          "enum": ["townsfolk", "outsider", "minion", "demon", "traveler", null]
+        },
+        "team_name": {
+          "bsonType": "string",
+          "description": "阵营中文名"
+        },
+        "ability": {
+          "bsonType": "string",
+          "description": "能力描述"
+        },
+        "setup_info": {
+          "bsonType": "string",
+          "description": "设置信息"
+        },
+        "script_belongs": {
+          "bsonType": "array",
+          "description": "所属剧本",
+          "items": {
+            "bsonType": "string"
+          }
+        }
+      }
+    },
+    "media": {
+      "bsonType": "object",
+      "description": "媒体资源",
+      "properties": {
+        "icon_url": {
+          "bsonType": "string",
+          "description": "图标URL"
+        },
+        "images": {
+          "bsonType": "array",
+          "description": "图片URL数组",
+          "items": {
+            "bsonType": "string"
+          }
+        }
+      }
+    },
+    "tags": {
+      "bsonType": "array",
+      "description": "标签",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "related_links": {
+      "bsonType": "array",
+      "description": "相关链接",
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "text": {
+            "bsonType": "string"
+          },
+          "url": {
+            "bsonType": "string"
+          }
+        }
+      }
+    },
+    "stats": {
+      "bsonType": "object",
+      "description": "统计数据",
+      "properties": {
+        "view_count": {
+          "bsonType": "int",
+          "description": "浏览次数",
+          "defaultValue": 0
+        },
+        "search_count": {
+          "bsonType": "int",
+          "description": "搜索次数",
+          "defaultValue": 0
+        },
+        "favorite_count": {
+          "bsonType": "int",
+          "description": "收藏次数",
+          "defaultValue": 0
+        }
+      }
+    },
+    "cache_expires_at": {
+      "bsonType": "timestamp",
+      "description": "缓存过期时间",
+      "title": "缓存过期时间"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      },
+      "title": "创建时间"
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      },
+      "title": "更新时间"
+    }
+  }
+}
+

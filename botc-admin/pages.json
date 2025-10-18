@@ -310,14 +310,32 @@
 						"navigationBarTitleText": "剧本管理"
 					}
 				},
-				{
-					"path": "script/edit",
-					"style": {
-						"navigationBarTitleText": "编辑剧本"
-					}
+			{
+				"path": "script/edit",
+				"style": {
+					"navigationBarTitleText": "编辑剧本"
 				}
-			]
-		},
+			},
+			{
+				"path": "wiki/sync",
+				"style": {
+					"navigationBarTitleText": "百科同步"
+				}
+			},
+			{
+				"path": "wiki/list",
+				"style": {
+					"navigationBarTitleText": "百科管理"
+				}
+			},
+			{
+				"path": "wiki/test-data",
+				"style": {
+					"navigationBarTitleText": "数据测试"
+				}
+			}
+		]
+	},
 		{
 			"root": "pages/uni-stat",
 			"pages": [{
