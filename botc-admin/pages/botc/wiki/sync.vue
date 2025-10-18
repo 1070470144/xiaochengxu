@@ -273,9 +273,15 @@ export default {
       try {
         uni.showLoading({ title: '同步中...' });
         
-        // 使用云对象方式调用
-        const syncObj = uniCloud.importObject('wiki-admin-sync-single');
-        const res = await syncObj.syncPage(this.singleUrl.trim());
+        // 改回云函数调用方式
+        const res = await uniCloud.callFunction({
+          name: 'wiki-admin-sync-single',
+          data: {
+            url: this.singleUrl.trim()
+          }
+        });
+        
+        console.log('[syncSingle] 云函数调用结果:', res);
         
         uni.hideLoading();
         

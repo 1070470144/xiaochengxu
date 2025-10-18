@@ -1,0 +1,519 @@
+/**
+ * 钟楼百科内容解析工具库
+ * 将HTML内容解析为结构化数据
+ */
+
+/**
+ * 提取章节内容
+ * @param {string} html - HTML内容
+ * @param {string} sectionTitle - 章节标题
+ * @param {string} nextSection - 下一个章节标题（用于确定边界）
+ * @returns {string} 章节内容
+ */
+function extractSection(html, sectionTitle, nextSection) {
+  try {
+    // 构建正则：从章节标题到下一个章节之间的内容
+    const pattern = new RegExp(
+      sectionTitle + '[\\s\\S]*?<\\/h[23]>[\\s\\S]*?(?=<h[23][^>]*>' + (nextSection || '$') + ')',
+      'i'
+    );
+    
+    const match = html.match(pattern);
+    if (match) {
+      // 移除HTML标签，保留文本
+      return match[0]
+        .replace(/<h[23][^>]*>.*?<\/h[23]>/gi, '') // 移除标题
+        .replace(/<[^>]+>/g, ' ') // 移除HTML标签
+        .replace(/\s+/g, ' ') // 合并空格
+        .trim();
+    }
+    return '';
+  } catch (error) {
+    console.error('[extractSection] 提取失败:', sectionTitle, error);
+    return '';
+  }
+}
+
+/**
+ * 1. 提取背景故事
+ * 背景故事通常在引号内，精确提取引号之间的内容
+ */
+function parseBackgroundStory(html) {
+  try {
+    // 简单粗暴：查找包含"背景故事"的<h2>标签
+    // 格式：<h2...>...背景故事...</h2>
+    const storyH2Pattern = /<h2[\s\S]{0,300}?背景故事[\s\S]{0,100}?<\/h2>/i;
+    const storyH2Match = html.match(storyH2Pattern);
+    
+    if (!storyH2Match) {
+      console.log('[parseBackgroundStory] 未找到背景故事的<h2>标签');
+      return '';
+    }
+    
+    console.log('[parseBackgroundStory] 找到H2标签:', storyH2Match[0].substring(0, 100));
+    
+    const storyIndex = html.indexOf(storyH2Match[0]);
+    
+    // 从<h2>标签结束到下一个<h2>开始之间的内容
+    const searchStart = storyIndex + storyH2Match[0].length;
+    const nextH2Index = html.indexOf('<h2', searchStart);
+    const searchRange = html.substring(
+      searchStart, 
+      nextH2Index > 0 ? nextH2Index : searchStart + 1000
+    );
+    
+    console.log('[parseBackgroundStory] 背景故事内容范围（前400字符）:', searchRange.substring(0, 400));
+    
+    // 提取所有 <i> 标签内的内容
+    const italicPattern = /<i>([^<]+)<\/i>/g;
+    let match;
+    const storyParts = [];
+    
+    while ((match = italicPattern.exec(searchRange)) !== null) {
+      console.log('[parseBackgroundStory] 匹配到 <i> 内容:', match[1].substring(0, 50));
+      
+      let text = match[1]
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&quot;/g, '')  // HTML实体引号
+        .replace(/[""""''\u201C\u201D]/g, '')  // 移除所有引号（包括Unicode 8220和8221）
+        .trim();
+      
+      // 清理空格
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      if (text.length > 5) {
+        storyParts.push(text);
+      }
+    }
+    
+    console.log('[parseBackgroundStory] 提取到段落数:', storyParts.length);
+    
+    // 合并所有部分，用两个换行分隔
+    const story = storyParts.join('\n\n');
+    
+    if (story.length > 10) {
+      console.log('[parseBackgroundStory] 最终结果:', story.substring(0, 100) + '...');
+      return story;
+    }
+    
+    console.log('[parseBackgroundStory] 未找到内容');
+    return '';
+  } catch (error) {
+    console.error('[parseBackgroundStory] 失败:', error);
+    return '';
+  }
+}
+
+/**
+ * 2. 提取角色能力
+ * 角色能力在"角色能力"章节的第一段
+ */
+function parseAbility(html) {
+  try {
+    // 直接匹配"角色能力"后面的内容，到下一个章节标题
+    const pattern = /角色能力[\s\S]{0,50}?<\/h[23]>([\s\S]{50,500}?)(?=<h[23]|角色简介)/i;
+    const match = html.match(pattern);
+    
+    if (match) {
+      const abilityText = match[1]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // 提取第一句（以句号结束）
+      const firstSentence = abilityText.split('。')[0];
+      return firstSentence ? firstSentence.trim() + '。' : abilityText;
+    }
+    
+    return '';
+  } catch (error) {
+    console.error('[parseAbility] 失败:', error);
+    return '';
+  }
+}
+
+/**
+ * 3. 提取角色简介（多段）
+ * 将简介章节按句子分割
+ */
+function parseIntroduction(html) {
+  try {
+    // 匹配"角色简介"章节
+    const pattern = /角色简介[\s\S]{0,50}?<\/h[23]>([\s\S]{50,2000}?)(?=<h[23]|范例)/i;
+    const match = html.match(pattern);
+    
+    if (match) {
+      const introText = match[1]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // 按句号分割
+      const paragraphs = introText
+        .split('。')
+        .map(p => p.trim())
+        .filter(p => p.length > 15) // 过滤太短的
+        .map(p => p + '。');
+      
+      return paragraphs;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('[parseIntroduction] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 4. 提取范例（场景+结果）
+ * 识别"XX是YY"模式和"洗衣妇得知"模式
+ */
+function parseExamples(html) {
+  try {
+    // 匹配"范例"章节
+    const pattern = /范例[\s\S]{0,50}?<\/h[23]>([\s\S]{50,3000}?)(?=<h[23]|运作方式)/i;
+    const match = html.match(pattern);
+    
+    if (!match) return [];
+    
+    const exampleText = match[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    const examples = [];
+    const sentences = exampleText.split('。').map(s => s.trim()).filter(s => s);
+    
+    let currentScenario = '';
+    
+    for (const sentence of sentences) {
+      // 识别场景（包含"是"的句子）
+      if (sentence.includes('是') && !sentence.includes('得知')) {
+        currentScenario = sentence + '。';
+      }
+      // 识别结果（包含"得知"的句子）
+      else if (sentence.includes('得知')) {
+        if (currentScenario) {
+          examples.push({
+            scenario: currentScenario,
+            result: sentence + '。'
+          });
+          currentScenario = '';
+        }
+      }
+    }
+    
+    return examples;
+  } catch (error) {
+    console.error('[parseExamples] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 5. 提取运作方式（多步骤）
+ * 按句子分割运作步骤
+ */
+function parseMechanics(html) {
+  try {
+    // 匹配"运作方式"章节
+    const pattern = /运作方式[\s\S]{0,50}?<\/h[23]>([\s\S]{50,2000}?)(?=<h[23]|提示标记)/i;
+    const match = html.match(pattern);
+    
+    if (!match) return [];
+    
+    const mechanicsText = match[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // 按句号分割
+    const steps = mechanicsText
+      .split('。')
+      .map(s => s.trim())
+      .filter(s => s.length > 20)
+      .map(s => s + '。');
+    
+    return steps;
+  } catch (error) {
+    console.error('[parseMechanics] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 6. 提取提示标记（标记名+详情）
+ * 识别每个标记的名称和相关说明
+ */
+function parseReminderTokens(html) {
+  try {
+    const tokenSection = extractSection(html, '提示标记', '规则细节');
+    if (!tokenSection) return [];
+    
+    const tokens = [];
+    
+    // 常见的提示标记名称
+    const tokenNames = ['镇民', '外来者', '爪牙', '恶魔', '错误', '是', '否', '投票', '使用过'];
+    
+    for (const tokenName of tokenNames) {
+      // 查找该标记相关的内容
+      const pattern = new RegExp(tokenName + '[\\s\\S]{0,500}?(?=(' + tokenNames.join('|') + ')|规则细节|$)', 'i');
+      const match = tokenSection.match(pattern);
+      
+      if (match) {
+        const tokenContent = match[0];
+        
+        // 提取详情（放置时机、放置条件、移除时机等）
+        const details = [];
+        const detailPatterns = ['放置时机：', '放置条件：', '移除时机：'];
+        
+        for (const pattern of detailPatterns) {
+          const detailMatch = tokenContent.match(new RegExp(pattern + '([^。]{10,200})。'));
+          if (detailMatch) {
+            details.push(pattern + detailMatch[1] + '。');
+          }
+        }
+        
+        if (details.length > 0) {
+          tokens.push({
+            name: tokenName,
+            icon: getTokenIcon(tokenName),
+            details: details
+          });
+        }
+      }
+    }
+    
+    return tokens;
+  } catch (error) {
+    console.error('[parseReminderTokens] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 7. 提取规则细节（多条）
+ */
+function parseRuleDetails(html) {
+  try {
+    // 匹配"规则细节"章节
+    const pattern = /规则细节[\s\S]{0,50}?<\/h[23]>([\s\S]{50,3000}?)(?=<h[23]|提示与技巧)/i;
+    const match = html.match(pattern);
+    
+    if (!match) return [];
+    
+    const ruleText = match[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // 按句号分割
+    const rules = ruleText
+      .split('。')
+      .map(r => r.trim())
+      .filter(r => r.length > 20)
+      .map(r => r + '。');
+    
+    return rules;
+  } catch (error) {
+    console.error('[parseRuleDetails] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 8. 提取提示与技巧（多条）
+ */
+function parseTipsAndTricks(html) {
+  try {
+    // 匹配"提示与技巧"章节
+    const pattern = /提示与技巧[\s\S]{0,50}?<\/h[23]>([\s\S]{50,5000}?)(?=<h[23]|伪装成)/i;
+    const match = html.match(pattern);
+    
+    if (!match) return [];
+    
+    const tipsText = match[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // 按句号分割
+    const tips = tipsText
+      .split('。')
+      .map(t => t.trim())
+      .filter(t => t.length > 20)
+      .map(t => t + '。');
+    
+    return tips;
+  } catch (error) {
+    console.error('[parseTipsAndTricks] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 9. 提取伪装方法（多条）
+ */
+function parseBluffTips(html) {
+  try {
+    // 匹配"伪装成XX"章节（洗衣妇的情况是"伪装成洗衣妇"）
+    const pattern = /伪装成[\s\S]{0,50}?<\/h[23]>([\s\S]{50,5000}?)(?=<h[23]|角色信息)/i;
+    const match = html.match(pattern);
+    
+    if (!match) return [];
+    
+    const bluffText = match[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // 按句号分割
+    const bluffs = bluffText
+      .split('。')
+      .map(b => b.trim())
+      .filter(b => b.length > 20)
+      .map(b => b + '。');
+    
+    return bluffs;
+  } catch (error) {
+    console.error('[parseBluffTips] 失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 10. 提取角色信息（属性）
+ * 提取英文名、所属剧本、角色类型等
+ */
+function parseCharacterInfo(html) {
+  try {
+    // 先清理HTML，再匹配
+    const cleanHtml = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    
+    // 匹配"角色信息"章节到最后
+    const pattern = /角色信息\s+([\s\S]{50,1000}?)$/i;
+    const match = cleanHtml.match(pattern);
+    
+    if (!match) {
+      console.log('[parseCharacterInfo] 未找到角色信息章节');
+      return {};
+    }
+    
+    const infoText = match[1].trim();
+    console.log('[parseCharacterInfo] 角色信息文本:', infoText.substring(0, 200));
+    
+    const info = {
+      english_name: '',
+      belongs_to_scripts: [],
+      character_type: '',
+      ability_categories: []
+    };
+    
+    // 提取英文名
+    const englishMatch = infoText.match(/英文名[：:]\s*(\w+)/);
+    if (englishMatch) {
+      info.english_name = englishMatch[1];
+    }
+    
+    // 提取所属剧本
+    const scriptMatch = infoText.match(/所属剧本[：:]\s*([^\s角]+)/);
+    if (scriptMatch) {
+      info.belongs_to_scripts = scriptMatch[1]
+        .split(/[、，,]/)
+        .map(s => s.trim())
+        .filter(s => s);
+    }
+    
+    // 提取角色类型
+    const typeMatch = infoText.match(/角色类型[：:]\s*(\S+)/);
+    if (typeMatch) {
+      info.character_type = typeMatch[1];
+    }
+    
+    // 提取能力类别
+    const categoryMatch = infoText.match(/角色能力类型[：:]\s*(.+?)$/);
+    if (categoryMatch) {
+      info.ability_categories = categoryMatch[1]
+        .split(/[、，,\s]+/)
+        .map(s => s.trim())
+        .filter(s => s && s.length > 1);
+    }
+    
+    console.log('[parseCharacterInfo] 提取结果:', info);
+    
+    return info;
+  } catch (error) {
+    console.error('[parseCharacterInfo] 失败:', error);
+    return {};
+  }
+}
+
+/**
+ * 获取标记图标
+ */
+function getTokenIcon(tokenName) {
+  const iconMap = {
+    '镇民': '🎯',
+    '外来者': '⚠️',
+    '爪牙': '😈',
+    '恶魔': '👹',
+    '错误': '❌',
+    '是': '✅',
+    '否': '⛔',
+    '投票': '🗳️',
+    '使用过': '✓'
+  };
+  
+  return iconMap[tokenName] || '🏷️';
+}
+
+/**
+ * 主解析函数：整合所有解析
+ */
+function parseRoleDetail(html) {
+  console.log('[parseRoleDetail] 开始详细解析');
+  
+  const detail = {
+    background_story: parseBackgroundStory(html),
+    ability: parseAbility(html),
+    introduction: parseIntroduction(html),
+    examples: parseExamples(html),
+    mechanics: parseMechanics(html),
+    reminder_tokens: parseReminderTokens(html),
+    rule_details: parseRuleDetails(html),
+    tips_and_tricks: parseTipsAndTricks(html),
+    bluff_tips: parseBluffTips(html),
+    character_info: parseCharacterInfo(html)
+  };
+  
+  console.log('[parseRoleDetail] 解析完成');
+  console.log('- 背景故事:', detail.background_story ? '✓' : '✗');
+  console.log('- 角色能力:', detail.ability ? '✓' : '✗');
+  console.log('- 角色简介:', detail.introduction.length, '段');
+  console.log('- 范例:', detail.examples.length, '条');
+  console.log('- 运作方式:', detail.mechanics.length, '步');
+  console.log('- 提示标记:', detail.reminder_tokens.length, '个');
+  console.log('- 规则细节:', detail.rule_details.length, '条');
+  console.log('- 提示技巧:', detail.tips_and_tricks.length, '条');
+  console.log('- 伪装方法:', detail.bluff_tips.length, '条');
+  
+  return detail;
+}
+
+// 导出所有函数
+module.exports = {
+  extractSection,
+  parseBackgroundStory,
+  parseAbility,
+  parseIntroduction,
+  parseExamples,
+  parseMechanics,
+  parseReminderTokens,
+  parseRuleDetails,
+  parseTipsAndTricks,
+  parseBluffTips,
+  parseCharacterInfo,
+  parseRoleDetail
+};
+

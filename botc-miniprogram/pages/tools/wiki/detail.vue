@@ -32,8 +32,144 @@
         </view>
       </view>
       
-      <!-- 角色信息（如果是角色） -->
-      <view v-if="entry.entry_type === 'role' && entry.role_info" class="role-info card">
+      <!-- 🆕 v2.1: 角色详细内容 -->
+      <view v-if="entry.entry_type === 'role' && entry.role_detail">
+        
+        <!-- 背景故事 -->
+        <view v-if="entry.role_detail.background_story" class="detail-card card">
+          <text class="card-title">📖 背景故事</text>
+          <text class="background-story">"{{ entry.role_detail.background_story }}"</text>
+        </view>
+        
+        <!-- 角色能力 -->
+        <view v-if="entry.role_detail.ability" class="detail-card card">
+          <text class="card-title">🎯 角色能力</text>
+          <text class="ability-text">{{ entry.role_detail.ability }}</text>
+        </view>
+        
+        <!-- 角色简介 -->
+        <view v-if="entry.role_detail.introduction && entry.role_detail.introduction.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('intro')">
+            📝 角色简介 {{ expandedSections.intro ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.intro" class="content-list">
+            <view v-for="(para, idx) in entry.role_detail.introduction" :key="idx" class="content-item">
+              <text class="bullet">•</text>
+              <text class="content-text">{{ para }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 范例 -->
+        <view v-if="entry.role_detail.examples && entry.role_detail.examples.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('examples')">
+            📌 范例 {{ expandedSections.examples ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.examples" class="examples-list">
+            <view v-for="(example, idx) in entry.role_detail.examples" :key="idx" class="example-item">
+              <text class="example-label">场景</text>
+              <text class="example-text">{{ example.scenario }}</text>
+              <text class="example-label">结果</text>
+              <text class="example-text result">{{ example.result }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 运作方式 -->
+        <view v-if="entry.role_detail.mechanics && entry.role_detail.mechanics.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('mechanics')">
+            ⚙️ 运作方式 {{ expandedSections.mechanics ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.mechanics" class="content-list">
+            <view v-for="(step, idx) in entry.role_detail.mechanics" :key="idx" class="content-item">
+              <text class="step-num">{{ idx + 1 }}.</text>
+              <text class="content-text">{{ step }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 提示标记 -->
+        <view v-if="entry.role_detail.reminder_tokens && entry.role_detail.reminder_tokens.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('tokens')">
+            🏷️ 提示标记 {{ expandedSections.tokens ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.tokens" class="tokens-list">
+            <view v-for="token in entry.role_detail.reminder_tokens" :key="token.name" class="token-item">
+              <text class="token-name">{{ token.icon }} {{ token.name }}</text>
+              <view class="token-details">
+                <text v-for="(detail, idx) in token.details" :key="idx" class="token-detail">
+                  {{ detail }}
+                </text>
+              </view>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 规则细节 -->
+        <view v-if="entry.role_detail.rule_details && entry.role_detail.rule_details.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('rules')">
+            📜 规则细节 {{ expandedSections.rules ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.rules" class="content-list">
+            <view v-for="(rule, idx) in entry.role_detail.rule_details" :key="idx" class="content-item">
+              <text class="bullet">•</text>
+              <text class="content-text">{{ rule }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 提示与技巧 -->
+        <view v-if="entry.role_detail.tips_and_tricks && entry.role_detail.tips_and_tricks.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('tips')">
+            💡 提示与技巧 {{ expandedSections.tips ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.tips" class="content-list">
+            <view v-for="(tip, idx) in entry.role_detail.tips_and_tricks" :key="idx" class="content-item">
+              <text class="bullet">•</text>
+              <text class="content-text">{{ tip }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 伪装方法 -->
+        <view v-if="entry.role_detail.bluff_tips && entry.role_detail.bluff_tips.length > 0" class="detail-card card">
+          <text class="card-title" @click="toggleSection('bluff')">
+            🎭 伪装方法 {{ expandedSections.bluff ? '▼' : '▶' }}
+          </text>
+          <view v-show="expandedSections.bluff" class="content-list">
+            <view v-for="(bluff, idx) in entry.role_detail.bluff_tips" :key="idx" class="content-item">
+              <text class="bullet">•</text>
+              <text class="content-text">{{ bluff }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 角色信息 -->
+        <view v-if="entry.role_detail.character_info" class="detail-card card">
+          <text class="card-title">ℹ️ 角色信息</text>
+          <view class="info-grid">
+            <view v-if="entry.role_detail.character_info.english_name" class="info-row">
+              <text class="info-key">英文名</text>
+              <text class="info-val">{{ entry.role_detail.character_info.english_name }}</text>
+            </view>
+            <view v-if="entry.role_detail.character_info.character_type" class="info-row">
+              <text class="info-key">角色类型</text>
+              <text class="info-val">{{ entry.role_detail.character_info.character_type }}</text>
+            </view>
+            <view v-if="entry.role_detail.character_info.belongs_to_scripts && entry.role_detail.character_info.belongs_to_scripts.length > 0" class="info-row">
+              <text class="info-key">所属剧本</text>
+              <text class="info-val">{{ entry.role_detail.character_info.belongs_to_scripts.join('、') }}</text>
+            </view>
+            <view v-if="entry.role_detail.character_info.ability_categories && entry.role_detail.character_info.ability_categories.length > 0" class="info-row">
+              <text class="info-key">能力类别</text>
+              <text class="info-val">{{ entry.role_detail.character_info.ability_categories.join('、') }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 原有的角色信息卡片（作为备用，如果没有role_detail） -->
+      <view v-else-if="entry.entry_type === 'role' && entry.role_info" class="role-info card">
         <view class="info-title">角色信息</view>
         
         <view v-if="entry.role_info.ability" class="info-item">
@@ -158,7 +294,17 @@ export default {
       entryId: '',
       entry: null,
       loading: true,
-      isFavorite: false
+      isFavorite: false,
+      // 🆕 v2.1: 折叠/展开状态
+      expandedSections: {
+        intro: true,      // 默认展开角色简介
+        examples: false,
+        mechanics: false,
+        tokens: false,
+        rules: false,
+        tips: false,
+        bluff: false
+      }
     }
   },
   
@@ -249,6 +395,11 @@ export default {
         urls: this.entry.media.images,
         current: this.entry.media.images[index]
       });
+    },
+    
+    // 🆕 v2.1: 切换章节展开/折叠
+    toggleSection(sectionName) {
+      this.expandedSections[sectionName] = !this.expandedSections[sectionName];
     },
     
     // 查看其他词条
@@ -779,6 +930,190 @@ export default {
 
 .action-btn.source {
   background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+/* 🆕 v2.1: 详细内容样式 */
+.detail-card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1A1A1A;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid #F0F0F0;
+}
+
+/* 背景故事 */
+.background-story {
+  display: block;
+  font-size: 30rpx;
+  color: #666;
+  line-height: 1.8;
+  font-style: italic;
+  padding: 20rpx;
+  background: #F8F8F8;
+  border-left: 6rpx solid #4facfe;
+  border-radius: 8rpx;
+}
+
+/* 角色能力 */
+.ability-text {
+  display: block;
+  font-size: 30rpx;
+  color: #333;
+  line-height: 1.8;
+  padding: 20rpx;
+  background: #E8F4FD;
+  border-radius: 8rpx;
+}
+
+/* 内容列表 */
+.content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-top: 16rpx;
+}
+
+.content-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.bullet {
+  font-size: 28rpx;
+  color: #4facfe;
+  margin-top: 4rpx;
+}
+
+.step-num {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #4facfe;
+  min-width: 40rpx;
+  margin-top: 4rpx;
+}
+
+.content-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* 范例列表 */
+.examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 16rpx;
+}
+
+.example-item {
+  padding: 20rpx;
+  background: #F8F8F8;
+  border-radius: 12rpx;
+  border-left: 6rpx solid #52c41a;
+}
+
+.example-label {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 8rpx;
+  font-weight: 500;
+}
+
+.example-text {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+}
+
+.example-text.result {
+  color: #52c41a;
+  font-weight: 500;
+  margin-bottom: 0;
+}
+
+/* 提示标记 */
+.tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 16rpx;
+}
+
+.token-item {
+  padding: 20rpx;
+  background: #FFF9E6;
+  border-radius: 12rpx;
+  border: 2rpx solid #FAAD14;
+}
+
+.token-name {
+  display: block;
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.token-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.token-detail {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.6;
+  padding-left: 24rpx;
+}
+
+/* 角色信息网格 */
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-key {
+  font-size: 26rpx;
+  color: #999;
+  min-width: 140rpx;
+}
+
+.info-val {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+  text-align: right;
 }
 </style>
 

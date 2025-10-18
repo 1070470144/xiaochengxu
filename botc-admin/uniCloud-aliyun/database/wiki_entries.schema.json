@@ -70,7 +70,53 @@
     },
     "role_info": {
       "bsonType": "object",
-      "description": "角色信息"
+      "description": "角色基本信息"
+    },
+    "role_detail": {
+      "bsonType": "object",
+      "description": "角色详细内容（v2.1新增）",
+      "properties": {
+        "background_story": {
+          "bsonType": "string",
+          "description": "背景故事"
+        },
+        "ability": {
+          "bsonType": "string",
+          "description": "角色能力"
+        },
+        "introduction": {
+          "bsonType": "array",
+          "description": "角色简介（多段）"
+        },
+        "examples": {
+          "bsonType": "array",
+          "description": "范例（场景+结果）"
+        },
+        "mechanics": {
+          "bsonType": "array",
+          "description": "运作方式（多步骤）"
+        },
+        "reminder_tokens": {
+          "bsonType": "array",
+          "description": "提示标记（结构化）"
+        },
+        "rule_details": {
+          "bsonType": "array",
+          "description": "规则细节"
+        },
+        "tips_and_tricks": {
+          "bsonType": "array",
+          "description": "提示与技巧"
+        },
+        "bluff_tips": {
+          "bsonType": "array",
+          "description": "伪装方法"
+        },
+        "character_info": {
+          "bsonType": "object",
+          "description": "角色属性信息"
+        }
+      }
     },
     "media": {
       "bsonType": "object",

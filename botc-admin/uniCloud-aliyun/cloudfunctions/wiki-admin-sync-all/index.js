@@ -1,6 +1,7 @@
 'use strict';
 
 const urlsConfig = require('./urls-config.js');
+const parserUtils = require('./parser-utils.js');
 
 exports.main = async (event, context) => {
   const { sync_type = 'all', batch_size = 5 } = event;
@@ -262,6 +263,13 @@ function parseMediaWikiPage(html, url) {
   const pageIdMatch = url.match(/title=([^&]+)/);
   const pageId = pageIdMatch ? decodeURIComponent(pageIdMatch[1]) : '';
   
+  // 🆕 v2.1: 详细内容解析（仅角色类型）
+  let role_detail = null;
+  if (entryType === 'role') {
+    console.log('[parseMediaWikiPage] 开始详细解析角色内容');
+    role_detail = parserUtils.parseRoleDetail(html);
+  }
+  
   return {
     entry_type: entryType,
     title: title,
@@ -276,6 +284,7 @@ function parseMediaWikiPage(html, url) {
       summary: contentText.substring(0, 300)
     },
     role_info: roleInfo,
+    role_detail: role_detail,  // 🆕 v2.1: 详细内容
     media: {
       icon_url: extractRoleIcon(html),
       images: images.slice(0, 15)

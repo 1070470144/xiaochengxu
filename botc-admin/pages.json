@@ -329,6 +329,12 @@
 				}
 			},
 			{
+				"path": "wiki/detail",
+				"style": {
+					"navigationBarTitleText": "词条详情"
+				}
+			},
+			{
 				"path": "wiki/test-data",
 				"style": {
 					"navigationBarTitleText": "数据测试"

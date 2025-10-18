@@ -168,10 +168,9 @@ export default {
     },
     
     viewEntry(entry) {
-      uni.showModal({
-        title: entry.title,
-        content: entry.content.summary || entry.content.text.substring(0, 200),
-        showCancel: false
+      // 跳转到详情页查看
+      uni.navigateTo({
+        url: '/pages/botc/wiki/detail?id=' + entry._id
       });
     },
     
