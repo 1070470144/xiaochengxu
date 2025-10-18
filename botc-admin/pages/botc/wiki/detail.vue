@@ -173,27 +173,27 @@
         </view>
         
         <!-- 角色信息 -->
-        <view v-if="entry.role_detail.character_info" class="section-card card">
+        <view v-if="characterInfo" class="section-card card">
           <view class="section-header">
             <text class="section-title">ℹ️ 角色信息</text>
           </view>
           <view class="section-content">
             <view class="info-table">
-              <view v-if="entry.role_detail.character_info.english_name" class="info-row">
+              <view v-if="characterInfo.english_name" class="info-row">
                 <text class="info-label">英文名</text>
-                <text class="info-value">{{ entry.role_detail.character_info.english_name }}</text>
+                <text class="info-value">{{ characterInfo.english_name }}</text>
               </view>
-              <view v-if="entry.role_detail.character_info.character_type" class="info-row">
+              <view v-if="characterInfo.character_type" class="info-row">
                 <text class="info-label">角色类型</text>
-                <text class="info-value">{{ entry.role_detail.character_info.character_type }}</text>
+                <text class="info-value">{{ characterInfo.character_type }}</text>
               </view>
-              <view v-if="entry.role_detail.character_info.belongs_to_scripts" class="info-row">
+              <view v-if="characterInfo.belongs_to_scripts && characterInfo.belongs_to_scripts.length > 0" class="info-row">
                 <text class="info-label">所属剧本</text>
-                <text class="info-value">{{ entry.role_detail.character_info.belongs_to_scripts.join('、') }}</text>
+                <text class="info-value">{{ characterInfo.belongs_to_scripts.join('、') }}</text>
               </view>
-              <view v-if="entry.role_detail.character_info.ability_categories" class="info-row">
+              <view v-if="characterInfo.ability_categories && characterInfo.ability_categories.length > 0" class="info-row">
                 <text class="info-label">能力类别</text>
-                <text class="info-value">{{ entry.role_detail.character_info.ability_categories.join('、') }}</text>
+                <text class="info-value">{{ characterInfo.ability_categories.join('、') }}</text>
               </view>
             </view>
           </view>
@@ -212,6 +212,24 @@ export default {
       entryId: '',
       entry: null,
       loading: true
+    }
+  },
+  
+  computed: {
+    characterInfo() {
+      if (!this.entry) return null;
+      
+      // 优先从 role_detail.character_info 获取
+      if (this.entry.role_detail && this.entry.role_detail.character_info) {
+        return this.entry.role_detail.character_info;
+      }
+      
+      // 兼容旧数据：从 media.character_info 获取
+      if (this.entry.media && this.entry.media.character_info) {
+        return this.entry.media.character_info;
+      }
+      
+      return null;
     }
   },
   

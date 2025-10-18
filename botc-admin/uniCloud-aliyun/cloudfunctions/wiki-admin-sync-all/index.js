@@ -287,6 +287,8 @@ function parseMediaWikiPage(html, url) {
     role_detail: role_detail,  // 🆕 v2.1: 详细内容
     media: {
       icon_url: role_detail ? role_detail.icon_url : extractRoleIcon(html),  // 优先使用详细解析的图标
+      character_info: role_detail ? role_detail.character_info : null,  // 角色信息
+      background_story: role_detail ? role_detail.background_story : null,  // 背景故事
       images: images.slice(0, 15)
     },
     category: getCategoryByType(entryType),

@@ -388,20 +388,58 @@ function parseBluffTips(html) {
  */
 function parseCharacterInfo(html) {
   try {
-    // 先清理HTML，再匹配
-    const cleanHtml = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    console.log('[parseCharacterInfo] 开始解析角色信息');
+    console.log('[parseCharacterInfo] HTML长度:', html.length);
     
-    // 匹配"角色信息"章节到最后
-    const pattern = /角色信息\s+([\s\S]{50,1000}?)$/i;
-    const match = cleanHtml.match(pattern);
+    // 方法：搜索 <h2>角色信息</h2> 然后提取后面的 <ul><li> 列表
+    // 注意：必须确保是内容区域的h2，不是目录的链接
     
-    if (!match) {
-      console.log('[parseCharacterInfo] 未找到角色信息章节');
+    // 搜索所有包含"角色信息"的 <h2> 标签位置
+    const h2Regex = /<h2[^>]*>[\s\S]*?角色信息[\s\S]*?<\/h2>/gi;
+    const h2Matches = [];
+    let match;
+    while ((match = h2Regex.exec(html)) !== null) {
+      h2Matches.push({
+        index: match.index,
+        text: match[0]
+      });
+    }
+    
+    console.log('[parseCharacterInfo] 找到', h2Matches.length, '个"角色信息"标题');
+    
+    // 取最后一个（真正的章节标题，不是目录）
+    if (h2Matches.length === 0) {
+      console.log('[parseCharacterInfo] ❌ 未找到"角色信息"章节');
       return {};
     }
     
-    const infoText = match[1].trim();
-    console.log('[parseCharacterInfo] 角色信息文本:', infoText.substring(0, 200));
+    const lastH2 = h2Matches[h2Matches.length - 1];
+    console.log('[parseCharacterInfo] 使用第', h2Matches.length, '个"角色信息"，位置:', lastH2.index);
+    
+    // 从这个h2标签的结束位置开始，提取后面的内容
+    const startPos = lastH2.index + lastH2.text.length;
+    const restHtml = html.substring(startPos, startPos + 1500);
+    
+    // 提取到下一个h2或注释为止
+    const contentMatch = restHtml.match(/^([\s\S]{50,1500}?)(?=<h[12]|<!--)/i);
+    
+    if (!contentMatch) {
+      console.log('[parseCharacterInfo] ❌ 未提取到角色信息内容');
+      return {};
+    }
+    
+    console.log('[parseCharacterInfo] 提取到HTML片段，长度:', contentMatch[1].length);
+    console.log('[parseCharacterInfo] HTML片段（前300字符）:', contentMatch[1].substring(0, 300));
+    
+    // 清理HTML
+    const infoText = contentMatch[1]
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    console.log('[parseCharacterInfo] 清理后的文本:', infoText);
     
     const info = {
       english_name: '',
@@ -410,41 +448,58 @@ function parseCharacterInfo(html) {
       ability_categories: []
     };
     
-    // 提取英文名
-    const englishMatch = infoText.match(/英文名[：:]\s*(\w+)/);
+    // 提取英文名（支持多种格式）
+    const englishMatch = infoText.match(/英文名[：:\s]*([A-Za-z\s]+?)(?=\s|角色|所属|能力|$)/i);
     if (englishMatch) {
-      info.english_name = englishMatch[1];
+      info.english_name = englishMatch[1].trim();
+      console.log('[parseCharacterInfo] ✓ 英文名:', info.english_name);
+    } else {
+      console.log('[parseCharacterInfo] ✗ 未匹配到英文名');
+    }
+    
+    // 提取角色类型（支持多种格式）
+    const typeMatch = infoText.match(/角色类型[：:\s]*(镇民|外来者|爪牙|恶魔|旅行者)/i);
+    if (typeMatch) {
+      info.character_type = typeMatch[1];
+      console.log('[parseCharacterInfo] ✓ 角色类型:', info.character_type);
+    } else {
+      console.log('[parseCharacterInfo] ✗ 未匹配到角色类型');
     }
     
     // 提取所属剧本
-    const scriptMatch = infoText.match(/所属剧本[：:]\s*([^\s角]+)/);
+    const scriptMatch = infoText.match(/所属剧本[：:\s]*([^角色能力]+?)(?=角色|能力|$)/i);
     if (scriptMatch) {
       info.belongs_to_scripts = scriptMatch[1]
-        .split(/[、，,]/)
+        .split(/[、，,]+/)
         .map(s => s.trim())
-        .filter(s => s);
+        .filter(s => s && s.length > 0 && s.length < 20);
+      console.log('[parseCharacterInfo] ✓ 所属剧本:', info.belongs_to_scripts);
+    } else {
+      console.log('[parseCharacterInfo] ✗ 未匹配到所属剧本');
     }
     
-    // 提取角色类型
-    const typeMatch = infoText.match(/角色类型[：:]\s*(\S+)/);
-    if (typeMatch) {
-      info.character_type = typeMatch[1];
-    }
-    
-    // 提取能力类别
-    const categoryMatch = infoText.match(/角色能力类型[：:]\s*(.+?)$/);
+    // 提取能力类别（多种可能的名称）
+    const categoryMatch = infoText.match(/(?:角色能力类型|能力类型|能力类别)[：:\s]*(.+?)(?=英文|角色|所属|导航|$)/i);
     if (categoryMatch) {
       info.ability_categories = categoryMatch[1]
         .split(/[、，,\s]+/)
         .map(s => s.trim())
-        .filter(s => s && s.length > 1);
+        .filter(s => s && s.length > 0 && s.length < 10);
+      console.log('[parseCharacterInfo] ✓ 能力类别:', info.ability_categories);
+    } else {
+      console.log('[parseCharacterInfo] ✗ 未匹配到能力类别');
     }
     
-    console.log('[parseCharacterInfo] 提取结果:', info);
+    console.log('[parseCharacterInfo] ========== 最终提取结果 ==========');
+    console.log('[parseCharacterInfo] 英文名:', info.english_name || '(空)');
+    console.log('[parseCharacterInfo] 角色类型:', info.character_type || '(空)');
+    console.log('[parseCharacterInfo] 所属剧本:', info.belongs_to_scripts.length ? info.belongs_to_scripts.join('、') : '(空)');
+    console.log('[parseCharacterInfo] 能力类别:', info.ability_categories.length ? info.ability_categories.join('、') : '(空)');
     
     return info;
   } catch (error) {
     console.error('[parseCharacterInfo] 失败:', error);
+    console.error('[parseCharacterInfo] 错误堆栈:', error.stack);
     return {};
   }
 }

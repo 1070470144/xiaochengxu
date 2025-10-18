@@ -115,6 +115,8 @@ exports.main = async (event, context) => {
       role_detail: role_detail,  // 🆕 v2.1: 详细内容
       media: { 
         icon_url: role_detail ? role_detail.icon_url : null,  // 🆕 使用解析的图标
+        character_info: role_detail ? role_detail.character_info : null,  // 🆕 角色信息也放到media中，方便列表页访问
+        background_story: role_detail ? role_detail.background_story : null,  // 🆕 背景故事
         images: [] 
       },
       category: '角色',
