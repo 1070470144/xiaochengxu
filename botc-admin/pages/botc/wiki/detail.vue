@@ -199,56 +199,6 @@
           </view>
         </view>
       </view>
-      
-      <!-- 统计信息 -->
-      <view class="stats-card card">
-        <view class="section-header">
-          <text class="section-title">📊 统计信息</text>
-        </view>
-        <view class="section-content">
-          <view class="stats-grid">
-            <view class="stat-item">
-              <text class="stat-label">浏览量</text>
-              <text class="stat-value">{{ entry.stats.view_count || 0 }}</text>
-            </view>
-            <view class="stat-item">
-              <text class="stat-label">收藏数</text>
-              <text class="stat-value">{{ entry.stats.favorite_count || 0 }}</text>
-            </view>
-            <view class="stat-item">
-              <text class="stat-label">搜索次数</text>
-              <text class="stat-value">{{ entry.stats.search_count || 0 }}</text>
-            </view>
-            <view class="stat-item">
-              <text class="stat-label">质量分数</text>
-              <text class="stat-value">{{ entry.quality_score || 0 }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      
-      <!-- 同步信息 -->
-      <view v-if="entry.sync_info" class="sync-card card">
-        <view class="section-header">
-          <text class="section-title">🔄 同步信息</text>
-        </view>
-        <view class="section-content">
-          <view class="info-table">
-            <view class="info-row">
-              <text class="info-label">最后同步</text>
-              <text class="info-value">{{ formatTime(entry.sync_info.last_synced_at) }}</text>
-            </view>
-            <view class="info-row">
-              <text class="info-label">同步方式</text>
-              <text class="info-value">{{ entry.sync_info.sync_source === 'manual' ? '手动' : '自动' }}</text>
-            </view>
-            <view class="info-row">
-              <text class="info-label">同步次数</text>
-              <text class="info-value">{{ entry.sync_info.sync_count || 1 }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
     </view>
   </view>
 </template>
@@ -683,32 +633,5 @@ export default {
   text-align: right;
 }
 
-/* 统计网格 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 16px;
-  background: #f8f8f8;
-  border-radius: 8px;
-}
-
-.stat-label {
-  display: block;
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: bold;
-  color: #4facfe;
-}
 </style>
 
