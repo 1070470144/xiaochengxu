@@ -74,6 +74,14 @@
 			}
 		},
 		{
+			"path": "pages/tools/wiki/detail",
+			"style": {
+				"navigationBarTitleText": "角色详情",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black"
+			}
+		},
+		{
 			"path": "pages/user/profile/profile",
 			"style": {
 				"navigationBarTitleText": "我的",

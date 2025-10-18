@@ -2,6 +2,12 @@
   "bsonType": "object",
   "description": "钟楼百科词条表",
   "required": ["entry_type", "title", "source_url"],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
   "properties": {
     "_id": {
       "description": "词条ID"

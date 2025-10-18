@@ -196,70 +196,7 @@
         </view>
       </view>
       
-      <!-- 文章内容 -->
-      <view class="article card">
-        <!-- 摘要 -->
-        <view v-if="entry.content.summary" class="summary">
-          {{ entry.content.summary }}
-        </view>
-        
-        <!-- 分段内容 -->
-        <view 
-          v-for="(section, index) in entry.content.sections" 
-          :key="index"
-          class="section"
-        >
-          <text class="section-heading" :class="'level-' + section.level">
-            {{ section.heading }}
-          </text>
-          <text class="section-content">{{ section.content }}</text>
-        </view>
-      </view>
-      
-      <!-- 相关图片 -->
-      <view v-if="entry.media && entry.media.images && entry.media.images.length > 0" class="images card">
-        <text class="images-title">相关图片</text>
-        <view class="image-grid">
-          <image 
-            v-for="(img, index) in entry.media.images" 
-            :key="index"
-            class="grid-image"
-            :src="img"
-            mode="aspectFill"
-            @click="previewImage(index)"
-          />
-        </view>
-      </view>
-      
-      <!-- 相关链接 -->
-      <view v-if="entry.related_links && entry.related_links.length > 0" class="related-links card">
-        <text class="links-title">相关链接</text>
-        <view 
-          v-for="(link, index) in entry.related_links" 
-          :key="index"
-          class="link-item"
-          @click="importFromLink(link.url)"
-        >
-          <text class="link-text">{{ link.text }}</text>
-          <text class="link-arrow">›</text>
-        </view>
-      </view>
-      
-      <!-- 相关词条 -->
-      <view v-if="entry.related_entries && entry.related_entries.length > 0" class="related-entries card">
-        <text class="related-title">相关词条</text>
-        <view 
-          v-for="item in entry.related_entries" 
-          :key="item._id"
-          class="related-item"
-          @click="viewDetail(item._id)"
-        >
-          <text class="related-name">{{ item.title }}</text>
-          <text class="related-arrow">›</text>
-        </view>
-      </view>
-      
-      <!-- 底部操作栏 -->
+      <!-- 底部占位 -->
       <view class="footer-placeholder"></view>
     </view>
     
@@ -272,14 +209,8 @@
     
     <!-- 固定底部操作栏 -->
     <view v-if="entry" class="footer">
-      <button class="action-btn favorite" @click="toggleFavorite">
-        {{ isFavorite ? '💛' : '🤍' }} {{ isFavorite ? '已收藏' : '收藏' }}
-      </button>
-      <button class="action-btn share" @click="shareEntry">
-        📤 分享
-      </button>
-      <button class="action-btn source" @click="openSource">
-        🔗 原文
+      <button class="action-btn-full source" @click="openSource">
+        🌐 跳转百科地址
       </button>
     </view>
   </view>
@@ -329,38 +260,58 @@ export default {
       this.loading = true;
       
       try {
-        const res = await uniCloud.callFunction({
-          name: 'wiki-detail',
-          data: {
-            entry_id: this.entryId,
-            userId: getApp().globalData.userId
-          }
-        });
+        const db = uniCloud.database();
+        const res = await db.collection('wiki_entries')
+          .doc(this.entryId)
+          .get();
         
-        if (res.result.code === 0) {
-          this.entry = res.result.data;
+        const data = res.result?.data || res.data || [];
+        
+        if (data && data.length > 0) {
+          this.entry = data[0];
           
           // 设置页面标题
           uni.setNavigationBarTitle({
             title: this.entry.title || '百科详情'
           });
           
-          // 检查是否已收藏
-          await this.checkFavorite();
+          // 更新浏览量
+          await this.updateViewCount();
+          
+          // 检查是否已收藏（仅登录用户）
+          const userId = getApp().globalData.userId;
+          if (userId) {
+            await this.checkFavorite();
+          }
         } else {
           uni.showToast({
-            title: res.result.message || '加载失败',
+            title: '词条不存在',
             icon: 'none'
           });
         }
       } catch (error) {
-        console.error('加载失败', error);
+        console.error('[loadEntry] 加载失败:', error);
         uni.showToast({
           title: '加载失败',
           icon: 'none'
         });
       } finally {
         this.loading = false;
+      }
+    },
+    
+    // 更新浏览量
+    async updateViewCount() {
+      try {
+        const db = uniCloud.database();
+        const dbCmd = db.command;
+        await db.collection('wiki_entries')
+          .doc(this.entryId)
+          .update({
+            'stats.view_count': dbCmd.inc(1)
+          });
+      } catch (error) {
+        console.error('[updateViewCount] 更新浏览量失败:', error);
       }
     },
     
@@ -409,133 +360,44 @@ export default {
       });
     },
     
-    // 从相关链接导入
-    importFromLink(url) {
-      uni.showModal({
-        title: '导入词条',
-        content: '是否导入这个词条？',
-        success: async (res) => {
-          if (res.confirm) {
-            try {
-              uni.showLoading({ title: '解析中...' });
-              
-              const result = await uniCloud.callFunction({
-                name: 'wiki-parse-url',
-                data: {
-                  url: url,
-                  userId: getApp().globalData.userId
-                }
-              });
-              
-              uni.hideLoading();
-              
-              if (result.result.code === 0) {
-                this.viewDetail(result.result.data._id);
-              } else {
-                uni.showToast({
-                  title: '导入失败',
-                  icon: 'none'
-                });
-              }
-            } catch (error) {
-              uni.hideLoading();
-              console.error('导入失败', error);
-            }
-          }
-        }
-      });
-    },
-    
-    // 收藏/取消收藏
-    async toggleFavorite() {
-      const userId = getApp().globalData.userId;
-      if (!userId) {
+    // 打开百科地址
+    openSource() {
+      if (!this.entry || !this.entry.source_url) {
         uni.showToast({
-          title: '请先登录',
+          title: '百科地址不存在',
           icon: 'none'
         });
         return;
       }
       
-      try {
-        const db = uniCloud.database();
-        const dbCmd = db.command;
-        
-        if (this.isFavorite) {
-          // 取消收藏
-          await db.collection('wiki_favorites')
-            .where({
-              user_id: userId,
-              entry_id: this.entryId
-            })
-            .remove();
-          
-          // 更新词条收藏计数
-          await db.collection('wiki_entries')
-            .doc(this.entryId)
-            .update({
-              'stats.favorite_count': dbCmd.inc(-1)
-            });
-          
-          this.isFavorite = false;
-          uni.showToast({
-            title: '已取消收藏',
-            icon: 'success'
-          });
-        } else {
-          // 添加收藏
-          await db.collection('wiki_favorites').add({
-            user_id: userId,
-            entry_id: this.entryId,
-            created_at: new Date()
-          });
-          
-          // 更新词条收藏计数
-          await db.collection('wiki_entries')
-            .doc(this.entryId)
-            .update({
-              'stats.favorite_count': dbCmd.inc(1)
-            });
-          
-          this.isFavorite = true;
-          uni.showToast({
-            title: '收藏成功',
-            icon: 'success'
-          });
-        }
-      } catch (error) {
-        console.error('收藏操作失败', error);
-        uni.showToast({
-          title: '操作失败',
-          icon: 'none'
-        });
-      }
-    },
-    
-    // 分享词条
-    shareEntry() {
-      // TODO: 实现分享功能
-      uni.showToast({
-        title: '分享功能开发中',
-        icon: 'none'
-      });
-    },
-    
-    // 打开原文链接
-    openSource() {
-      if (!this.entry || !this.entry.source_url) return;
+      console.log('[openSource] 准备打开百科地址:', this.entry.source_url);
       
-      // 复制链接到剪贴板
+      // 使用 web-view 或外部浏览器打开
+      // #ifdef H5
+      // H5端直接打开新窗口
+      window.open(this.entry.source_url, '_blank');
+      // #endif
+      
+      // #ifndef H5
+      // 小程序端复制地址并提示用户在浏览器中打开
       uni.setClipboardData({
         data: this.entry.source_url,
         success: () => {
           uni.showModal({
-            title: '链接已复制',
-            content: '可以在浏览器中打开查看原文',
+            title: '🌐 即将跳转',
+            content: '百科地址已复制到剪贴板\n\n' + this.entry.source_url + '\n\n请在浏览器中粘贴打开',
+            confirmText: '好的',
             showCancel: false
+          });
+        },
+        fail: () => {
+          uni.showToast({
+            title: '操作失败',
+            icon: 'none'
           });
         }
       });
+      // #endif
     }
   }
 }
@@ -729,170 +591,9 @@ export default {
   border-radius: 20rpx;
 }
 
-/* 文章内容 */
-.article {
-  padding: 32rpx;
-}
-
-.summary {
-  font-size: 30rpx;
-  color: #333;
-  line-height: 1.8;
-  margin-bottom: 32rpx;
-  padding-bottom: 32rpx;
-  border-bottom: 2rpx solid #F0F0F0;
-}
-
-.section {
-  margin-bottom: 32rpx;
-}
-
-.section:last-child {
-  margin-bottom: 0;
-}
-
-.section-heading {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #1A1A1A;
-  margin-bottom: 16rpx;
-  line-height: 1.4;
-}
-
-.section-heading.level-3 {
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-.section-heading.level-4 {
-  font-size: 26rpx;
-  font-weight: 500;
-}
-
-.section-content {
-  display: block;
-  font-size: 28rpx;
-  color: #666;
-  line-height: 1.8;
-  white-space: pre-wrap;
-}
-
-/* 图片网格 */
-.images {
-  padding: 32rpx;
-}
-
-.images-title {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #1A1A1A;
-  margin-bottom: 24rpx;
-}
-
-.image-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16rpx;
-}
-
-.grid-image {
-  width: 100%;
-  height: 200rpx;
-  border-radius: 12rpx;
-  background: #F5F5F5;
-}
-
-/* 相关链接 */
-.related-links {
-  padding: 32rpx;
-}
-
-.links-title {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #1A1A1A;
-  margin-bottom: 24rpx;
-}
-
-.link-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
-}
-
-.link-item:last-child {
-  border-bottom: none;
-}
-
-.link-item:active {
-  background: #F8F8F8;
-  margin: 0 -16rpx;
-  padding: 20rpx 16rpx;
-}
-
-.link-text {
-  flex: 1;
-  font-size: 28rpx;
-  color: #333;
-}
-
-.link-arrow {
-  font-size: 40rpx;
-  color: #ccc;
-  margin-left: 16rpx;
-}
-
-/* 相关词条 */
-.related-entries {
-  padding: 32rpx;
-}
-
-.related-title {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #1A1A1A;
-  margin-bottom: 24rpx;
-}
-
-.related-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
-}
-
-.related-item:last-child {
-  border-bottom: none;
-}
-
-.related-item:active {
-  background: #F8F8F8;
-  margin: 0 -16rpx;
-  padding: 20rpx 16rpx;
-}
-
-.related-name {
-  flex: 1;
-  font-size: 28rpx;
-  color: #333;
-}
-
-.related-arrow {
-  font-size: 40rpx;
-  color: #ccc;
-  margin-left: 16rpx;
-}
-
 /* 底部占位 */
 .footer-placeholder {
-  height: 120rpx;
+  height: 100rpx;
 }
 
 /* 底部操作栏 */
@@ -901,8 +602,6 @@ export default {
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  gap: 12rpx;
   padding: 20rpx 24rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   background: white;
@@ -910,26 +609,25 @@ export default {
   z-index: 100;
 }
 
-.action-btn {
-  flex: 1;
-  height: 80rpx;
-  font-size: 26rpx;
-  border-radius: 12rpx;
+.action-btn-full {
+  width: 100%;
+  height: 88rpx;
+  font-size: 30rpx;
+  border-radius: 16rpx;
   border: none;
   color: white;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 2rpx;
 }
 
-.action-btn.favorite {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+.action-btn-full.source {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.3);
 }
 
-.action-btn.share {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.action-btn.source {
-  background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+.action-btn-full:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 /* 🆕 v2.1: 详细内容样式 */
