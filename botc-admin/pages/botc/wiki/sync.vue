@@ -21,56 +21,167 @@
       </view>
     </view>
     
-    <view class="sync-section card">
-      <view class="section-title">批量同步</view>
-      <view class="sync-buttons">
-        <button 
-          class="sync-btn primary" 
-          :loading="syncing && syncType === 'all'"
-          @click="startSync('all')"
-        >
-          同步所有内容
-        </button>
-        <button 
-          class="sync-btn" 
-          :loading="syncing && syncType === 'roles'"
-          @click="startSync('roles')"
-        >
-          仅同步角色
-        </button>
-        <button 
-          class="sync-btn" 
-          :loading="syncing && syncType === 'scripts'"
-          @click="startSync('scripts')"
-        >
-          仅同步剧本
-        </button>
-        <button 
-          class="sync-btn" 
-          :loading="syncing && syncType === 'rules'"
-          @click="startSync('rules')"
-        >
-          仅同步规则
-        </button>
-      </view>
-    </view>
-    
-    <view class="single-sync-section card">
-      <view class="section-title">单个同步</view>
-      <view class="input-row">
-        <input 
-          class="url-input"
-          v-model="singleUrl"
-          placeholder="输入钟楼百科页面URL"
+    <!-- 角色管理区域 -->
+    <view class="role-management-section card">
+      <view class="section-title">角色管理</view>
+      
+      <!-- 添加角色 -->
+      <view class="add-role-area">
+        <view class="input-label">添加角色（多个角色用逗号或换行分隔）</view>
+        <textarea 
+          class="role-textarea"
+          v-model="roleInput"
+          placeholder="请输入角色名称，例如：&#10;图书管理员&#10;哲学家&#10;洗衣妇"
+          maxlength="1000"
         />
-        <button 
-          class="sync-single-btn"
-          :loading="syncingSingle"
-          :disabled="!singleUrl.trim()"
-          @click="syncSingle"
-        >
-          同步
-        </button>
+        <view class="button-row">
+          <button 
+            class="add-role-btn"
+            :loading="addingRoles"
+            :disabled="!roleInput.trim()"
+            @click="addRoles"
+          >
+            保存角色
+          </button>
+          <button 
+            class="clear-btn"
+            @click="roleInput = ''"
+          >
+            清空
+          </button>
+        </view>
+      </view>
+      
+      <!-- 搜索和筛选 -->
+      <view class="search-filter-area">
+        <view class="search-row">
+          <input 
+            class="search-input"
+            v-model="searchKeyword"
+            placeholder="搜索角色名称"
+            @input="searchRoles"
+          />
+          <picker 
+            mode="selector" 
+            :value="statusFilterIndex" 
+            :range="statusOptions"
+            range-key="label"
+            @change="onStatusFilterChange"
+          >
+            <button class="filter-btn">
+              {{ statusOptions[statusFilterIndex].label }}
+            </button>
+          </picker>
+        </view>
+      </view>
+      
+      <!-- 角色列表 -->
+      <view class="role-list-area">
+        <view class="list-header">
+          <text class="list-title">已保存的角色（{{ roleList.length }}/{{ totalRoles }}）</text>
+          <view class="batch-actions">
+            <button 
+              class="batch-btn"
+              :disabled="selectedRoles.length === 0"
+              @click="batchSync"
+            >
+              批量同步（{{ selectedRoles.length }}）
+            </button>
+            <button 
+              class="batch-btn delete"
+              :disabled="selectedRoles.length === 0"
+              @click="batchDelete"
+            >
+              批量删除（{{ selectedRoles.length }}）
+            </button>
+          </view>
+        </view>
+        
+        <view v-if="loadingRoles" class="loading-area">
+          <text>加载中...</text>
+        </view>
+        
+        <view v-else-if="roleList.length === 0" class="empty-area">
+          <text class="empty-text">暂无角色，请先添加角色</text>
+        </view>
+        
+        <view v-else class="role-table">
+          <view class="table-header">
+            <view class="col-checkbox">
+              <checkbox 
+                :checked="allSelected" 
+                @click="toggleSelectAll"
+              />
+            </view>
+            <view class="col-name">角色名称</view>
+            <view class="col-status">状态</view>
+            <view class="col-time">最后同步时间</view>
+            <view class="col-actions">操作</view>
+          </view>
+          
+          <view 
+            v-for="role in roleList" 
+            :key="role._id" 
+            class="table-row"
+            :class="{ 'row-selected': selectedRoles.includes(role._id) }"
+          >
+            <view class="col-checkbox">
+              <checkbox 
+                :value="role._id"
+                :checked="selectedRoles.includes(role._id)"
+                @click="toggleSelect(role._id)"
+              />
+            </view>
+            <view class="col-name">
+              <text class="role-name">{{ role.role_name }}</text>
+            </view>
+            <view class="col-status">
+              <view 
+                class="status-tag"
+                :class="'status-' + role.sync_status"
+              >
+                {{ getStatusText(role.sync_status) }}
+              </view>
+            </view>
+            <view class="col-time">
+              <text class="time-text">{{ formatTime(role.last_sync_time) }}</text>
+            </view>
+            <view class="col-actions">
+              <button 
+                class="action-btn sync-btn"
+                :loading="syncingRole === role._id"
+                @click="syncSingleRole(role)"
+              >
+                同步
+              </button>
+              <button 
+                class="action-btn delete-btn"
+                @click="deleteRole(role)"
+              >
+                删除
+              </button>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 分页 -->
+        <view v-if="totalRoles > pageSize" class="pagination">
+          <button 
+            class="page-btn"
+            :disabled="currentPage === 1"
+            @click="changePage(currentPage - 1)"
+          >
+            上一页
+          </button>
+          <text class="page-info">{{ currentPage }} / {{ totalPages }}</text>
+          <button 
+            class="page-btn"
+            :disabled="currentPage === totalPages"
+            @click="changePage(currentPage + 1)"
+          >
+            下一页
+          </button>
+        </view>
       </view>
     </view>
     
@@ -137,7 +248,35 @@ export default {
       syncingSingle: false,
       singleUrl: '',
       lastSync: null,
-      syncLogs: []
+      syncLogs: [],
+      
+      // 角色管理相关
+      roleInput: '',
+      addingRoles: false,
+      searchKeyword: '',
+      statusFilterIndex: 0,
+      statusOptions: [
+        { label: '全部状态', value: 'all' },
+        { label: '已同步', value: 'synced' },
+        { label: '未同步', value: 'unsynced' },
+        { label: '同步失败', value: 'failed' }
+      ],
+      roleList: [],
+      totalRoles: 0,
+      loadingRoles: false,
+      selectedRoles: [],
+      syncingRole: null,
+      currentPage: 1,
+      pageSize: 20
+    }
+  },
+  
+  computed: {
+    allSelected() {
+      return this.roleList.length > 0 && this.selectedRoles.length === this.roleList.length;
+    },
+    totalPages() {
+      return Math.ceil(this.totalRoles / this.pageSize);
     }
   },
   
@@ -145,6 +284,7 @@ export default {
     console.log('[WikiSync] 页面加载');
     this.loadStats();
     this.loadSyncLogs();
+    this.loadRoleList();
   },
   
   onShow() {
@@ -313,8 +453,329 @@ export default {
     },
     
     getStatusText(status) {
-      const map = { success: '成功', partial_success: '部分成功', failed: '失败', running: '运行中' };
+      if (!status) return '未同步';
+      const map = { 
+        success: '已同步', 
+        partial_success: '部分成功', 
+        failed: '失败', 
+        running: '运行中',
+        pending: '未同步'
+      };
       return map[status] || status;
+    },
+    
+    // ========== 角色管理相关方法 ==========
+    
+    // 添加角色
+    async addRoles() {
+      const input = this.roleInput.trim();
+      if (!input) {
+        return uni.showToast({ title: '请输入角色名称', icon: 'none' });
+      }
+      
+      // 分割角色名称（支持逗号、换行、分号分隔）
+      const roleNames = input
+        .split(/[,，\n;；]/)
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+      
+      if (roleNames.length === 0) {
+        return uni.showToast({ title: '请输入有效的角色名称', icon: 'none' });
+      }
+      
+      this.addingRoles = true;
+      
+      try {
+        uni.showLoading({ title: '添加中...' });
+        
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-add',
+          data: {
+            role_names: roleNames
+          }
+        });
+        
+        uni.hideLoading();
+        
+        console.log('[addRoles] 添加结果:', res.result);
+        
+        if (res.result.code === 0) {
+          const data = res.result.data;
+          let message = res.result.message;
+          
+          if (data.duplicate.length > 0) {
+            message += `\n重复角色：${data.duplicate.join('、')}`;
+          }
+          
+          if (data.failed.length > 0) {
+            message += `\n失败角色：${data.failed.map(f => f.role_name).join('、')}`;
+          }
+          
+          uni.showModal({
+            title: '添加完成',
+            content: message,
+            showCancel: false,
+            success: () => {
+              this.roleInput = '';
+              this.loadRoleList();
+            }
+          });
+        } else {
+          uni.showToast({ 
+            title: res.result.message, 
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      } catch (error) {
+        uni.hideLoading();
+        console.error('[addRoles] 添加失败:', error);
+        uni.showToast({ 
+          title: '添加失败: ' + error.message, 
+          icon: 'none',
+          duration: 2000
+        });
+      } finally {
+        this.addingRoles = false;
+      }
+    },
+    
+    // 加载角色列表
+    async loadRoleList() {
+      this.loadingRoles = true;
+      
+      try {
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-list',
+          data: {
+            keyword: this.searchKeyword,
+            sync_status: this.statusOptions[this.statusFilterIndex].value,
+            page: this.currentPage,
+            page_size: this.pageSize
+          }
+        });
+        
+        console.log('[loadRoleList] 加载结果:', res.result);
+        
+        if (res.result.code === 0) {
+          this.roleList = res.result.data.list;
+          this.totalRoles = res.result.data.total;
+        } else {
+          uni.showToast({ 
+            title: '加载失败: ' + res.result.message, 
+            icon: 'none' 
+          });
+        }
+      } catch (error) {
+        console.error('[loadRoleList] 加载失败:', error);
+        uni.showToast({ 
+          title: '加载失败: ' + error.message, 
+          icon: 'none' 
+        });
+      } finally {
+        this.loadingRoles = false;
+      }
+    },
+    
+    // 搜索角色
+    searchRoles() {
+      // 防抖处理
+      clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(() => {
+        this.currentPage = 1;
+        this.loadRoleList();
+      }, 500);
+    },
+    
+    // 状态筛选变化
+    onStatusFilterChange(e) {
+      this.statusFilterIndex = e.detail.value;
+      this.currentPage = 1;
+      this.loadRoleList();
+    },
+    
+    // 切换选择
+    toggleSelect(roleId) {
+      const index = this.selectedRoles.indexOf(roleId);
+      if (index > -1) {
+        this.selectedRoles.splice(index, 1);
+      } else {
+        this.selectedRoles.push(roleId);
+      }
+    },
+    
+    // 全选/取消全选
+    toggleSelectAll() {
+      if (this.allSelected) {
+        this.selectedRoles = [];
+      } else {
+        this.selectedRoles = this.roleList.map(role => role._id);
+      }
+    },
+    
+    // 同步单个角色
+    async syncSingleRole(role) {
+      uni.showModal({
+        title: '确认同步',
+        content: `确定要同步角色 "${role.role_name}" 吗？`,
+        success: async (res) => {
+          if (res.confirm) {
+            await this.executeSyncRoles([role._id]);
+          }
+        }
+      });
+    },
+    
+    // 批量同步
+    async batchSync() {
+      if (this.selectedRoles.length === 0) {
+        return uni.showToast({ title: '请先选择角色', icon: 'none' });
+      }
+      
+      uni.showModal({
+        title: '确认批量同步',
+        content: `确定要同步选中的 ${this.selectedRoles.length} 个角色吗？`,
+        success: async (res) => {
+          if (res.confirm) {
+            await this.executeSyncRoles(this.selectedRoles);
+          }
+        }
+      });
+    },
+    
+    // 执行同步角色
+    async executeSyncRoles(roleIds) {
+      this.syncing = true;
+      
+      try {
+        uni.showLoading({ title: '同步中...', mask: true });
+        
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-sync',
+          data: {
+            role_ids: roleIds
+          }
+        });
+        
+        uni.hideLoading();
+        
+        console.log('[executeSyncRoles] 同步结果:', res.result);
+        
+        if (res.result.code === 0) {
+          const data = res.result.data;
+          let content = `总数: ${data.total_count}\n成功: ${data.success_count}\n失败: ${data.failed_count}\n耗时: ${data.duration}秒`;
+          
+          if (data.failed.length > 0) {
+            content += `\n\n失败角色：\n${data.failed.map(f => `${f.role_name}: ${f.reason}`).join('\n')}`;
+          }
+          
+          uni.showModal({
+            title: '同步完成',
+            content: content,
+            showCancel: false,
+            success: () => {
+              this.selectedRoles = [];
+              this.loadRoleList();
+              this.loadStats();
+            }
+          });
+        } else {
+          uni.showToast({ 
+            title: '同步失败: ' + res.result.message, 
+            icon: 'none',
+            duration: 3000
+          });
+        }
+      } catch (error) {
+        uni.hideLoading();
+        console.error('[executeSyncRoles] 同步失败:', error);
+        uni.showToast({ 
+          title: '同步失败: ' + error.message, 
+          icon: 'none',
+          duration: 2000
+        });
+      } finally {
+        this.syncing = false;
+        this.syncingRole = null;
+      }
+    },
+    
+    // 删除角色
+    async deleteRole(role) {
+      uni.showModal({
+        title: '确认删除',
+        content: `确定要删除角色 "${role.role_name}" 吗？`,
+        success: async (res) => {
+          if (res.confirm) {
+            await this.executeDeleteRoles([role._id]);
+          }
+        }
+      });
+    },
+    
+    // 批量删除
+    async batchDelete() {
+      if (this.selectedRoles.length === 0) {
+        return uni.showToast({ title: '请先选择角色', icon: 'none' });
+      }
+      
+      uni.showModal({
+        title: '确认批量删除',
+        content: `确定要删除选中的 ${this.selectedRoles.length} 个角色吗？删除后无法恢复。`,
+        success: async (res) => {
+          if (res.confirm) {
+            await this.executeDeleteRoles(this.selectedRoles);
+          }
+        }
+      });
+    },
+    
+    // 执行删除角色
+    async executeDeleteRoles(roleIds) {
+      try {
+        uni.showLoading({ title: '删除中...' });
+        
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-delete',
+          data: {
+            role_ids: roleIds
+          }
+        });
+        
+        uni.hideLoading();
+        
+        console.log('[executeDeleteRoles] 删除结果:', res.result);
+        
+        if (res.result.code === 0) {
+          uni.showToast({ 
+            title: res.result.message, 
+            icon: 'success' 
+          });
+          this.selectedRoles = [];
+          this.loadRoleList();
+        } else {
+          uni.showToast({ 
+            title: '删除失败: ' + res.result.message, 
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      } catch (error) {
+        uni.hideLoading();
+        console.error('[executeDeleteRoles] 删除失败:', error);
+        uni.showToast({ 
+          title: '删除失败: ' + error.message, 
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    },
+    
+    // 切换页码
+    changePage(page) {
+      this.currentPage = page;
+      this.selectedRoles = [];
+      this.loadRoleList();
     }
   }
 }
@@ -329,21 +790,175 @@ export default {
 .stat-label { display: block; font-size: 14px; color: #666; }
 .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #333; }
-.sync-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.sync-btn { height: 44px; background: #f0f0f0; color: #666; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
-.sync-btn.primary { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-weight: bold; }
-.input-row { display: flex; gap: 12px; }
-.url-input { flex: 1; height: 40px; padding: 0 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-.sync-single-btn { width: 120px; height: 40px; background: #4facfe; color: white; border: none; border-radius: 6px; cursor: pointer; }
-.sync-single-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 角色管理样式 */
+.role-management-section { }
+.add-role-area { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #e8e8e8; }
+.input-label { font-size: 14px; color: #666; margin-bottom: 8px; }
+.role-textarea { 
+  width: 100%; 
+  height: 120px; 
+  padding: 12px; 
+  border: 1px solid #ddd; 
+  border-radius: 6px; 
+  font-size: 14px; 
+  line-height: 1.6;
+  resize: vertical;
+}
+.button-row { display: flex; gap: 12px; margin-top: 12px; }
+.add-role-btn { 
+  flex: 1; 
+  height: 40px; 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+  color: white; 
+  border: none; 
+  border-radius: 6px; 
+  font-size: 14px; 
+  font-weight: bold;
+  cursor: pointer; 
+}
+.clear-btn { 
+  width: 100px; 
+  height: 40px; 
+  background: #f0f0f0; 
+  color: #666; 
+  border: none; 
+  border-radius: 6px; 
+  cursor: pointer; 
+}
+
+/* 搜索筛选样式 */
+.search-filter-area { margin-bottom: 24px; }
+.search-row { display: flex; gap: 12px; align-items: center; }
+.search-input { 
+  flex: 1; 
+  height: 40px; 
+  padding: 0 12px; 
+  border: 1px solid #ddd; 
+  border-radius: 6px; 
+  font-size: 14px; 
+}
+.filter-btn { 
+  width: 140px; 
+  height: 40px; 
+  background: #f0f0f0; 
+  color: #666; 
+  border: none; 
+  border-radius: 6px; 
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* 列表样式 */
+.role-list-area { }
+.list-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 16px; 
+}
+.list-title { font-size: 16px; font-weight: bold; color: #333; }
+.batch-actions { display: flex; gap: 12px; }
+.batch-btn { 
+  height: 36px; 
+  padding: 0 20px; 
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+  color: white; 
+  border: none; 
+  border-radius: 6px; 
+  font-size: 13px;
+  cursor: pointer;
+}
+.batch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.batch-btn.delete { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+
+.loading-area, .empty-area { 
+  text-align: center; 
+  padding: 60px 20px; 
+  color: #999; 
+  font-size: 14px; 
+}
+.empty-text { color: #999; }
+
+/* 表格样式 */
+.role-table { border: 1px solid #e8e8e8; border-radius: 6px; overflow: hidden; }
+.table-header, .table-row { 
+  display: flex; 
+  align-items: center; 
+  padding: 12px 16px; 
+  border-bottom: 1px solid #e8e8e8; 
+}
+.table-header { 
+  background: #fafafa; 
+  font-weight: bold; 
+  font-size: 14px; 
+  color: #333; 
+}
+.table-row { 
+  background: white; 
+  transition: background 0.2s; 
+}
+.table-row:hover { background: #f5f5f5; }
+.table-row:last-child { border-bottom: none; }
+.table-row.row-selected { background: #e6f7ff; }
+
+.col-checkbox { width: 60px; }
+.col-name { flex: 1; min-width: 150px; }
+.col-status { width: 120px; }
+.col-time { width: 180px; }
+.col-actions { width: 180px; display: flex; gap: 8px; }
+
+.role-name { font-size: 14px; color: #333; }
+.status-tag { 
+  display: inline-block; 
+  padding: 4px 12px; 
+  border-radius: 12px; 
+  font-size: 12px; 
+  font-weight: 500;
+}
+.status-success { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.status-pending { background: #f0f0f0; color: #999; border: 1px solid #d9d9d9; }
+.status-failed { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+
+.time-text { font-size: 13px; color: #666; }
+
+.action-btn { 
+  height: 32px; 
+  padding: 0 16px; 
+  border: none; 
+  border-radius: 4px; 
+  font-size: 13px;
+  cursor: pointer;
+}
+.action-btn.sync-btn { background: #4facfe; color: white; }
+.action-btn.delete-btn { background: #fff; color: #f5222d; border: 1px solid #f5222d; }
+
+/* 分页样式 */
+.pagination { 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  gap: 12px; 
+  margin-top: 20px; 
+}
+.page-btn { 
+  height: 36px; 
+  padding: 0 20px; 
+  background: white; 
+  color: #666; 
+  border: 1px solid #d9d9d9; 
+  border-radius: 4px; 
+  cursor: pointer;
+}
+.page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-info { font-size: 14px; color: #666; }
+
+/* 旧样式保留 */
 .sync-info { display: flex; flex-direction: column; gap: 12px; }
 .info-row { display: flex; align-items: center; font-size: 14px; }
 .info-label { color: #666; margin-right: 8px; min-width: 80px; }
 .info-value { color: #333; margin-right: 16px; }
 .info-value.success { color: #52c41a; }
 .info-value.failed { color: #f5222d; }
-.status-success { color: #52c41a; }
-.status-partial_success { color: #faad14; }
-.status-failed { color: #f5222d; }
 </style>
 
