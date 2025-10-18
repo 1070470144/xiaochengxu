@@ -3,21 +3,15 @@
     <view class="page-title">百科同步管理</view>
     
     <view class="stats-container">
-      <view class="stat-card">
+      <view class="stat-card primary">
         <text class="stat-value">{{ stats.total }}</text>
-        <text class="stat-label">总词条</text>
+        <text class="stat-label">总词条数</text>
+        <text class="stat-desc">已同步的所有词条</text>
       </view>
-      <view class="stat-card">
+      <view class="stat-card highlight">
         <text class="stat-value">{{ stats.role }}</text>
-        <text class="stat-label">角色</text>
-      </view>
-      <view class="stat-card">
-        <text class="stat-value">{{ stats.script }}</text>
-        <text class="stat-label">剧本</text>
-      </view>
-      <view class="stat-card">
-        <text class="stat-value">{{ stats.rule }}</text>
-        <text class="stat-label">规则</text>
+        <text class="stat-label">角色数量</text>
+        <text class="stat-desc">已同步的角色词条</text>
       </view>
     </view>
     
@@ -78,7 +72,16 @@
       <!-- 角色列表 -->
       <view class="role-list-area">
         <view class="list-header">
-          <text class="list-title">已保存的角色（{{ roleList.length }}/{{ totalRoles }}）</text>
+          <view class="list-info">
+            <text class="list-title">已保存的角色</text>
+            <text class="list-stats">
+              当前显示：{{ roleList.length }} 个 | 
+              总计：{{ totalRoles }} 个
+              <text v-if="totalPages > 1" class="page-indicator">
+                | 第 {{ currentPage }} / {{ totalPages }} 页
+              </text>
+            </text>
+          </view>
           <view class="batch-actions">
             <button 
               class="batch-btn"
@@ -171,16 +174,29 @@
             :disabled="currentPage === 1"
             @click="changePage(currentPage - 1)"
           >
-            上一页
+            <text class="page-btn-text">← 上一页</text>
           </button>
-          <text class="page-info">{{ currentPage }} / {{ totalPages }}</text>
+          
+          <view class="page-info-box">
+            <text class="page-current">第 {{ currentPage }} 页</text>
+            <text class="page-separator">/</text>
+            <text class="page-total">共 {{ totalPages }} 页</text>
+          </view>
+          
           <button 
             class="page-btn"
             :disabled="currentPage === totalPages"
             @click="changePage(currentPage + 1)"
           >
-            下一页
+            <text class="page-btn-text">下一页 →</text>
           </button>
+        </view>
+        
+        <view v-if="totalRoles > pageSize" class="pagination-summary">
+          <text class="summary-text">
+            显示 {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalRoles) }} 条，
+            共 {{ totalRoles }} 条记录
+          </text>
         </view>
       </view>
     </view>
@@ -242,7 +258,7 @@ export default {
   
   data() {
     return {
-      stats: { total: 0, role: 0, script: 0, rule: 0 },
+      stats: { total: 0, role: 0 },
       syncing: false,
       syncType: '',
       syncingSingle: false,
@@ -295,25 +311,22 @@ export default {
     async loadStats() {
       try {
         const db = uniCloud.database();
-        const types = ['role', 'script', 'rule'];
-        let total = 0;
         
-        for (const type of types) {
-          const res = await db.collection('wiki_entries')
-            .where({ entry_type: type, status: 1 })
-            .count();
-          
-          console.log(`统计${type}:`, res);
-          
-          // 兼容不同返回格式
-          const count = res.result?.total || res.total || 0;
-          this.stats[type] = count;
-          total += count;
-        }
+        // 查询总词条数
+        const totalRes = await db.collection('wiki_entries')
+          .where({ status: 1 })
+          .count();
+        this.stats.total = totalRes.result?.total || totalRes.total || 0;
         
-        this.stats.total = total;
+        // 查询角色数量
+        const roleRes = await db.collection('wiki_entries')
+          .where({ entry_type: 'role', status: 1 })
+          .count();
+        this.stats.role = roleRes.result?.total || roleRes.total || 0;
+        
+        console.log('[loadStats] 统计完成 - 总词条:', this.stats.total, '角色:', this.stats.role);
       } catch (error) {
-        console.error('加载统计失败', error);
+        console.error('[loadStats] 加载统计失败:', error);
       }
     },
     
@@ -677,6 +690,7 @@ export default {
               this.selectedRoles = [];
               this.loadRoleList();
               this.loadStats();
+              this.loadSyncLogs();  // 刷新同步日志
             }
           });
         } else {
@@ -784,10 +798,54 @@ export default {
 <style scoped>
 .page { padding: 20px; }
 .page-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-.stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
-.stat-card { background: white; border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.stat-value { display: block; font-size: 32px; font-weight: bold; color: #4facfe; margin-bottom: 8px; }
-.stat-label { display: block; font-size: 14px; color: #666; }
+.stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px; }
+.stat-card { 
+  background: white; 
+  border-radius: 12px; 
+  padding: 30px 24px; 
+  text-align: center; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12); 
+}
+.stat-card.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.stat-card.highlight {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.stat-card.primary .stat-value,
+.stat-card.primary .stat-label,
+.stat-card.primary .stat-desc,
+.stat-card.highlight .stat-value,
+.stat-card.highlight .stat-label,
+.stat-card.highlight .stat-desc {
+  color: white;
+}
+.stat-value { 
+  display: block; 
+  font-size: 48px; 
+  font-weight: bold; 
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.stat-label { 
+  display: block; 
+  font-size: 16px; 
+  font-weight: 500;
+  margin-bottom: 4px;
+  opacity: 0.95;
+}
+.stat-desc {
+  display: block;
+  font-size: 12px;
+  opacity: 0.85;
+}
 .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #333; }
 
@@ -857,7 +915,24 @@ export default {
   align-items: center; 
   margin-bottom: 16px; 
 }
-.list-title { font-size: 16px; font-weight: bold; color: #333; }
+.list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.list-title { 
+  font-size: 16px; 
+  font-weight: bold; 
+  color: #333; 
+}
+.list-stats {
+  font-size: 13px;
+  color: #666;
+}
+.page-indicator {
+  color: #4facfe;
+  font-weight: 500;
+}
 .batch-actions { display: flex; gap: 12px; }
 .batch-btn { 
   height: 36px; 
@@ -938,20 +1013,65 @@ export default {
   display: flex; 
   justify-content: center; 
   align-items: center; 
-  gap: 12px; 
-  margin-top: 20px; 
+  gap: 16px; 
+  margin-top: 20px;
+  padding: 16px 0;
+  border-top: 1px solid #f0f0f0;
 }
 .page-btn { 
-  height: 36px; 
-  padding: 0 20px; 
+  height: 40px; 
+  min-width: 100px;
+  padding: 0 24px; 
   background: white; 
   color: #666; 
   border: 1px solid #d9d9d9; 
-  border-radius: 4px; 
+  border-radius: 6px; 
   cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
 }
-.page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.page-info { font-size: 14px; color: #666; }
+.page-btn:hover:not(:disabled) { 
+  border-color: #4facfe;
+  color: #4facfe;
+  background: #f0f9ff;
+}
+.page-btn:disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+  background: #f5f5f5;
+}
+.page-btn-text {
+  font-size: 14px;
+}
+.page-info-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  color: white;
+}
+.page-current {
+  font-size: 15px;
+  font-weight: bold;
+}
+.page-separator {
+  font-size: 14px;
+  opacity: 0.8;
+}
+.page-total {
+  font-size: 14px;
+  opacity: 0.95;
+}
+.pagination-summary {
+  text-align: center;
+  margin-top: 8px;
+}
+.summary-text {
+  font-size: 13px;
+  color: #999;
+}
 
 /* 旧样式保留 */
 .sync-info { display: flex; flex-direction: column; gap: 12px; }

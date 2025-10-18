@@ -101,6 +101,26 @@ exports.main = async (event, context) => {
     const end_time = Date.now();
     const duration = Math.round((end_time - start_time) / 1000);
     
+    // 写入同步日志
+    try {
+      const logCollection = db.collection('wiki_sync_logs');
+      await logCollection.add({
+        sync_type: 'roles',
+        start_time: start_time,
+        end_time: end_time,
+        duration: duration,
+        total_count: role_ids.length,
+        success_count: results.success.length,
+        failed_count: results.failed.length,
+        status: results.failed.length === 0 ? 'success' : (results.success.length > 0 ? 'partial_success' : 'failed'),
+        created_at: Date.now()
+      });
+      console.log('[wiki-role-sync] 同步日志已写入');
+    } catch (logError) {
+      console.error('[wiki-role-sync] 写入日志失败:', logError);
+      // 日志写入失败不影响同步结果
+    }
+    
     const message = `同步完成：成功 ${results.success.length} 个，失败 ${results.failed.length} 个，耗时 ${duration} 秒`;
     
     return {
@@ -118,6 +138,26 @@ exports.main = async (event, context) => {
     
   } catch (error) {
     console.error('[wiki-role-sync] 错误:', error);
+    
+    // 记录失败日志
+    try {
+      const logCollection = db.collection('wiki_sync_logs');
+      await logCollection.add({
+        sync_type: 'roles',
+        start_time: start_time,
+        end_time: Date.now(),
+        duration: Math.round((Date.now() - start_time) / 1000),
+        total_count: role_ids.length,
+        success_count: 0,
+        failed_count: role_ids.length,
+        status: 'failed',
+        error_message: error.message,
+        created_at: Date.now()
+      });
+    } catch (logError) {
+      console.error('[wiki-role-sync] 写入失败日志失败:', logError);
+    }
+    
     return {
       code: 500,
       message: '同步失败: ' + error.message
