@@ -1,5 +1,15 @@
 <template>
   <view class="page">
+    <!-- 返回按钮 -->
+    <view class="back-bar">
+      <view class="back-btn" @click="goBack">
+        <view class="btn-content">
+          <text class="back-icon">←</text>
+          <text class="back-text">返回列表</text>
+        </view>
+      </view>
+    </view>
+    
     <view v-if="loading" class="loading">
       <uni-load-more status="loading" />
     </view>
@@ -263,6 +273,20 @@ export default {
   },
   
   methods: {
+    goBack() {
+      // 优先使用navigateBack，如果没有历史记录则跳转到列表页
+      const pages = getCurrentPages();
+      if (pages.length > 1) {
+        uni.navigateBack({
+          delta: 1
+        });
+      } else {
+        uni.redirectTo({
+          url: '/pages/botc/wiki/list'
+        });
+      }
+    },
+    
     async loadEntry() {
       this.loading = true;
       
@@ -325,6 +349,80 @@ export default {
   padding: 20px;
   background: #F5F5F5;
   min-height: 100vh;
+}
+
+/* 返回按钮 */
+.back-bar {
+  margin-bottom: 24px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.back-btn {
+  display: inline-block;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.back-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  border-radius: 50px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 0;
+}
+
+.back-btn:hover::before {
+  opacity: 1;
+}
+
+.back-btn:hover .btn-content {
+  transform: translateX(-4px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.back-btn:active .btn-content {
+  transform: translateX(-4px) scale(0.98);
+}
+
+.back-icon {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  line-height: 1;
+  transition: transform 0.3s;
+}
+
+.back-btn:hover .back-icon {
+  transform: translateX(-3px);
+}
+
+.back-text {
+  font-size: 15px;
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .loading {
