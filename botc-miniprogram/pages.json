@@ -82,6 +82,14 @@
 			}
 		},
 		{
+			"path": "pages/ranking/index",
+			"style": {
+				"navigationBarTitleText": "榜单",
+				"navigationBarBackgroundColor": "#667eea",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/user/profile/profile",
 			"style": {
 				"navigationBarTitleText": "我的",

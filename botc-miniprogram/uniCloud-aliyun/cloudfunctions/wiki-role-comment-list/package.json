@@ -1,0 +1,7 @@
+{
+  "name": "wiki-role-comment-list",
+  "version": "1.0.0",
+  "description": "获取角色评论列表",
+  "main": "index.js"
+}
+

@@ -1,10 +1,15 @@
 <template>
   <view class="page">
-    <!-- 统计信息 -->
-    <view class="stats-section">
+    <!-- 统计和榜单 -->
+    <view class="top-section">
       <view class="stat-card-large">
         <text class="stat-num-large">{{ totalRoles }}</text>
         <text class="stat-label-large">收录角色</text>
+      </view>
+      
+      <view class="ranking-card" @click="goToRanking">
+        <text class="ranking-icon">🏆</text>
+        <text class="ranking-text">榜单</text>
       </view>
     </view>
 
@@ -367,6 +372,13 @@ export default {
         '旅行者': 'traveler'
       };
       return typeMap[characterType] || 'unknown';
+    },
+    
+    // 跳转到榜单
+    goToRanking() {
+      uni.navigateTo({
+        url: '/pages/ranking/index'
+      });
     }
   }
 }
@@ -615,12 +627,15 @@ export default {
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
 }
 
-/* 统计区域 */
-.stats-section {
+/* 顶部区域 */
+.top-section {
+  display: flex;
+  gap: 20rpx;
   padding: 32rpx 24rpx 24rpx;
 }
 
 .stat-card-large {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -642,6 +657,35 @@ export default {
   font-size: 32rpx;
   color: rgba(255, 255, 255, 0.95);
   font-weight: 500;
+  letter-spacing: 2rpx;
+}
+
+/* 榜单卡片 */
+.ranking-card {
+  width: 160rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 24rpx rgba(240, 147, 251, 0.3);
+  transition: transform 0.2s;
+}
+
+.ranking-card:active {
+  transform: scale(0.95);
+}
+
+.ranking-icon {
+  font-size: 56rpx;
+}
+
+.ranking-text {
+  font-size: 28rpx;
+  color: white;
+  font-weight: bold;
   letter-spacing: 2rpx;
 }
 

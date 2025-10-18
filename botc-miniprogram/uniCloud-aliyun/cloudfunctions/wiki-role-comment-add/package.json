@@ -1,0 +1,7 @@
+{
+  "name": "wiki-role-comment-add",
+  "version": "1.0.0",
+  "description": "发表角色评论",
+  "main": "index.js"
+}
+

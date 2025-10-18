@@ -196,6 +196,97 @@
         </view>
       </view>
       
+      <!-- 🆕 互动区域 -->
+      <view class="interaction-section">
+        <!-- 点赞和统计 -->
+        <view class="stats-bar card">
+          <view class="stat-item">
+            <text class="stat-icon">👁️</text>
+            <text class="stat-text">{{ entry.stats?.view_count || 0 }}</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-icon">❤️</text>
+            <text class="stat-text">{{ entry.stats?.like_count || 0 }}</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-icon">💬</text>
+            <text class="stat-text">{{ entry.stats?.comment_count || 0 }}</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-icon">⭐</text>
+            <text class="stat-text">{{ entry.stats?.favorite_count || 0 }}</text>
+          </view>
+        </view>
+        
+        <!-- 点赞按钮 -->
+        <view class="like-section card">
+          <button 
+            class="like-btn"
+            :class="{ liked: isLiked }"
+            @click="toggleLike"
+          >
+            <text class="like-icon">{{ isLiked ? '❤️' : '🤍' }}</text>
+            <text class="like-text">{{ isLiked ? '已点赞' : '点赞' }}</text>
+          </button>
+        </view>
+        
+        <!-- 评论区域 -->
+        <view class="comments-section card">
+          <view class="comments-header">
+            <text class="comments-title">💬 评论 ({{ commentList.length }})</text>
+          </view>
+          
+          <!-- 评论列表 -->
+          <view v-if="loadingComments" class="comments-loading">
+            <uni-load-more status="loading" />
+          </view>
+          
+          <view v-else-if="commentList.length === 0" class="comments-empty">
+            <text class="empty-icon">💭</text>
+            <text class="empty-text">还没有评论，快来抢沙发吧~</text>
+          </view>
+          
+          <view v-else class="comments-list">
+            <view 
+              v-for="comment in commentList" 
+              :key="comment._id"
+              class="comment-item"
+            >
+              <image 
+                class="comment-avatar"
+                :src="comment.user_avatar || '/static/default-avatar.png'"
+                mode="aspectFill"
+              />
+              <view class="comment-content">
+                <view class="comment-header">
+                  <text class="comment-user">{{ comment.user_nickname }}</text>
+                  <text class="comment-time">{{ formatCommentTime(comment.created_at) }}</text>
+                </view>
+                <text class="comment-text">{{ comment.content }}</text>
+              </view>
+            </view>
+          </view>
+          
+          <!-- 评论输入 -->
+          <view class="comment-input-area">
+            <input 
+              class="comment-input"
+              v-model="commentInput"
+              placeholder="说说你的看法..."
+              :maxlength="500"
+              @confirm="submitComment"
+            />
+            <button 
+              class="comment-submit"
+              :disabled="!commentInput.trim()"
+              @click="submitComment"
+            >
+              发送
+            </button>
+          </view>
+        </view>
+      </view>
+      
       <!-- 底部占位 -->
       <view class="footer-placeholder"></view>
     </view>
@@ -235,7 +326,12 @@ export default {
         rules: false,
         tips: false,
         bluff: false
-      }
+      },
+      // 🆕 v3.0: 互动功能
+      isLiked: false,
+      commentList: [],
+      loadingComments: false,
+      commentInput: ''
     }
   },
   
@@ -282,7 +378,11 @@ export default {
           const userId = getApp().globalData.userId;
           if (userId) {
             await this.checkFavorite();
+            await this.checkLikeStatus();
           }
+          
+          // 加载评论列表
+          await this.loadComments();
         } else {
           uni.showToast({
             title: '词条不存在',
@@ -398,6 +498,188 @@ export default {
         }
       });
       // #endif
+    },
+    
+    // 🆕 v3.0: 检查点赞状态
+    async checkLikeStatus() {
+      try {
+        const userId = getApp().globalData.userId;
+        if (!userId) {
+          this.isLiked = false;
+          return;
+        }
+        
+        const db = uniCloud.database();
+        const res = await db.collection('wiki_role_likes')
+          .where({
+            user_id: userId,
+            role_id: this.entryId
+          })
+          .count();
+        
+        this.isLiked = (res.result?.total || res.total || 0) > 0;
+      } catch (error) {
+        console.error('[checkLikeStatus] 检查点赞状态失败:', error);
+      }
+    },
+    
+    // 🆕 v3.0: 点赞/取消点赞
+    async toggleLike() {
+      const userId = getApp().globalData.userId;
+      if (!userId) {
+        uni.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      try {
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-toggle-like',
+          data: {
+            role_id: this.entryId
+          }
+        });
+        
+        if (res.result.code === 0) {
+          this.isLiked = res.result.data.is_liked;
+          
+          // 更新本地统计
+          if (this.entry.stats) {
+            this.entry.stats.like_count = (this.entry.stats.like_count || 0) + (this.isLiked ? 1 : -1);
+          }
+          
+          uni.showToast({
+            title: res.result.message,
+            icon: 'success',
+            duration: 1000
+          });
+        } else {
+          uni.showToast({
+            title: res.result.message,
+            icon: 'none'
+          });
+        }
+      } catch (error) {
+        console.error('[toggleLike] 点赞失败:', error);
+        uni.showToast({
+          title: '操作失败',
+          icon: 'none'
+        });
+      }
+    },
+    
+    // 🆕 v3.0: 加载评论列表
+    async loadComments() {
+      this.loadingComments = true;
+      
+      try {
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-comment-list',
+          data: {
+            role_id: this.entryId,
+            page: 1,
+            page_size: 50
+          }
+        });
+        
+        if (res.result.code === 0) {
+          this.commentList = res.result.data.list || [];
+          console.log('[loadComments] 加载评论成功，共', this.commentList.length, '条');
+        }
+      } catch (error) {
+        console.error('[loadComments] 加载评论失败:', error);
+      } finally {
+        this.loadingComments = false;
+      }
+    },
+    
+    // 🆕 v3.0: 发表评论
+    async submitComment() {
+      const userId = getApp().globalData.userId;
+      if (!userId) {
+        uni.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      const content = this.commentInput.trim();
+      if (!content) {
+        uni.showToast({
+          title: '请输入评论内容',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      try {
+        uni.showLoading({ title: '发送中...' });
+        
+        const res = await uniCloud.callFunction({
+          name: 'wiki-role-comment-add',
+          data: {
+            role_id: this.entryId,
+            content: content
+          }
+        });
+        
+        uni.hideLoading();
+        
+        if (res.result.code === 0) {
+          uni.showToast({
+            title: '评论成功',
+            icon: 'success'
+          });
+          
+          // 清空输入
+          this.commentInput = '';
+          
+          // 更新本地统计
+          if (this.entry.stats) {
+            this.entry.stats.comment_count = (this.entry.stats.comment_count || 0) + 1;
+          }
+          
+          // 重新加载评论列表
+          await this.loadComments();
+        } else {
+          uni.showToast({
+            title: res.result.message,
+            icon: 'none'
+          });
+        }
+      } catch (error) {
+        uni.hideLoading();
+        console.error('[submitComment] 评论失败:', error);
+        uni.showToast({
+          title: '评论失败',
+          icon: 'none'
+        });
+      }
+    },
+    
+    // 🆕 v3.0: 格式化评论时间
+    formatCommentTime(timestamp) {
+      if (!timestamp) return '';
+      
+      const now = Date.now();
+      const time = new Date(timestamp).getTime();
+      const diff = now - time;
+      
+      if (diff < 60000) {
+        return '刚刚';
+      } else if (diff < 3600000) {
+        return Math.floor(diff / 60000) + '分钟前';
+      } else if (diff < 86400000) {
+        return Math.floor(diff / 3600000) + '小时前';
+      } else if (diff < 2592000000) {
+        return Math.floor(diff / 86400000) + '天前';
+      } else {
+        const d = new Date(timestamp);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+      }
     }
   }
 }
@@ -628,6 +910,188 @@ export default {
 .action-btn-full:active {
   transform: scale(0.98);
   opacity: 0.9;
+}
+
+/* 🆕 v3.0: 互动区域样式 */
+.interaction-section {
+  padding: 0 24rpx;
+}
+
+/* 统计栏 */
+.stats-bar {
+  display: flex;
+  justify-content: space-around;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-icon {
+  font-size: 32rpx;
+}
+
+.stat-text {
+  font-size: 24rpx;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 点赞按钮 */
+.like-section {
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.like-btn {
+  width: 100%;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+  border-radius: 16rpx;
+  border: none;
+  box-shadow: 0 8rpx 20rpx rgba(253, 203, 110, 0.3);
+  transition: all 0.3s;
+}
+
+.like-btn.liked {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  box-shadow: 0 8rpx 20rpx rgba(255, 107, 107, 0.4);
+}
+
+.like-btn:active {
+  transform: scale(0.95);
+}
+
+.like-icon {
+  font-size: 36rpx;
+}
+
+.like-text {
+  font-size: 30rpx;
+  color: white;
+  font-weight: bold;
+}
+
+/* 评论区域 */
+.comments-section {
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.comments-header {
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid #F0F0F0;
+}
+
+.comments-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1A1A1A;
+}
+
+.comments-loading,
+.comments-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 20rpx;
+  gap: 16rpx;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-bottom: 32rpx;
+}
+
+.comment-item {
+  display: flex;
+  gap: 20rpx;
+}
+
+.comment-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #F5F5F5;
+  flex-shrink: 0;
+}
+
+.comment-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-user {
+  font-size: 26rpx;
+  color: #666;
+  font-weight: 500;
+}
+
+.comment-time {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.comment-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+/* 评论输入 */
+.comment-input-area {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  padding: 20rpx;
+  background: #F8F8F8;
+  border-radius: 12rpx;
+}
+
+.comment-input {
+  flex: 1;
+  height: 64rpx;
+  padding: 0 20rpx;
+  background: white;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+}
+
+.comment-submit {
+  width: 120rpx;
+  height: 64rpx;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  font-size: 26rpx;
+  font-weight: 500;
+  border-radius: 32rpx;
+  border: none;
+}
+
+.comment-submit[disabled] {
+  opacity: 0.5;
 }
 
 /* 🆕 v2.1: 详细内容样式 */

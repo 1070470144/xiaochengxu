@@ -159,6 +159,16 @@
           "bsonType": "int",
           "description": "收藏次数",
           "defaultValue": 0
+        },
+        "like_count": {
+          "bsonType": "int",
+          "description": "点赞次数",
+          "defaultValue": 0
+        },
+        "comment_count": {
+          "bsonType": "int",
+          "description": "收藏次数",
+          "defaultValue": 0
         }
       }
     },

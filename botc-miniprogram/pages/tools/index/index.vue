@@ -38,6 +38,16 @@
         <text class="tool-arrow">›</text>
       </view>
 
+      <!-- 榜单 -->
+      <view class="tool-card card" @click="goToRanking">
+        <view class="tool-icon ranking">🏆</view>
+        <view class="tool-content">
+          <text class="tool-title">榜单</text>
+          <text class="tool-desc">说书人榜·角色榜</text>
+        </view>
+        <text class="tool-arrow">›</text>
+      </view>
+
       <!-- 说书人 -->
       <view class="tool-card card" @click="goToStoryteller">
         <view class="tool-icon storyteller">🎭</view>
@@ -90,6 +100,13 @@ export default {
     goToWiki() {
       uni.navigateTo({
         url: '/pages/tools/wiki/wiki'
+      })
+    },
+    
+    // 跳转到榜单
+    goToRanking() {
+      uni.navigateTo({
+        url: '/pages/ranking/index'
       })
     },
     
@@ -187,6 +204,10 @@ export default {
 
 .tool-icon.wiki {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.tool-icon.ranking {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
 .tool-icon.storyteller {

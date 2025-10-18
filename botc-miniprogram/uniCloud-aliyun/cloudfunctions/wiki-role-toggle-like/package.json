@@ -1,0 +1,7 @@
+{
+  "name": "wiki-role-toggle-like",
+  "version": "1.0.0",
+  "description": "角色点赞/取消点赞",
+  "main": "index.js"
+}
+
