@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "main": {
+      "async": true
+    }
+  },
+  "triggers": [
+    {
+      "name": "http",
+      "type": "http",
+      "config": {
+        "path": "/http/script-json-get",
+        "method": ["GET", "POST"]
+      }
+    }
+  ]
+}
+

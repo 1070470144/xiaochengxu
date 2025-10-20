@@ -1,0 +1,8 @@
+{
+  "name": "script-ranking-new",
+  "version": "1.0.0",
+  "description": "获取最新剧本排行榜",
+  "main": "index.js",
+  "dependencies": {}
+}
+

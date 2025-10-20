@@ -1,0 +1,8 @@
+{
+  "name": "user-daily-login",
+  "version": "1.0.0",
+  "description": "每日登录签到",
+  "main": "index.js",
+  "dependencies": {}
+}
+

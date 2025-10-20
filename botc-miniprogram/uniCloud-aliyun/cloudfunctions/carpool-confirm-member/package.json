@@ -1,0 +1,8 @@
+{
+  "name": "carpool-confirm-member",
+  "version": "1.0.0",
+  "description": "拼车发起人确认或拒绝报名成员",
+  "main": "index.js",
+  "dependencies": {}
+}
+

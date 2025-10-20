@@ -104,11 +104,16 @@
 
       <!-- 操作按钮 -->
       <view class="action-bar">
-        <button class="action-btn btn-secondary" @click="shareScript">分享</button>
         <button class="action-btn btn-secondary" @click="favoriteScript">
-          {{ isFavorite ? '取消收藏' : '收藏' }}
+          {{ isFavorite ? '❤️ 已收藏' : '🤍 收藏' }}
         </button>
-        <button class="action-btn btn-primary" @click="downloadScript">下载剧本</button>
+      </view>
+      
+      <!-- JSON操作按钮 -->
+      <view class="json-actions">
+        <button class="json-btn btn-download" @click="downloadJsonFile">
+          {{ downloadingJson ? '⏳ 下载中...' : '💾 下载.json文件' }}
+        </button>
       </view>
 
       <!-- 相关帖子 -->
@@ -242,6 +247,9 @@ export default {
       commentList: [],
       loading: false,
       isFavorite: false,
+      generatingUrl: false,
+      copiedUrl: false,
+      downloadingJson: false,
       
       // 评论相关
       commentRating: 0,
@@ -616,6 +624,233 @@ export default {
           })
         }
       })
+    },
+    
+    // 生成JSON链接
+    async generateJsonUrl() {
+      this.generatingUrl = true;
+      
+      try {
+        console.log('[generateJsonUrl] 开始生成链接，剧本ID:', this.scriptId);
+        
+        if (!this.scriptId) {
+          uni.showToast({
+            title: '剧本ID不存在',
+            icon: 'none'
+          });
+          this.generatingUrl = false;
+          return;
+        }
+        
+        // 检查JSON数据
+        if (!this.scriptDetail || !this.scriptDetail.json_data) {
+          uni.showToast({
+            title: 'JSON数据不存在',
+            icon: 'none'
+          });
+          this.generatingUrl = false;
+          return;
+        }
+        
+        // 生成Data URL（无需服务器，直接在浏览器中打开）
+        // 将JSON对象转换为格式化字符串
+        const jsonString = JSON.stringify(this.scriptDetail.json_data, null, 2);
+        
+        // 创建Data URL（浏览器可以直接打开）
+        const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonString);
+        
+        console.log('[generateJsonUrl] Data URL长度:', dataUrl.length);
+        console.log('[generateJsonUrl] Data URL前100字符:', dataUrl.substring(0, 100));
+        
+        // 复制Data URL到剪贴板
+        uni.setClipboardData({
+          data: dataUrl,
+          success: () => {
+            this.copiedUrl = true;
+            
+            uni.showModal({
+              title: '✅ JSON链接已生成',
+              content: `链接已复制到剪贴板\n\n链接较长，在浏览器地址栏中粘贴即可直接查看JSON内容\n\n提示：\n• H5端可点击"在新窗口打开"\n• 小程序端请复制到浏览器打开`,
+              confirmText: '在新窗口打开',
+              cancelText: '关闭',
+              success: (res) => {
+                if (res.confirm) {
+                  // #ifdef H5
+                  window.open(dataUrl, '_blank');
+                  // #endif
+                  
+                  // #ifndef H5
+                  uni.showToast({
+                    title: '请在浏览器中粘贴链接',
+                    icon: 'none',
+                    duration: 2000
+                  });
+                  // #endif
+                }
+              }
+            });
+            
+            // 3秒后恢复按钮状态
+            setTimeout(() => {
+              this.copiedUrl = false;
+            }, 3000);
+          },
+          fail: () => {
+            uni.showToast({
+              title: '复制失败',
+              icon: 'none'
+            });
+          }
+        });
+      } catch (error) {
+        console.error('[generateJsonUrl] 生成链接失败:', error);
+        uni.showToast({
+          title: '生成失败: ' + error.message,
+          icon: 'none'
+        });
+      } finally {
+        this.generatingUrl = false;
+      }
+    },
+    
+    // 下载JSON文件
+    async downloadJsonFile() {
+      this.downloadingJson = true;
+      
+      try {
+        console.log('[downloadJsonFile] 开始下载，剧本ID:', this.scriptId);
+        
+        // 检查当前剧本数据是否已有json_data
+        if (!this.scriptDetail || !this.scriptDetail.json_data) {
+          uni.showToast({
+            title: 'JSON数据不存在',
+            icon: 'none'
+          });
+          this.downloadingJson = false;
+          return;
+        }
+        
+        uni.showLoading({ title: '生成JSON文件中...' });
+        
+        const json_data = this.scriptDetail.json_data;
+        
+        // 将JSON对象转换为格式化字符串
+        const jsonString = JSON.stringify(json_data, null, 2);
+            
+            // 生成文件名
+            const fileName = `${this.scriptDetail.title || 'script'}-${Date.now()}.json`;
+            
+            // #ifdef H5
+            // H5端：创建Blob并触发下载
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            uni.hideLoading();
+            uni.showToast({
+              title: 'JSON文件已下载',
+              icon: 'success'
+            });
+            // #endif
+            
+            // #ifndef H5
+            // 小程序端：保存到本地文件系统
+            const fs = uni.getFileSystemManager();
+            const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`;
+            
+            fs.writeFile({
+              filePath: filePath,
+              data: jsonString,
+              encoding: 'utf8',
+              success: () => {
+                uni.hideLoading();
+                uni.showModal({
+                  title: '✅ JSON文件已生成',
+                  content: `文件名：${fileName}\n\n文件已保存到本地临时目录，您可以：\n1. 点击"打开文件"查看\n2. 点击"分享文件"发送给他人`,
+                  confirmText: '打开文件',
+                  cancelText: '分享文件',
+                  success: (res) => {
+                    if (res.confirm) {
+                      // 打开文件
+                      uni.openDocument({
+                        filePath: filePath,
+                        fileType: 'json',
+                        success: () => {
+                          console.log('[downloadJsonFile] 文件打开成功');
+                        },
+                        fail: (err) => {
+                          console.error('[downloadJsonFile] 打开文件失败:', err);
+                          uni.showToast({
+                            title: '打开失败，文件路径已复制',
+                            icon: 'none'
+                          });
+                          uni.setClipboardData({
+                            data: filePath
+                          });
+                        }
+                      });
+                    } else if (res.cancel) {
+                      // 分享文件
+                      uni.shareFileMessage({
+                        filePath: filePath,
+                        success: () => {
+                          uni.showToast({
+                            title: '分享成功',
+                            icon: 'success'
+                          });
+                        },
+                        fail: () => {
+                          uni.showToast({
+                            title: '分享失败',
+                            icon: 'none'
+                          });
+                        }
+                      });
+                    }
+                  }
+                });
+              },
+              fail: (err) => {
+                uni.hideLoading();
+                console.error('[downloadJsonFile] 写入文件失败:', err);
+                
+                // 降级方案：复制到剪贴板
+                uni.setClipboardData({
+                  data: jsonString,
+                  success: () => {
+                    uni.showToast({
+                      title: '文件生成失败，JSON已复制',
+                      icon: 'none',
+                      duration: 2000
+                    });
+                  }
+                });
+              }
+            });
+            // #endif
+      } catch (error) {
+        uni.hideLoading();
+        console.error('[downloadJsonFile] 下载JSON文件失败:', error);
+        console.error('[downloadJsonFile] 错误详情:', error.message);
+        console.error('[downloadJsonFile] 错误堆栈:', error.stack);
+        
+        uni.showModal({
+          title: '生成失败',
+          content: '错误信息：' + (error.message || JSON.stringify(error)),
+          showCancel: false
+        });
+      } finally {
+        this.downloadingJson = false;
+        
+        // 2秒后恢复按钮状态
+        setTimeout(() => {
+          this.downloadingJson = false;
+        }, 2000);
+      }
     },
     
     async downloadScript() {
@@ -1180,6 +1415,40 @@ export default {
 .action-btn:active {
   transform: scale(0.95);
   box-shadow: 0 4rpx 12rpx rgba(139, 69, 19, 0.2);
+}
+
+/* JSON操作按钮 */
+.json-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 0 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.json-btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+  color: white;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.json-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.json-btn.btn-copy {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.json-btn.btn-download {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* 相关帖子区 */

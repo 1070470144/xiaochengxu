@@ -1,11 +1,5 @@
 <template>
   <view class="page">
-    <!-- 页面标题 -->
-    <view class="page-title">
-      <text class="title-text">工具箱</text>
-      <text class="subtitle-text">Blood on the Clocktower</text>
-    </view>
-
     <!-- 工具卡片列表 -->
     <view class="tools-container">
       <!-- 拼车组局 -->
@@ -33,7 +27,7 @@
         <view class="tool-icon wiki">📚</view>
         <view class="tool-content">
           <text class="tool-title">血染百科</text>
-          <text class="tool-desc">规则、角色、攻略</text>
+          <text class="tool-desc">角色、规则、攻略</text>
         </view>
         <text class="tool-arrow">›</text>
       </view>
@@ -44,16 +38,6 @@
         <view class="tool-content">
           <text class="tool-title">榜单</text>
           <text class="tool-desc">说书人榜·角色榜</text>
-        </view>
-        <text class="tool-arrow">›</text>
-      </view>
-
-      <!-- 说书人 -->
-      <view class="tool-card card" @click="goToStoryteller">
-        <view class="tool-icon storyteller">🎭</view>
-        <view class="tool-content">
-          <text class="tool-title">说书人</text>
-          <text class="tool-desc">寻找专业说书人</text>
         </view>
         <text class="tool-arrow">›</text>
       </view>
@@ -134,30 +118,9 @@ export default {
   padding-bottom: 40rpx;
 }
 
-/* 页面标题 */
-.page-title {
-  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
-  padding: 60rpx 40rpx 40rpx;
-  text-align: center;
-}
-
-.title-text {
-  display: block;
-  font-size: 48rpx;
-  font-weight: bold;
-  color: #FFFFFF;
-  margin-bottom: 12rpx;
-}
-
-.subtitle-text {
-  display: block;
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.9);
-}
-
 /* 工具容器 */
 .tools-container {
-  padding: 32rpx 24rpx;
+  padding: 24rpx;
 }
 
 /* 工具卡片 */
@@ -208,10 +171,6 @@ export default {
 
 .tool-icon.ranking {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.tool-icon.storyteller {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 }
 
 .tool-icon.shop {
