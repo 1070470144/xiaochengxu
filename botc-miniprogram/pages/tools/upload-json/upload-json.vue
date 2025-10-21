@@ -158,6 +158,52 @@
       </view>
     </view>
 
+    <!-- 剧本图片上传 -->
+    <view v-if="parsedInfo" class="card section">
+      <view class="section-header">
+        <text class="section-title">剧本图片（可选）</text>
+        <text class="images-count">{{ userImages.length }}/3</text>
+      </view>
+      
+      <view class="upload-hint-box">
+        <text class="hint-icon">💡</text>
+        <view class="hint-content">
+          <text class="hint-text">可上传0-3张图片（如剧本介绍图、玩法说明图等）</text>
+          <text class="hint-sub">系统会根据JSON自动生成预览图，用户上传的图片作为补充展示</text>
+        </view>
+      </view>
+      
+      <view class="images-upload-area">
+        <!-- 已上传的图片列表 -->
+        <view v-if="uploadedImageUrls.length > 0" class="uploaded-images">
+          <view 
+            v-for="(img, index) in uploadedImageUrls" 
+            :key="index"
+            class="image-item"
+          >
+            <image :src="img" mode="aspectFill" class="uploaded-img" />
+            <view class="img-delete" @click="deleteUploadedImage(index)">
+              <text class="delete-icon">×</text>
+            </view>
+            <view class="img-status">
+              <text class="status-text">✓ 已上传</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 上传按钮 -->
+        <button 
+          v-if="uploadedImageUrls.length < 3"
+          class="image-upload-btn"
+          @click="chooseImages"
+          :disabled="uploadingImages"
+        >
+          <text class="upload-btn-icon">📸</text>
+          <text class="upload-btn-text">{{ uploadingImages ? '上传中...' : '选择图片' }}</text>
+        </button>
+      </view>
+    </view>
+
     <!-- 预览图展示（上传成功后） -->
     <view v-if="uploadedPreviewImage" class="card section preview-display-section">
       <view class="section-header">
@@ -229,7 +275,12 @@ export default {
         description: ''
       },
       uploading: false,
-      uploadedPreviewImage: ''  // 上传成功后的预览图
+      uploadedPreviewImage: '',  // 上传成功后的预览图
+      
+      // 图片上传相关
+      userImages: [],  // 用于显示图片数量
+      uploadedImageUrls: [],  // 已上传的图片永久URL
+      uploadingImages: false  // 是否正在上传图片
     }
   },
   
@@ -255,6 +306,152 @@ export default {
         customAuthor: '',
         description: ''
       }
+      // 重置图片
+      this.userImages = []
+      this.uploadedImageUrls = []
+      this.uploadingImages = false
+    },
+    
+    // 选择图片
+    async chooseImages() {
+      try {
+        const remainingCount = 3 - this.uploadedImageUrls.length
+        
+        const res = await uni.chooseImage({
+          count: remainingCount,
+          sizeType: ['compressed'],  // 压缩图片
+          sourceType: ['album', 'camera']
+        })
+        
+        if (res.tempFilePaths && res.tempFilePaths.length > 0) {
+          // 上传到云存储
+          await this.uploadImagesToCloud(res.tempFilePaths)
+        }
+      } catch (error) {
+        console.error('选择图片失败:', error)
+        if (error.errMsg && !error.errMsg.includes('cancel')) {
+          uni.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      }
+    },
+    
+    // 上传图片到云存储
+    async uploadImagesToCloud(filePaths) {
+      this.uploadingImages = true
+      
+      try {
+        uni.showLoading({ 
+          title: `上传图片中 0/${filePaths.length}`,
+          mask: true
+        })
+        
+        const uploadedUrls = []
+        
+        for (let i = 0; i < filePaths.length; i++) {
+          const filePath = filePaths[i]
+          
+          try {
+            // 更新进度
+            uni.showLoading({ 
+              title: `上传图片中 ${i + 1}/${filePaths.length}`,
+              mask: true
+            })
+            
+            // 生成云存储路径
+            const timestamp = Date.now()
+            const random = Math.random().toString(36).substr(2, 9)
+            const cloudPath = `script-images/${timestamp}-${i}-${random}.jpg`
+            
+            console.log(`[图片上传] 开始上传第${i + 1}张，路径:`, cloudPath)
+            
+            // ✅ 上传到uniCloud云存储
+            const uploadResult = await uniCloud.uploadFile({
+              filePath: filePath,
+              cloudPath: cloudPath
+            })
+            
+            console.log(`[图片上传] 第${i + 1}张上传成功，fileID:`, uploadResult.fileID)
+            
+            // ✅ 获取永久访问URL
+            const tempUrlResult = await uniCloud.getTempFileURL({
+              fileList: [uploadResult.fileID]
+            })
+            
+            if (tempUrlResult.fileList && tempUrlResult.fileList[0]) {
+              const permanentUrl = tempUrlResult.fileList[0].tempFileURL
+              uploadedUrls.push(permanentUrl)
+              console.log(`[图片上传] 第${i + 1}张获得永久URL:`, permanentUrl)
+              console.log(`[图片上传] URL格式检查 - 是否HTTPS:`, permanentUrl.startsWith('https://'))
+            }
+            
+          } catch (error) {
+            console.error(`[图片上传] 第${i + 1}张上传失败:`, error)
+            uni.showToast({
+              title: `第${i + 1}张图片上传失败`,
+              icon: 'none'
+            })
+          }
+        }
+        
+        // 添加到已上传列表
+        if (uploadedUrls.length > 0) {
+          this.uploadedImageUrls = [...this.uploadedImageUrls, ...uploadedUrls]
+          this.userImages = this.uploadedImageUrls  // 同步数据
+          
+          console.log('[图片上传] 所有图片上传完成')
+          console.log('[图片上传] 永久URLs:', this.uploadedImageUrls)
+          console.log('[图片上传] URL类型检查:', this.uploadedImageUrls.map(url => ({
+            url: url.substring(0, 50) + '...',
+            isHTTPS: url.startsWith('https://'),
+            isCDN: url.includes('cdn')
+          })))
+          
+          uni.hideLoading()
+          uni.showToast({
+            title: `✅ 成功上传${uploadedUrls.length}张图片`,
+            icon: 'success',
+            duration: 2000
+          })
+        } else {
+          uni.hideLoading()
+          uni.showToast({
+            title: '图片上传失败',
+            icon: 'none'
+          })
+        }
+        
+      } catch (error) {
+        console.error('[图片上传] 上传过程出错:', error)
+        uni.hideLoading()
+        uni.showToast({
+          title: '上传失败: ' + (error.message || '未知错误'),
+          icon: 'none'
+        })
+      } finally {
+        this.uploadingImages = false
+      }
+    },
+    
+    // 删除已上传的图片
+    deleteUploadedImage(index) {
+      uni.showModal({
+        title: '确认删除',
+        content: '确定要删除这张图片吗？',
+        success: (res) => {
+          if (res.confirm) {
+            this.uploadedImageUrls.splice(index, 1)
+            this.userImages = this.uploadedImageUrls
+            
+            uni.showToast({
+              title: '已删除',
+              icon: 'success'
+            })
+          }
+        }
+      })
     },
     
     // 选择JSON文件
@@ -513,13 +710,22 @@ export default {
         // 获取用户token
         const token = uni.getStorageSync('uni_id_token') || uni.getStorageSync('userInfo')?._id || 'test_user'
         
+        // ✅ 构建上传数据，包含用户上传的图片
         const uploadData = {
           title: finalTitle,
           author: finalAuthor,
           description: this.formData.description || this.parsedInfo.description,
           json: this.jsonContent,
+          user_images: this.uploadedImageUrls,  // ✅ 添加图片URL数组
           token: token  // 传递token
         }
+        
+        console.log('[剧本提交] 提交数据:', {
+          title: finalTitle,
+          author: finalAuthor,
+          user_images_count: this.uploadedImageUrls.length,
+          user_images: this.uploadedImageUrls
+        })
         
         const res = await uniCloud.callFunction({
           name: 'script-upload',
@@ -531,11 +737,13 @@ export default {
           this.uploadedPreviewImage = res.result.data.previewImage || ''
           this.currentStep = 3
           
+          console.log('[剧本提交] 上传成功，返回数据:', res.result.data)
+          
           // 延迟显示成功提示，让用户先看到预览图
           setTimeout(() => {
             uni.showModal({
               title: '上传成功',
-              content: `剧本已提交审核\n预览图已自动生成\n\n使用信息：\n标题：${finalTitle}\n作者：${finalAuthor}`,
+              content: `剧本已提交审核\n预览图已自动生成${this.uploadedImageUrls.length > 0 ? '\n用户图片：' + this.uploadedImageUrls.length + '张' : ''}\n\n使用信息：\n标题：${finalTitle}\n作者：${finalAuthor}`,
               confirmText: '查看我的上传',
               cancelText: '继续上传',
               success: (modalRes) => {
@@ -1087,5 +1295,170 @@ export default {
   background: #FFFFFF;
   border-radius: 16rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 图片上传提示框 */
+.upload-hint-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  padding: 20rpx;
+  background: linear-gradient(135deg, #e6f7ff 0%, #d9f0ff 100%);
+  border-radius: 12rpx;
+  border: 1rpx solid #91d5ff;
+  margin-bottom: 24rpx;
+}
+
+.hint-icon {
+  font-size: 32rpx;
+  flex-shrink: 0;
+}
+
+.hint-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.hint-text {
+  font-size: 26rpx;
+  color: #0050b3;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.hint-sub {
+  font-size: 22rpx;
+  color: #096dd9;
+  line-height: 1.5;
+}
+
+/* 图片数量计数 */
+.images-count {
+  font-size: 24rpx;
+  color: #1890ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #d9f0ff 100%);
+  padding: 8rpx 16rpx;
+  border-radius: 12rpx;
+  font-weight: 600;
+}
+
+/* 图片上传区域 */
+.images-upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+/* 已上传图片列表 */
+.uploaded-images {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.image-item {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;  /* 1:1 比例 */
+  border-radius: 12rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  background: #f5f5f5;
+}
+
+.uploaded-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-delete {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 48rpx;
+  height: 48rpx;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(4rpx);
+  transition: all 0.3s ease;
+}
+
+.img-delete:active {
+  background: rgba(245, 34, 45, 0.9);
+  transform: scale(0.9);
+}
+
+.delete-icon {
+  color: white;
+  font-size: 36rpx;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.img-status {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  padding: 12rpx 8rpx 8rpx;
+  text-align: center;
+}
+
+.status-text {
+  font-size: 20rpx;
+  color: #52c41a;
+  font-weight: 600;
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.5);
+}
+
+/* 图片上传按钮 */
+.image-upload-btn {
+  width: 100%;
+  height: 160rpx;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border: 3rpx dashed #d9d9d9;
+  border-radius: 12rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.image-upload-btn:not([disabled]):active {
+  background: linear-gradient(135deg, #e6f7ff 0%, #d9f0ff 100%);
+  border-color: #1890ff;
+  transform: scale(0.98);
+}
+
+.image-upload-btn[disabled] {
+  opacity: 0.5;
+}
+
+.upload-btn-icon {
+  font-size: 56rpx;
+  opacity: 0.6;
+}
+
+.upload-btn-text {
+  font-size: 26rpx;
+  color: #666;
+  font-weight: 500;
+}
+
+.image-upload-btn:not([disabled]):active .upload-btn-text {
+  color: #1890ff;
 }
 </style>

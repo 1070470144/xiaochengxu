@@ -32,10 +32,6 @@
             <text class="info-value">{{ scriptDetail.player_count || '未知' }}</text>
           </view>
           <view class="info-row">
-            <text class="info-label">时长：</text>
-            <text class="info-value">{{ scriptDetail.duration ? scriptDetail.duration + '分钟' : '未知' }}</text>
-          </view>
-          <view class="info-row">
             <text class="info-label">难度：</text>
             <text class="info-value difficulty" :class="getDifficultyClass(scriptDetail.difficulty)">
               {{ getDifficultyText(scriptDetail.difficulty) }}
@@ -53,10 +49,8 @@
       <!-- 剧本预览图 -->
       <view v-if="scriptDetail.preview_image" class="preview-card card">
         <view class="card-header">
-          <text class="card-title">剧本预览图</text>
-          <view class="download-options">
-            <text class="download-tip">点击图片可放大查看</text>
-          </view>
+          <text class="card-title">🤖 自动生成的预览图</text>
+          <text class="ai-badge">AI生成</text>
         </view>
         <view class="card-body">
           <image 
@@ -68,14 +62,44 @@
           
           <!-- 下载按钮 -->
           <view class="preview-actions">
-            <button class="preview-btn btn-normal" @click="downloadPreviewNormal">
+            <button class="action-btn btn-download-normal" @click="downloadPreviewNormal">
               <text class="btn-icon">📥</text>
               <text class="btn-text">普通下载</text>
             </button>
-            <button class="preview-btn btn-hd" @click="downloadPreviewHD">
+            <button class="action-btn btn-download-hd" @click="downloadPreviewHD">
               <text class="btn-icon">🖼️</text>
-              <text class="btn-text">超高清打印</text>
+              <text class="btn-text">超高清</text>
             </button>
+          </view>
+        </view>
+      </view>
+
+      <!-- 用户上传的图片 -->
+      <view v-if="scriptDetail.user_images && scriptDetail.user_images.length > 0" class="user-images-card card">
+        <view class="card-header">
+          <text class="card-title">👤 用户上传的图片</text>
+          <text class="user-badge">{{ scriptDetail.user_images.length }}张</text>
+        </view>
+        <view class="card-body">
+          <view class="user-images-grid">
+            <view 
+              v-for="(img, index) in scriptDetail.user_images" 
+              :key="index"
+              class="grid-item"
+              @click="previewUserImages(index)"
+            >
+              <image 
+                class="grid-image" 
+                :src="img" 
+                mode="aspectFill"
+              />
+              <view class="image-overlay">
+                <text class="overlay-icon">🔍</text>
+              </view>
+            </view>
+          </view>
+          <view class="image-tip">
+            <text class="tip-text">💡 点击图片可放大查看，长按保存到相册</text>
           </view>
         </view>
       </view>
@@ -104,18 +128,14 @@
 
       <!-- 操作按钮 -->
       <view class="action-bar">
-        <button class="action-btn btn-secondary" @click="favoriteScript">
-          {{ isFavorite ? '❤️ 已收藏' : '🤍 收藏' }}
+        <button class="action-btn btn-favorite" :class="{ 'is-favorite': isFavorite }" @click="favoriteScript">
+          <text class="btn-icon">{{ isFavorite ? '❤️' : '🤍' }}</text>
+          <text class="btn-text">{{ isFavorite ? '已收藏' : '收藏' }}</text>
         </button>
-      </view>
-      
-      <!-- JSON操作按钮 -->
-      <view class="json-actions">
-        <button class="json-btn btn-copy" @click="copyJsonToClipboard">
-          {{ copyingJson ? '⏳ 生成中...' : '🔗 复制JSON链接' }}
-        </button>
-        <button class="json-btn btn-download" @click="downloadJsonFile">
-          {{ downloadingJson ? '⏳ 下载中...' : '💾 下载.json文件' }}
+        
+        <button class="action-btn btn-json" @click="copyJsonToClipboard" :disabled="copyingJson">
+          <text class="btn-icon">{{ copyingJson ? '⏳' : '🔗' }}</text>
+          <text class="btn-text">{{ copyingJson ? '生成中...' : '复制JSON' }}</text>
         </button>
       </view>
 
@@ -159,46 +179,6 @@
         </view>
       </view>
 
-      <!-- 评论区 -->
-      <view class="comment-section">
-        <view class="comment-header card-header">
-          <text class="card-title">用户评价</text>
-          <button 
-            class="comment-btn btn-outline" 
-            :class="{ 'btn-disabled': hasReviewed }"
-            @click="showCommentModal"
-          >
-            {{ hasReviewed ? '已评价' : '写评价' }}
-          </button>
-        </view>
-
-        <!-- 评论列表 -->
-        <view v-if="commentList.length > 0" class="comment-list">
-          <view v-for="comment in commentList" :key="comment._id" class="comment-item card">
-            <view class="card-body">
-              <view class="comment-header-info flex-between">
-                <view class="user-info">
-                  <text 
-                    class="user-name clickable" 
-                    @click="handleUserClick(comment.user_id, comment.user)"
-                  >
-                    {{ comment.user ? comment.user.nickname : '匿名用户' }}
-                  </text>
-                  <view v-if="comment.rating" class="comment-rating">
-                    <text class="rating-stars">{{ getStars(comment.rating) }}</text>
-                  </view>
-                </view>
-                <text class="comment-time">{{ formatTime(comment.created_at) }}</text>
-              </view>
-              <text class="comment-content">{{ comment.content }}</text>
-            </view>
-          </view>
-        </view>
-
-        <view v-else class="no-comment">
-          <text class="no-comment-text">暂无评价，来写第一个吧~</text>
-        </view>
-      </view>
     </view>
 
     <!-- 错误状态 -->
@@ -206,33 +186,6 @@
       <text class="error-text">剧本加载失败</text>
       <button class="retry-btn btn-primary" @click="loadScriptDetail">重新加载</button>
     </view>
-
-    <!-- 评论弹窗 -->
-    <uni-popup ref="commentPopup" type="bottom">
-      <view class="comment-popup">
-        <view class="popup-header">
-          <text class="popup-title">写评价</text>
-          <text class="popup-close" @click="closeCommentModal">×</text>
-        </view>
-        <view class="popup-body">
-          <view class="rating-section">
-            <text class="rating-label">评分：</text>
-            <uni-rate v-model="commentRating" :size="18" :margin="8" />
-          </view>
-          <view class="content-section">
-            <textarea 
-              v-model="commentContent"
-              placeholder="分享你的游戏体验..."
-              maxlength="500"
-              class="comment-textarea">
-            </textarea>
-          </view>
-        </view>
-        <view class="popup-footer">
-          <button class="submit-btn btn-primary" @click="submitComment" :loading="submitting">提交评价</button>
-        </view>
-      </view>
-    </uni-popup>
   </view>
 </template>
 
@@ -247,19 +200,12 @@ export default {
     return {
       scriptId: '',
       scriptDetail: null,
-      commentList: [],
       loading: false,
       isFavorite: false,
       generatingUrl: false,
       copiedUrl: false,
       copyingJson: false,
       downloadingJson: false,
-      
-      // 评论相关
-      commentRating: 0,
-      commentContent: '',
-      submitting: false,
-      hasReviewed: false,  // 是否已评论
       currentUserId: '',    // 当前用户ID
       
       // 相关帖子
@@ -284,7 +230,6 @@ export default {
       }
       
       this.loadScriptDetail()
-      this.loadComments()
       this.loadRelatedPosts()
       
       // 记录浏览历史
@@ -339,111 +284,6 @@ export default {
       }
     },
 
-    // 加载评论
-    async loadComments() {
-      try {
-        const db = uniCloud.database()
-        
-        // 第一步：查询评价列表
-        const reviewsResult = await db.collection('botc-script-reviews')
-          .where({
-            script_id: this.scriptId,
-            status: 1
-          })
-          .orderBy('created_at', 'desc')
-          .limit(20)
-          .get()
-        
-        console.log('查询评价结果：', reviewsResult)
-        
-        // 兼容不同的数据结构
-        const reviews = reviewsResult.result?.data || reviewsResult.data || []
-        
-        console.log('📝 评论列表数量：', reviews.length)
-        console.log('📝 评论列表详情：', reviews)
-        
-        // ⭐ 重要：先检查当前用户是否已评论（必须在任何 return 之前）
-        if (this.currentUserId) {
-          console.log('🔍 开始检查是否已评论...')
-          console.log('🔍 当前用户ID：', this.currentUserId, '类型：', typeof this.currentUserId)
-          
-          // 打印所有评论的 user_id
-          reviews.forEach((review, index) => {
-            console.log(`🔍 评论${index + 1} user_id：`, review.user_id, '类型：', typeof review.user_id)
-          })
-          
-          this.hasReviewed = reviews.some(review => {
-            const match = review.user_id === this.currentUserId
-            if (match) {
-              console.log('✅ 找到匹配的评论！')
-            }
-            return match
-          })
-          console.log('🎯 最终结果 - 当前用户是否已评论：', this.hasReviewed)
-        } else {
-          console.log('❌ currentUserId 为空，跳过检查')
-        }
-        
-        if (reviews.length === 0) {
-          this.commentList = []
-          return
-        }
-        
-        // 第二步：获取所有用户ID
-        const userIds = [...new Set(reviews.map(r => r.user_id).filter(id => id))]
-        
-        if (userIds.length === 0) {
-          // 没有用户ID，直接使用匿名用户
-          this.commentList = reviews.map(review => ({
-            _id: review._id,
-            content: review.content,
-            rating: review.rating,
-            like_count: review.like_count,
-            created_at: review.created_at,
-            user: {
-              nickname: '匿名用户',
-              avatar: ''
-            }
-          }))
-          return
-        }
-        
-        // 第三步：查询用户信息
-        const usersResult = await db.collection('uni-id-users')
-          .where({
-            _id: db.command.in(userIds)
-          })
-          .field('_id,nickname,avatar')
-          .get()
-        
-        console.log('查询用户结果：', usersResult)
-        
-        // 兼容不同的数据结构
-        const users = usersResult.result?.data || usersResult.data || []
-        
-        const usersMap = {}
-        users.forEach(user => {
-          usersMap[user._id] = user
-        })
-        
-        // 第四步：合并数据
-        this.commentList = reviews.map(review => ({
-          _id: review._id,
-          content: review.content,
-          rating: review.rating,
-          like_count: review.like_count,
-          created_at: review.created_at,
-          user: usersMap[review.user_id] || {
-            nickname: '匿名用户',
-            avatar: ''
-          }
-        }))
-      } catch (error) {
-        console.error('加载评论失败：', error)
-        this.commentList = []
-      }
-    },
-    
     // 加载相关帖子
     async loadRelatedPosts() {
       try {
@@ -518,7 +358,7 @@ export default {
     },
 
     // 下载剧本
-    // 预览图片（点击放大）
+    // 预览自动生成的图片（点击放大）
     previewImage() {
       if (!this.scriptDetail.preview_image) return
       
@@ -536,95 +376,454 @@ export default {
       })
     },
     
+    // 预览用户上传的图片（支持多图浏览）
+    previewUserImages(index) {
+      if (!this.scriptDetail.user_images || this.scriptDetail.user_images.length === 0) return
+      
+      uni.previewImage({
+        urls: this.scriptDetail.user_images,
+        current: index,
+        longPressActions: {
+          itemList: ['保存图片'],
+          success: (data) => {
+            if (data.tapIndex === 0) {
+              this.saveImageToAlbum(this.scriptDetail.user_images[data.index || index])
+            }
+          }
+        }
+      })
+    },
+    
     // 下载预览图（普通版）
     async downloadPreviewNormal() {
-      if (!this.scriptDetail.preview_image) return
+      console.log('=== 点击普通下载按钮 ===')
+      console.log('剧本数据:', this.scriptDetail ? '存在' : '不存在')
+      console.log('预览图:', this.scriptDetail?.preview_image ? '存在' : '不存在')
       
+      if (!this.scriptDetail.preview_image) {
+        console.log('❌ 没有预览图，退出')
+        return
+      }
+      
+      console.log('✅ 开始下载流程')
       uni.showLoading({ title: '准备下载...' })
       
       try {
-        // SVG图片可以直接保存
-        await this.saveImageToAlbum(this.scriptDetail.preview_image)
+        const previewImage = this.scriptDetail.preview_image
+        console.log('预览图格式:', previewImage.substring(0, 50) + '...')
         
-        uni.showToast({
-          title: '预览图已保存',
-          icon: 'success'
-        })
+        // #ifdef H5
+        console.log('🌐 当前平台: H5')
+        console.log('开始将SVG转换为PNG...')
+        
+        // H5端：将SVG转换为PNG后下载
+        const fileName = `${this.scriptDetail.title || '剧本预览图'}.png`
+        console.log('目标文件名:', fileName)
+        
+        if (previewImage.startsWith('data:image/svg+xml;base64,')) {
+          console.log('✅ SVG格式验证通过')
+          
+          try {
+            // 创建Image元素加载SVG
+            const img = new Image()
+            
+            img.onload = () => {
+              console.log('✅ SVG图片加载成功')
+              console.log('图片尺寸:', img.width, 'x', img.height)
+              
+              // 创建Canvas
+              const canvas = document.createElement('canvas')
+              canvas.width = img.width || 800
+              canvas.height = img.height || 600
+              console.log('Canvas尺寸:', canvas.width, 'x', canvas.height)
+              
+              const ctx = canvas.getContext('2d')
+              // 白色背景
+              ctx.fillStyle = 'white'
+              ctx.fillRect(0, 0, canvas.width, canvas.height)
+              // 绘制SVG
+              ctx.drawImage(img, 0, 0)
+              console.log('✅ SVG已绘制到Canvas')
+              
+              // 转换为PNG
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  console.error('❌ PNG转换失败')
+                  uni.hideLoading()
+                  uni.showToast({ title: 'PNG转换失败', icon: 'none' })
+                  return
+                }
+                
+                console.log('✅ PNG转换成功，大小:', (blob.size / 1024).toFixed(2), 'KB')
+                
+                // 创建下载链接
+                const url = URL.createObjectURL(blob)
+                console.log('PNG Blob URL:', url)
+                console.log('💾 下载位置: C:\\Users\\Administrator\\Downloads\\')
+                console.log('💡 快捷键: 按 Ctrl+J 查看下载管理器')
+                
+                const a = document.createElement('a')
+                a.href = url
+                a.download = fileName
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                
+                console.log('✅ PNG下载已触发！')
+                console.log('文件名:', fileName)
+                
+                URL.revokeObjectURL(url)
+                console.log('Blob URL已释放')
+                
+                uni.hideLoading()
+                uni.showToast({
+                  title: 'PNG图片已下载',
+                  icon: 'success',
+                  duration: 2000
+                })
+                
+                console.log('=== H5 PNG下载完成 ===')
+              }, 'image/png', 1.0)
+            }
+            
+            img.onerror = (err) => {
+              console.error('❌ SVG图片加载失败:', err)
+              uni.hideLoading()
+              uni.showToast({
+                title: 'SVG加载失败',
+                icon: 'none'
+              })
+            }
+            
+            console.log('开始加载SVG图片...')
+            img.src = previewImage
+            
+          } catch (h5Error) {
+            console.error('❌ H5下载过程出错:', h5Error)
+            uni.hideLoading()
+            throw h5Error
+          }
+        } else {
+          console.log('❌ 图片格式不是SVG base64')
+          throw new Error('图片格式不支持')
+        }
+        // #endif
+        
+        // #ifndef H5
+        console.log('📱 当前平台: 小程序/APP')
+        // 小程序端：保存到相册
+        try {
+          console.log('调用 saveImageToAlbum...')
+          await this.saveImageToAlbum(previewImage)
+          console.log('saveImageToAlbum 执行完成')
+          uni.hideLoading()
+          uni.showToast({
+            title: '预览图已保存到相册',
+            icon: 'success'
+          })
+        } catch (saveError) {
+          // 如果保存相册失败，尝试其他方式
+          console.error('保存到相册失败:', saveError)
+          uni.hideLoading()
+          
+          // 提供复制base64的降级方案
+          uni.showModal({
+            title: '保存失败',
+            content: '当前环境不支持保存到相册，是否复制图片数据？',
+            success: (res) => {
+              if (res.confirm) {
+                uni.setClipboardData({
+                  data: previewImage,
+                  success: () => {
+                    uni.showToast({
+                      title: '图片数据已复制',
+                      icon: 'success'
+                    })
+                  }
+                })
+              }
+            }
+          })
+        }
+        // #endif
+        
       } catch (error) {
         console.error('下载失败:', error)
+        uni.hideLoading()
         uni.showToast({
           title: '下载失败',
           icon: 'none'
         })
-      } finally {
-        uni.hideLoading()
       }
     },
     
     // 下载预览图（超高清打印版）
     async downloadPreviewHD() {
-      uni.showLoading({ title: '准备生成高清版...' })
+      console.log('=== 点击超高清按钮 ===')
+      console.log('剧本数据:', this.scriptDetail ? '存在' : '不存在')
+      console.log('预览图:', this.scriptDetail?.preview_image ? '存在' : '不存在')
+      
+      if (!this.scriptDetail.preview_image) {
+        console.log('❌ 没有预览图，退出')
+        return
+      }
+      
+      console.log('✅ 开始超高清下载流程')
+      uni.showLoading({ title: '准备下载...' })
       
       try {
-        // 调用云函数生成高清版（可选功能）
-        const res = await uniCloud.callFunction({
-          name: 'script-generate-hd-preview',
-          data: {
-            scriptId: this.scriptId,
-            quality: 'ultra'
-          }
-        })
+        const previewImage = this.scriptDetail.preview_image
+        console.log('预览图格式:', previewImage.substring(0, 50) + '...')
         
-        if (res.result.code === 0) {
-          await this.saveImageToAlbum(res.result.data.hdImageUrl)
+        // #ifdef H5
+        console.log('🌐 当前平台: H5')
+        console.log('开始将SVG转换为超高清PNG...')
+        
+        // H5端：将SVG转换为高清PNG后下载
+        const fileName = `${this.scriptDetail.title || '剧本预览图'}-超高清.png`
+        console.log('目标文件名:', fileName)
+        
+        if (previewImage.startsWith('data:image/svg+xml;base64,')) {
+          console.log('✅ SVG格式验证通过')
+          
+          try {
+            // 创建Image元素加载SVG
+            const img = new Image()
+            
+            img.onload = () => {
+              console.log('✅ SVG图片加载成功')
+              console.log('原始尺寸:', img.width, 'x', img.height)
+              
+              // 创建高清Canvas（2倍分辨率）
+              const canvas = document.createElement('canvas')
+              const scale = 2  // 2倍超高清
+              canvas.width = (img.width || 800) * scale
+              canvas.height = (img.height || 600) * scale
+              console.log('超高清Canvas尺寸:', canvas.width, 'x', canvas.height, '(2倍分辨率)')
+              
+              const ctx = canvas.getContext('2d')
+              ctx.scale(scale, scale)
+              // 白色背景
+              ctx.fillStyle = 'white'
+              ctx.fillRect(0, 0, canvas.width, canvas.height)
+              // 绘制SVG
+              ctx.drawImage(img, 0, 0)
+              console.log('✅ SVG已绘制到超高清Canvas')
+              
+              // 转换为高质量PNG
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  console.error('❌ PNG转换失败')
+                  uni.hideLoading()
+                  uni.showToast({ title: 'PNG转换失败', icon: 'none' })
+                  return
+                }
+                
+                console.log('✅ 超高清PNG转换成功，大小:', (blob.size / 1024).toFixed(2), 'KB')
+                
+                // 创建下载链接
+                const url = URL.createObjectURL(blob)
+                console.log('PNG Blob URL:', url)
+                console.log('💾 下载位置: C:\\Users\\Administrator\\Downloads\\')
+                console.log('💡 快捷键: 按 Ctrl+J 查看下载管理器')
+                
+                const a = document.createElement('a')
+                a.href = url
+                a.download = fileName
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                
+                console.log('✅ 超高清PNG下载已触发！')
+                console.log('文件名:', fileName)
+                
+                URL.revokeObjectURL(url)
+                console.log('Blob URL已释放')
+                
+                uni.hideLoading()
+                uni.showToast({
+                  title: '超高清PNG已下载',
+                  icon: 'success',
+                  duration: 2000
+                })
+                
+                console.log('=== H5超高清PNG下载完成 ===')
+                
+                // 提示用户
+                setTimeout(() => {
+                  uni.showModal({
+                    title: '💡 打印提示',
+                    content: 'PNG格式已转换为2倍超高清\n适合打印使用\n可获得最佳打印效果',
+                    showCancel: false
+                  })
+                }, 2000)
+              }, 'image/png', 1.0)
+            }
+            
+            img.onerror = (err) => {
+              console.error('❌ SVG图片加载失败:', err)
+              uni.hideLoading()
+              uni.showToast({
+                title: 'SVG加载失败',
+                icon: 'none'
+              })
+            }
+            
+            console.log('开始加载SVG图片...')
+            img.src = previewImage
+            
+          } catch (h5Error) {
+            console.error('❌ H5下载过程出错:', h5Error)
+            uni.hideLoading()
+            throw h5Error
+          }
+        } else {
+          console.log('❌ 图片格式不是SVG base64')
+          throw new Error('图片格式不支持')
+        }
+        // #endif
+        
+        // #ifndef H5
+        // 小程序端：保存到相册
+        try {
+          await this.saveImageToAlbum(previewImage)
+          uni.hideLoading()
           uni.showToast({
             title: '超高清版已保存',
-            icon: 'success'
+            icon: 'success',
+            duration: 2000
           })
-        } else {
-          throw new Error(res.result.message)
-        }
-      } catch (error) {
-        console.error('生成高清版失败:', error)
-        
-        // 降级方案：直接保存普通版
-        uni.showModal({
-          title: '提示',
-          content: '超高清版生成失败，是否保存普通版？',
-          success: (res) => {
-            if (res.confirm) {
-              this.downloadPreviewNormal()
+          
+          // 提示用户
+          setTimeout(() => {
+            uni.showModal({
+              title: '💡 打印提示',
+              content: 'SVG格式支持无损缩放\n从相册打开后可获得最佳打印效果',
+              showCancel: false
+            })
+          }, 2000)
+        } catch (saveError) {
+          console.error('保存失败:', saveError)
+          uni.hideLoading()
+          
+          // 降级方案：复制数据
+          uni.showModal({
+            title: '保存失败',
+            content: '当前环境不支持保存到相册，是否复制图片数据？',
+            success: (res) => {
+              if (res.confirm) {
+                uni.setClipboardData({
+                  data: previewImage,
+                  success: () => {
+                    uni.showToast({
+                      title: '图片数据已复制',
+                      icon: 'success'
+                    })
+                  }
+                })
+              }
             }
-          }
-        })
-      } finally {
+          })
+        }
+        // #endif
+        
+      } catch (error) {
+        console.error('下载失败:', error)
         uni.hideLoading()
+        uni.showToast({
+          title: '下载失败: ' + (error.message || '未知错误'),
+          icon: 'none'
+        })
       }
     },
     
     // 保存图片到相册
     async saveImageToAlbum(imageUrl) {
       return new Promise((resolve, reject) => {
-        // 如果是base64图片，需要先转换
-        if (imageUrl.startsWith('data:image')) {
-          // base64图片直接保存
+        console.log('[保存图片] 开始，URL前缀:', imageUrl.substring(0, 50))
+        
+        // SVG base64需要转换为PNG
+        if (imageUrl.startsWith('data:image/svg+xml;base64,')) {
+          console.log('[保存图片] SVG格式，需要转换为PNG')
+          
+          // 使用canvas将SVG转为PNG
+          const img = new Image()
+          img.onload = () => {
+            console.log('[保存图片] SVG图片加载成功，尺寸:', img.width, 'x', img.height)
+            
+            // 创建canvas
+            const canvas = document.createElement('canvas')
+            canvas.width = img.width || 800
+            canvas.height = img.height || 600
+            
+            const ctx = canvas.getContext('2d')
+            ctx.fillStyle = 'white'
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            ctx.drawImage(img, 0, 0)
+            
+            // 转为PNG base64
+            const pngDataUrl = canvas.toDataURL('image/png', 1.0)
+            console.log('[保存图片] 转换为PNG成功，大小:', (pngDataUrl.length / 1024).toFixed(2), 'KB')
+            
+            // 保存PNG到相册
+            uni.saveImageToPhotosAlbum({
+              filePath: pngDataUrl,
+              success: () => {
+                console.log('[保存图片] ✅ PNG已保存到相册')
+                console.log('[保存图片] 💡 位置: 手机相册/图库')
+                resolve()
+              },
+              fail: (err) => {
+                console.error('[保存图片] ❌ 保存失败:', err)
+                reject(err)
+              }
+            })
+          }
+          
+          img.onerror = (err) => {
+            console.error('[保存图片] ❌ SVG加载失败:', err)
+            reject(new Error('SVG图片加载失败'))
+          }
+          
+          img.src = imageUrl
+          
+        } else if (imageUrl.startsWith('data:image')) {
+          // 其他base64图片（PNG/JPG）
+          console.log('[保存图片] 普通base64格式，直接保存')
           uni.saveImageToPhotosAlbum({
             filePath: imageUrl,
-            success: resolve,
-            fail: reject
+            success: () => {
+              console.log('[保存图片] ✅ 已保存到相册')
+              resolve()
+            },
+            fail: (err) => {
+              console.error('[保存图片] ❌ 保存失败:', err)
+              reject(err)
+            }
           })
         } else {
           // 网络图片先下载再保存
+          console.log('[保存图片] 网络URL，先下载...')
           uni.downloadFile({
             url: imageUrl,
             success: (downloadRes) => {
+              console.log('[保存图片] 下载成功，临时路径:', downloadRes.tempFilePath)
               uni.saveImageToPhotosAlbum({
                 filePath: downloadRes.tempFilePath,
-                success: resolve,
-                fail: reject
+                success: () => {
+                  console.log('[保存图片] ✅ 已保存到相册')
+                  resolve()
+                },
+                fail: (err) => {
+                  console.error('[保存图片] ❌ 保存失败:', err)
+                  reject(err)
+                }
               })
             },
-            fail: reject
+            fail: (err) => {
+              console.error('[保存图片] ❌ 下载失败:', err)
+              reject(err)
+            }
           })
         }
       })
@@ -829,146 +1028,6 @@ export default {
       }
     },
     
-    // 下载JSON文件
-    async downloadJsonFile() {
-      this.downloadingJson = true;
-      
-      try {
-        console.log('[downloadJsonFile] 开始下载，剧本ID:', this.scriptId);
-        
-        // 检查当前剧本数据是否已有json_data
-        if (!this.scriptDetail || !this.scriptDetail.json_data) {
-          uni.showToast({
-            title: 'JSON数据不存在',
-            icon: 'none'
-          });
-          this.downloadingJson = false;
-          return;
-        }
-        
-        uni.showLoading({ title: '生成JSON文件中...' });
-        
-        const json_data = this.scriptDetail.json_data;
-        
-        // 将JSON对象转换为格式化字符串
-        const jsonString = JSON.stringify(json_data, null, 2);
-            
-            // 生成文件名
-            const fileName = `${this.scriptDetail.title || 'script'}-${Date.now()}.json`;
-            
-            // #ifdef H5
-            // H5端：创建Blob并触发下载
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            uni.hideLoading();
-            uni.showToast({
-              title: 'JSON文件已下载',
-              icon: 'success'
-            });
-            // #endif
-            
-            // #ifndef H5
-            // 小程序端：保存到本地文件系统
-            const fs = uni.getFileSystemManager();
-            const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`;
-            
-            fs.writeFile({
-              filePath: filePath,
-              data: jsonString,
-              encoding: 'utf8',
-              success: () => {
-                uni.hideLoading();
-                uni.showModal({
-                  title: '✅ JSON文件已生成',
-                  content: `文件名：${fileName}\n\n文件已保存到本地临时目录，您可以：\n1. 点击"打开文件"查看\n2. 点击"分享文件"发送给他人`,
-                  confirmText: '打开文件',
-                  cancelText: '分享文件',
-                  success: (res) => {
-                    if (res.confirm) {
-                      // 打开文件
-                      uni.openDocument({
-                        filePath: filePath,
-                        fileType: 'json',
-                        success: () => {
-                          console.log('[downloadJsonFile] 文件打开成功');
-                        },
-                        fail: (err) => {
-                          console.error('[downloadJsonFile] 打开文件失败:', err);
-                          uni.showToast({
-                            title: '打开失败，文件路径已复制',
-                            icon: 'none'
-                          });
-                          uni.setClipboardData({
-                            data: filePath
-                          });
-                        }
-                      });
-                    } else if (res.cancel) {
-                      // 分享文件
-                      uni.shareFileMessage({
-                        filePath: filePath,
-                        success: () => {
-                          uni.showToast({
-                            title: '分享成功',
-                            icon: 'success'
-                          });
-                        },
-                        fail: () => {
-                          uni.showToast({
-                            title: '分享失败',
-                            icon: 'none'
-                          });
-                        }
-                      });
-                    }
-                  }
-                });
-              },
-              fail: (err) => {
-                uni.hideLoading();
-                console.error('[downloadJsonFile] 写入文件失败:', err);
-                
-                // 降级方案：复制到剪贴板
-                uni.setClipboardData({
-                  data: jsonString,
-                  success: () => {
-                    uni.showToast({
-                      title: '文件生成失败，JSON已复制',
-                      icon: 'none',
-                      duration: 2000
-                    });
-                  }
-                });
-              }
-            });
-            // #endif
-      } catch (error) {
-        uni.hideLoading();
-        console.error('[downloadJsonFile] 下载JSON文件失败:', error);
-        console.error('[downloadJsonFile] 错误详情:', error.message);
-        console.error('[downloadJsonFile] 错误堆栈:', error.stack);
-        
-        uni.showModal({
-          title: '生成失败',
-          content: '错误信息：' + (error.message || JSON.stringify(error)),
-          showCancel: false
-        });
-      } finally {
-        this.downloadingJson = false;
-        
-        // 2秒后恢复按钮状态
-        setTimeout(() => {
-          this.downloadingJson = false;
-        }, 2000);
-      }
-    },
-    
     async downloadScript() {
       try {
         uni.showLoading({ title: '准备下载...' })
@@ -1101,103 +1160,6 @@ export default {
       }
     },
 
-    // 显示评论弹窗
-    showCommentModal() {
-      // 检查是否已登录
-      if (!Auth.isLogin()) {
-        uni.showToast({
-          title: '请先登录',
-          icon: 'none'
-        })
-        setTimeout(() => {
-          Auth.toLogin()
-        }, 1500)
-        return
-      }
-      
-      // 检查是否已评论
-      if (this.hasReviewed) {
-        uni.showModal({
-          title: '提示',
-          content: '您已经评价过该剧本了，每个剧本只能评价一次哦~',
-          showCancel: false,
-          confirmText: '知道了'
-        })
-        return
-      }
-      
-      this.$refs.commentPopup.open()
-    },
-
-    // 关闭评论弹窗
-    closeCommentModal() {
-      this.$refs.commentPopup.close()
-    },
-
-    // 提交评价
-    async submitComment() {
-      if (this.commentRating === 0) {
-        uni.showToast({
-          title: '请选择评分',
-          icon: 'none'
-        })
-        return
-      }
-
-      if (!this.commentContent.trim()) {
-        uni.showToast({
-          title: '请输入评价内容',
-          icon: 'none'
-        })
-        return
-      }
-
-      this.submitting = true
-
-      try {
-        const result = await uniCloud.callFunction({
-          name: 'script-review-create',
-          data: {
-            scriptId: this.scriptId,
-            content: this.commentContent.trim(),
-            rating: this.commentRating,
-            token: Auth.getToken()
-          }
-        })
-
-        if (result.result.code === 0) {
-          uni.showToast({
-            title: '评价成功',
-            icon: 'success'
-          })
-          
-          // 标记已评论
-          this.hasReviewed = true
-          
-          // 清空表单
-          this.commentRating = 0
-          this.commentContent = ''
-          this.closeCommentModal()
-          
-          // 重新加载评论
-          this.loadComments()
-          
-          // 重新加载剧本详情（更新评分）
-          this.loadScriptDetail()
-        } else {
-          throw new Error(result.result.message)
-        }
-      } catch (error) {
-        console.error('提交评价失败：', error)
-        uni.showToast({
-          title: '提交失败',
-          icon: 'none'
-        })
-      } finally {
-        this.submitting = false
-      }
-    },
-
     // 工具方法
     formatTime(timestamp) {
       if (!timestamp) return ''
@@ -1223,10 +1185,6 @@ export default {
         4: '专家'
       }
       return textMap[difficulty] || '未知'
-    },
-
-    getStars(rating) {
-      return '⭐'.repeat(rating)
     },
     
     // 处理用户点击事件
@@ -1407,6 +1365,23 @@ export default {
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
 }
 
+.preview-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.ai-badge {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 2rpx 8rpx rgba(139, 69, 19, 0.2);
+}
+
 .download-options {
   display: flex;
   align-items: center;
@@ -1418,50 +1393,108 @@ export default {
   color: #999;
 }
 
+/* 用户上传图片卡片 */
+.user-images-card {
+  margin: 30rpx 20rpx;
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.user-images-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.user-badge {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 2rpx 8rpx rgba(24, 144, 255, 0.2);
+}
+
+/* 用户图片网格 */
+.user-images-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.grid-item {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;  /* 1:1 比例 */
+  border-radius: 12rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  background: #f5f5f5;
+  cursor: pointer;
+}
+
+.grid-item:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.grid-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.grid-item:active .image-overlay {
+  opacity: 1;
+}
+
+.overlay-icon {
+  font-size: 48rpx;
+  color: white;
+  filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.3));
+}
+
+/* 图片提示 */
+.image-tip {
+  padding: 16rpx 20rpx;
+  background: linear-gradient(135deg, #e6f7ff 0%, #d9f0ff 100%);
+  border-radius: 12rpx;
+  border: 1rpx solid #91d5ff;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #0050b3;
+  line-height: 1.5;
+}
+
 .preview-image {
   width: 100%;
   border-radius: 12rpx;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
   cursor: pointer;
-}
-
-.preview-actions {
-  display: flex;
-  gap: 20rpx;
-  margin-top: 24rpx;
-}
-
-.preview-btn {
-  flex: 1;
-  height: 80rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  border-radius: 40rpx;
-  font-size: 28rpx;
-  font-weight: 500;
-  border: none;
-}
-
-.preview-btn.btn-normal {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
-  box-shadow: 0 4rpx 16rpx rgba(79, 172, 254, 0.3);
-}
-
-.preview-btn.btn-hd {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-  box-shadow: 0 4rpx 16rpx rgba(245, 87, 108, 0.3);
-}
-
-.btn-icon {
-  font-size: 32rpx;
-}
-
-.btn-text {
-  font-size: 28rpx;
 }
 
 .desc-card {
@@ -1505,76 +1538,102 @@ export default {
   transition: all 0.3s ease;
 }
 
-/* 操作栏 - 正常排列 */
-.action-bar {
+/* 操作栏和预览操作区 */
+.action-bar,
+.preview-actions {
   display: flex;
-  padding: 25rpx 20rpx;
+  padding: 0 20rpx;
   gap: 20rpx;
-  background: white;
-  margin: 30rpx 20rpx;
-  border-radius: 20rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  margin: 30rpx 0;
 }
 
+.preview-actions {
+  margin: 24rpx 0 0;
+  padding: 0;
+}
+
+/* 统一的按钮样式 */
 .action-btn {
   flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 44rpx;
-  font-size: 32rpx;
-  font-weight: 600;
-  box-shadow: 0 6rpx 20rpx rgba(139, 69, 19, 0.3);
+  height: 100rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  border-radius: 16rpx;
+  border: none;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
 }
 
 .action-btn:active {
   transform: scale(0.95);
-  box-shadow: 0 4rpx 12rpx rgba(139, 69, 19, 0.2);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
 }
 
-/* JSON操作按钮 */
-.json-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-  padding: 0 20rpx;
-  margin-bottom: 30rpx;
+.action-btn .btn-icon {
+  font-size: 40rpx;
+  line-height: 1;
 }
 
-.json-btn {
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 16rpx;
-  font-size: 30rpx;
+.action-btn .btn-text {
+  font-size: 26rpx;
   font-weight: 600;
-  border: none;
+  line-height: 1;
+}
+
+/* 收藏按钮 - 灰色渐变 */
+.action-btn.btn-favorite {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+}
+
+.action-btn.btn-favorite .btn-text {
+  color: #666;
+}
+
+/* 收藏按钮 - 已收藏时粉红渐变 */
+.action-btn.btn-favorite.is-favorite {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+}
+
+.action-btn.btn-favorite.is-favorite .btn-icon,
+.action-btn.btn-favorite.is-favorite .btn-text {
   color: white;
-  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
 }
 
-.json-btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+/* 复制JSON按钮 - 棕色渐变 */
+.action-btn.btn-json {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
 }
 
-.json-btn.btn-copy {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 0 6rpx 20rpx rgba(79, 172, 254, 0.3);
+.action-btn.btn-json .btn-icon,
+.action-btn.btn-json .btn-text {
+  color: white;
 }
 
-.json-btn.btn-copy:active {
-  box-shadow: 0 4rpx 12rpx rgba(79, 172, 254, 0.2);
+.action-btn.btn-json[disabled] {
+  opacity: 0.6;
 }
 
-.json-btn.btn-download {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 6rpx 20rpx rgba(102, 126, 234, 0.3);
+/* 普通下载按钮 - 蓝色渐变 */
+.action-btn.btn-download-normal {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
 }
 
-.json-btn.btn-download:active {
-  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.2);
+.action-btn.btn-download-normal .btn-icon,
+.action-btn.btn-download-normal .btn-text {
+  color: white;
+}
+
+/* 超高清下载按钮 - 紫色渐变 */
+.action-btn.btn-download-hd {
+  background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+}
+
+.action-btn.btn-download-hd .btn-icon,
+.action-btn.btn-download-hd .btn-text {
+  color: white;
 }
 
 /* 相关帖子区 */

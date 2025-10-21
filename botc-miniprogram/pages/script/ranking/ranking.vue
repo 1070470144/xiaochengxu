@@ -30,7 +30,7 @@
               @click="goToDetail(script._id)">
               <image 
                 class="script-cover" 
-                :src="script.cover_image || '/static/logo.png'" 
+                :src="getScriptThumbnail(script)" 
                 mode="aspectFill" />
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
@@ -63,7 +63,7 @@
               <view class="rank-badge" :class="getRankClass(index)">{{ index + 1 }}</view>
               <image 
                 class="script-cover" 
-                :src="script.cover_image || '/static/logo.png'" 
+                :src="getScriptThumbnail(script)" 
                 mode="aspectFill" />
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
@@ -93,7 +93,7 @@
               @click="goToDetail(script._id)">
               <image 
                 class="script-cover" 
-                :src="script.cover_image || '/static/logo.png'" 
+                :src="getScriptThumbnail(script)" 
                 mode="aspectFill" />
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
@@ -125,7 +125,7 @@
               @click="goToDetail(script._id)">
               <image 
                 class="script-cover" 
-                :src="script.cover_image || '/static/logo.png'" 
+                :src="getScriptThumbnail(script)" 
                 mode="aspectFill" />
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
@@ -156,7 +156,7 @@
               <view class="rank-badge" :class="getRankClass(index)">{{ index + 1 }}</view>
               <image 
                 class="script-cover" 
-                :src="script.cover_image || '/static/logo.png'" 
+                :src="getScriptThumbnail(script)" 
                 mode="aspectFill" />
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
@@ -187,7 +187,7 @@
               <view class="rank-badge" :class="getRankClass(index)">{{ index + 1 }}</view>
               <image 
                 class="script-cover" 
-                :src="script.cover_image || '/static/logo.png'" 
+                :src="getScriptThumbnail(script)" 
                 mode="aspectFill" />
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
@@ -386,6 +386,23 @@ export default {
       if (index === 1) return 'rank-2'
       if (index === 2) return 'rank-3'
       return 'rank-other'
+    },
+    
+    // 获取剧本缩略图（优先用户上传，随机选择）
+    getScriptThumbnail(script) {
+      // 1. 优先使用用户上传的图片（随机选择一张）
+      if (script.user_images && script.user_images.length > 0) {
+        const randomIndex = Math.floor(Math.random() * script.user_images.length)
+        return script.user_images[randomIndex]
+      }
+      
+      // 2. 没有用户上传图片，使用自动生成的预览图
+      if (script.preview_image) {
+        return script.preview_image
+      }
+      
+      // 3. 都没有，使用默认图片
+      return '/static/logo.png'
     }
   }
 }

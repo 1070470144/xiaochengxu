@@ -8,6 +8,162 @@
       </view>
     </view>
 
+    <!-- 剧本预览弹窗 -->
+    <uni-popup ref="previewPopup" type="dialog">
+      <view class="preview-dialog">
+        <view class="dialog-title">
+          <text>剧本预览</text>
+          <text class="close-btn" @click="closePreview">×</text>
+        </view>
+        <view class="dialog-content" v-if="previewData">
+          <!-- 剧本图片展示 -->
+          <view class="preview-section" v-if="hasImages">
+            <view class="section-title">🖼️ 剧本图片</view>
+            
+            <!-- 自动生成的预览图 -->
+            <view v-if="previewData.preview_image" class="image-display-section">
+              <text class="image-label">📌 自动生成的预览图：</text>
+              <image 
+                class="preview-main-image" 
+                :src="previewData.preview_image" 
+                mode="widthFix"
+                @click="viewImage(previewData.preview_image)"
+              />
+              <text class="image-hint">点击图片可放大查看</text>
+            </view>
+            
+            <!-- 用户上传的图片 -->
+            <view v-if="previewData.user_images && previewData.user_images.length > 0" class="image-display-section">
+              <text class="image-label">📸 用户上传的图片（{{ previewData.user_images.length }}张）：</text>
+              <view class="user-images-grid">
+                <image 
+                  v-for="(img, index) in previewData.user_images"
+                  :key="index"
+                  class="user-image-item" 
+                  :src="img" 
+                  mode="aspectFill"
+                  @click="viewImage(img)"
+                />
+              </view>
+              <text class="image-hint">点击图片可放大查看</text>
+            </view>
+            
+            <!-- 兼容旧数据的封面图 -->
+            <view v-if="previewData.cover_image && !previewData.preview_image && !hasUserImages" class="image-display-section">
+              <text class="image-label">🖼️ 封面图：</text>
+              <image 
+                class="preview-main-image" 
+                :src="previewData.cover_image" 
+                mode="widthFix"
+                @click="viewImage(previewData.cover_image)"
+              />
+            </view>
+          </view>
+          
+          <!-- 基本信息 -->
+          <view class="preview-section">
+            <view class="section-title">📋 基本信息</view>
+            <view class="info-grid">
+              <view class="info-item">
+                <text class="label">标题：</text>
+                <text class="value">{{ previewData.title }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">副标题：</text>
+                <text class="value">{{ previewData.subtitle || '-' }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">作者：</text>
+                <text class="value">{{ previewData.author || '-' }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">类型：</text>
+                <text class="value">{{ getTypeText(previewData.script_type) }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">难度：</text>
+                <text class="value">{{ getDifficultyText(previewData.difficulty) }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">人数：</text>
+                <text class="value">{{ previewData.player_count || '-' }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">时长：</text>
+                <text class="value">{{ previewData.duration ? previewData.duration + '分钟' : '-' }}</text>
+              </view>
+              <view class="info-item">
+                <text class="label">状态：</text>
+                <text class="value">{{ getStatusText(previewData.status) }}</text>
+              </view>
+            </view>
+          </view>
+          
+          <!-- 剧本描述 -->
+          <view class="preview-section">
+            <view class="section-title">📝 剧本描述</view>
+            <view class="desc-content">{{ previewData.description || '暂无描述' }}</view>
+          </view>
+          
+          <!-- 标签 -->
+          <view class="preview-section" v-if="previewData.tags && previewData.tags.length > 0">
+            <view class="section-title">🏷️ 标签</view>
+            <view class="tag-list">
+              <uni-tag v-for="tag in previewData.tags" :key="tag" :text="tag" size="small" />
+            </view>
+          </view>
+          
+          <!-- JSON数据预览 -->
+          <view class="preview-section" v-if="previewData.json_data">
+            <view class="section-title">
+              <text>📦 JSON数据</text>
+              <button size="mini" type="default" @click="viewFullJson">查看完整JSON</button>
+            </view>
+            <view class="json-preview-box">
+              <text class="json-info">角色数量：{{ getJsonRoleCount(previewData.json_data) }}</text>
+              <text class="json-info">数据大小：{{ getJsonDataSize(previewData.json_data) }}</text>
+              <view class="json-roles-preview">
+                <text class="roles-title">角色预览（前5个）：</text>
+                <view v-for="(role, index) in getPreviewRoles(previewData.json_data)" :key="index" class="role-item">
+                  <text class="role-name">{{ role.name }}</text>
+                  <text class="role-team">{{ getTeamText(role.team) }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+        
+        <view class="dialog-actions">
+          <button @click="closePreview">关闭</button>
+          <button v-if="previewData && previewData.status === 0" type="success" @click="approveFromPreview">
+            ✓ 通过审核
+          </button>
+        </view>
+      </view>
+    </uni-popup>
+    
+    <!-- 完整JSON查看弹窗 -->
+    <uni-popup ref="jsonViewPopup" type="dialog">
+      <view class="json-view-dialog">
+        <view class="dialog-title">
+          <text>完整JSON内容</text>
+          <text class="close-btn" @click="closeJsonView">×</text>
+        </view>
+        <view class="dialog-content">
+          <textarea 
+            :value="fullJsonText" 
+            readonly 
+            class="json-textarea"
+            auto-height>
+          </textarea>
+        </view>
+        <view class="dialog-actions">
+          <button @click="copyFullJson">复制</button>
+          <button @click="closeJsonView">关闭</button>
+        </view>
+      </view>
+    </uni-popup>
+
     <!-- 批量上传弹窗 -->
     <uni-popup ref="batchUploadPopup" type="dialog">
       <view class="batch-upload-dialog">
@@ -166,6 +322,12 @@
           <uni-td align="center">
             <view class="action-buttons">
               <button 
+                type="default" 
+                size="mini" 
+                @click="previewScript(item)">
+                预览
+              </button>
+              <button 
                 type="primary" 
                 size="mini" 
                 @click="goToEdit(item._id)">
@@ -175,8 +337,15 @@
                 v-if="item.status === 0" 
                 type="success" 
                 size="mini" 
-                @click="changeStatus(item._id, 1)">
-                发布
+                @click="auditScript(item)">
+                审核
+              </button>
+              <button 
+                v-if="item.status === 0" 
+                type="warning" 
+                size="mini" 
+                @click="rejectScript(item._id)">
+                拒绝
               </button>
               <button 
                 v-if="item.status === 1" 
@@ -234,6 +403,10 @@ export default {
         pageSize: 20,
         total: 0
       },
+      // 预览相关
+      previewData: null,
+      fullJsonText: '',
+      
       // 批量上传相关
       selectedFiles: [],
       importing: false,
@@ -268,6 +441,21 @@ export default {
 
   onLoad() {
     this.loadData()
+  },
+  
+  computed: {
+    // 检查是否有图片
+    hasImages() {
+      if (!this.previewData) return false
+      return !!(this.previewData.preview_image || 
+                this.previewData.user_images?.length > 0 || 
+                this.previewData.cover_image)
+    },
+    
+    // 检查是否有用户上传的图片
+    hasUserImages() {
+      return this.previewData?.user_images?.length > 0
+    }
   },
 
   methods: {
@@ -346,6 +534,212 @@ export default {
       uni.navigateTo({
         url: `/pages/botc/script/edit?id=${id}`
       })
+    },
+
+    // 预览剧本
+    previewScript(item) {
+      console.log('预览剧本数据：', item)
+      console.log('preview_image:', item.preview_image ? '存在' : '不存在')
+      console.log('user_images:', item.user_images)
+      console.log('user_images长度:', item.user_images?.length || 0)
+      
+      this.previewData = item
+      this.$refs.previewPopup.open()
+    },
+    
+    // 查看图片（放大）
+    viewImage(imageUrl) {
+      if (!imageUrl) return
+      
+      // 如果是base64格式的SVG，在新窗口打开
+      if (imageUrl.startsWith('data:image/svg+xml')) {
+        window.open(imageUrl, '_blank')
+      } else {
+        // 普通图片URL，使用uni.previewImage
+        uni.previewImage({
+          urls: [imageUrl],
+          current: imageUrl
+        })
+      }
+    },
+    
+    // 关闭预览
+    closePreview() {
+      this.$refs.previewPopup.close()
+      this.previewData = null
+    },
+    
+    // 审核剧本
+    auditScript(item) {
+      this.previewData = item
+      this.$refs.previewPopup.open()
+    },
+    
+    // 从预览窗口通过审核
+    async approveFromPreview() {
+      if (!this.previewData) return
+      
+      try {
+        const updateData = { 
+          status: 1,
+          published_at: Date.now()
+        }
+        
+        await db.collection('botc-scripts')
+          .doc(this.previewData._id)
+          .update(updateData)
+        
+        uni.showToast({
+          title: '审核通过',
+          icon: 'success'
+        })
+        
+        this.closePreview()
+        this.loadData()
+      } catch (error) {
+        console.error('审核失败：', error)
+        uni.showToast({
+          title: '审核失败',
+          icon: 'none'
+        })
+      }
+    },
+    
+    // 拒绝剧本
+    rejectScript(id) {
+      uni.showModal({
+        title: '拒绝剧本',
+        content: '确定要拒绝这个剧本吗？拒绝后状态将变为"已下架"',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await db.collection('botc-scripts')
+                .doc(id)
+                .update({ status: 2 })
+              
+              uni.showToast({
+                title: '已拒绝',
+                icon: 'success'
+              })
+              
+              this.loadData()
+            } catch (error) {
+              console.error('操作失败：', error)
+              uni.showToast({
+                title: '操作失败',
+                icon: 'none'
+              })
+            }
+          }
+        }
+      })
+    },
+    
+    // 查看完整JSON
+    viewFullJson() {
+      if (!this.previewData || !this.previewData.json_data) {
+        uni.showToast({
+          title: '暂无JSON数据',
+          icon: 'none'
+        })
+        return
+      }
+      
+      // 格式化JSON
+      const jsonData = this.previewData.json_data
+      this.fullJsonText = JSON.stringify(jsonData, null, 2)
+      
+      this.$refs.jsonViewPopup.open()
+    },
+    
+    // 关闭JSON查看
+    closeJsonView() {
+      this.$refs.jsonViewPopup.close()
+      this.fullJsonText = ''
+    },
+    
+    // 复制完整JSON
+    copyFullJson() {
+      if (!this.fullJsonText) return
+      
+      // H5环境使用navigator.clipboard
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(this.fullJsonText).then(() => {
+          uni.showToast({
+            title: '已复制到剪贴板',
+            icon: 'success'
+          })
+        }).catch(() => {
+          // 降级方案
+          this.copyToClipboardFallback(this.fullJsonText)
+        })
+      } else {
+        this.copyToClipboardFallback(this.fullJsonText)
+      }
+    },
+    
+    // 复制到剪贴板降级方案
+    copyToClipboardFallback(text) {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      try {
+        document.execCommand('copy')
+        uni.showToast({
+          title: '已复制到剪贴板',
+          icon: 'success'
+        })
+      } catch (err) {
+        uni.showToast({
+          title: '复制失败',
+          icon: 'none'
+        })
+      }
+      document.body.removeChild(textarea)
+    },
+    
+    // 获取JSON角色数量
+    getJsonRoleCount(jsonData) {
+      if (!jsonData) return 0
+      if (!Array.isArray(jsonData)) return 0
+      
+      return jsonData.filter(item => {
+        return item.team && !['fabled', 'a jinxed'].includes(item.team)
+      }).length
+    },
+    
+    // 获取JSON数据大小
+    getJsonDataSize(jsonData) {
+      if (!jsonData) return '0 KB'
+      const size = JSON.stringify(jsonData).length
+      if (size < 1024) return size + ' B'
+      if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB'
+      return (size / (1024 * 1024)).toFixed(2) + ' MB'
+    },
+    
+    // 获取预览角色（前5个）
+    getPreviewRoles(jsonData) {
+      if (!jsonData || !Array.isArray(jsonData)) return []
+      
+      return jsonData
+        .filter(item => item.team && !['fabled', 'a jinxed'].includes(item.team))
+        .slice(0, 5)
+    },
+    
+    // 获取队伍中文名
+    getTeamText(team) {
+      const map = {
+        'townsfolk': '镇民',
+        'outsider': '外来者',
+        'minion': '爪牙',
+        'demon': '恶魔',
+        'traveler': '旅行者',
+        'fabled': '传说'
+      }
+      return map[team] || team
     },
 
     async changeStatus(id, status) {
@@ -1027,6 +1421,236 @@ export default {
   justify-content: center;
 }
 
+/* 预览弹窗样式 */
+.preview-dialog {
+  width: 800px;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-dialog .dialog-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.close-btn {
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.close-btn:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.preview-section {
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.preview-section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.info-item {
+  display: flex;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.info-item .label {
+  color: #666;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.info-item .value {
+  color: #333;
+  flex: 1;
+}
+
+.desc-content {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  background: #f9f9f9;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 图片展示区 */
+.image-display-section {
+  margin-bottom: 20px;
+}
+
+.image-display-section:last-child {
+  margin-bottom: 0;
+}
+
+.image-label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.preview-main-image {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.3s;
+  display: block;
+  margin: 0 auto;
+}
+
+.preview-main-image:hover {
+  transform: scale(1.02);
+}
+
+.user-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.user-image-item {
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s;
+  object-fit: cover;
+}
+
+.user-image-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.image-hint {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.json-preview-box {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.json-info {
+  font-size: 13px;
+  color: #666;
+}
+
+.json-roles-preview {
+  margin-top: 10px;
+}
+
+.roles-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.role-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+
+.role-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.role-team {
+  font-size: 12px;
+  color: #999;
+  padding: 2px 8px;
+  background: #e6f7ff;
+  border-radius: 10px;
+}
+
+/* JSON查看弹窗 */
+.json-view-dialog {
+  width: 700px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.json-textarea {
+  width: 100%;
+  min-height: 400px;
+  max-height: 60vh;
+  padding: 15px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  resize: vertical;
+}
+
 /* 批量上传弹窗样式 */
 .batch-upload-dialog {
   width: 600px;
@@ -1042,6 +1666,9 @@ export default {
   padding: 20px;
   border-bottom: 1px solid #e8e8e8;
   background: #f5f5f5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .dialog-content {

@@ -27,7 +27,19 @@
     },
     "cover_image": {
       "bsonType": "string",
-      "description": "封面图URL"
+      "description": "封面图URL（已废弃，保留用于兼容）"
+    },
+    "user_images": {
+      "bsonType": "array",
+      "description": "用户上传的图片（0-3张）",
+      "maxItems": 3,
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "preview_image": {
+      "bsonType": "string",
+      "description": "自动生成的预览图（SVG base64格式）"
     },
     "description": {
       "bsonType": "string",

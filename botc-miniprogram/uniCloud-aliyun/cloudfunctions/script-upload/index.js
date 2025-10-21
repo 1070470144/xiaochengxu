@@ -9,13 +9,53 @@
 const { generateScriptPreviewSVG, extractScriptInfo } = require('./preview-generator')
 
 exports.main = async (event, context) => {
-  const { title, author, description, json, token } = event
+  const { title, author, description, json, user_images, token } = event
   
   // 参数验证
   if (!title || !author || !json) {
     return {
       code: 400,
       message: '缺少必要参数'
+    }
+  }
+  
+  // 验证user_images格式（如果提供）
+  if (user_images !== undefined && user_images !== null) {
+    if (!Array.isArray(user_images)) {
+      return {
+        code: 400,
+        message: 'user_images必须是数组格式'
+      }
+    }
+    if (user_images.length > 3) {
+      return {
+        code: 400,
+        message: '最多上传3张图片'
+      }
+    }
+    // 验证每个URL都是字符串且是有效的HTTPS URL
+    for (let i = 0; i < user_images.length; i++) {
+      const url = user_images[i]
+      if (typeof url !== 'string') {
+        return {
+          code: 400,
+          message: `图片${i + 1}的URL格式错误`
+        }
+      }
+      // 检查是否是有效的URL（HTTPS或data:开头）
+      if (!url.startsWith('https://') && !url.startsWith('http://') && !url.startsWith('data:image/')) {
+        return {
+          code: 400,
+          message: `图片${i + 1}的URL无效，必须是HTTPS地址`
+        }
+      }
+      // 拒绝Blob URL
+      if (url.startsWith('blob:')) {
+        return {
+          code: 400,
+          message: `图片${i + 1}不能使用临时Blob地址，请上传到云存储`
+        }
+      }
     }
   }
   
@@ -70,12 +110,14 @@ exports.main = async (event, context) => {
     const db = uniCloud.database()
     const scriptsCollection = db.collection('botc-scripts')
     
+    // ✅ 构建剧本文档，包含用户上传的图片
     const scriptDoc = {
       title,
       author,
       description: description || scriptInfo.description || '',
       json_data: parsedJson, // 保存原始JSON
       preview_image: previewDataUrl, // 保存SVG预览图（base64）
+      user_images: user_images || [],  // ✅ 保存用户上传的图片URL数组
       player_count: scriptInfo.playerCount,
       total_characters: scriptInfo.totalCharacters,
       difficulty: scriptInfo.difficulty,
@@ -92,6 +134,13 @@ exports.main = async (event, context) => {
       created_at: Date.now(),
       updated_at: Date.now()
     }
+    
+    console.log('[SCRIPT-UPLOAD] 保存剧本数据:', {
+      title: scriptDoc.title,
+      author: scriptDoc.author,
+      user_images_count: scriptDoc.user_images.length,
+      user_images: scriptDoc.user_images
+    })
     
     const insertRes = await scriptsCollection.add(scriptDoc)
     
