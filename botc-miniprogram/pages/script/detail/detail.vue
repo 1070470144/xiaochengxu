@@ -111,6 +111,9 @@
       
       <!-- JSON操作按钮 -->
       <view class="json-actions">
+        <button class="json-btn btn-copy" @click="copyJsonToClipboard">
+          {{ copyingJson ? '⏳ 生成中...' : '🔗 复制JSON链接' }}
+        </button>
         <button class="json-btn btn-download" @click="downloadJsonFile">
           {{ downloadingJson ? '⏳ 下载中...' : '💾 下载.json文件' }}
         </button>
@@ -249,6 +252,7 @@ export default {
       isFavorite: false,
       generatingUrl: false,
       copiedUrl: false,
+      copyingJson: false,
       downloadingJson: false,
       
       // 评论相关
@@ -624,6 +628,118 @@ export default {
           })
         }
       })
+    },
+    
+    // 复制JSON URL到剪贴板
+    async copyJsonToClipboard() {
+      this.copyingJson = true
+      
+      try {
+        console.log('[copyJsonToClipboard] 开始生成JSON URL，剧本ID:', this.scriptId)
+        
+        // 检查剧本数据
+        if (!this.scriptDetail) {
+          uni.showToast({
+            title: '剧本数据不存在',
+            icon: 'none'
+          })
+          this.copyingJson = false
+          return
+        }
+        
+        // 优先使用 json_url（如果存在）
+        if (this.scriptDetail.json_url) {
+          console.log('[copyJsonToClipboard] 使用现有的 json_url:', this.scriptDetail.json_url)
+          
+          uni.setClipboardData({
+            data: this.scriptDetail.json_url,
+            success: () => {
+              console.log('[copyJsonToClipboard] JSON URL 复制成功')
+              uni.showToast({
+                title: '✅ JSON链接已复制',
+                icon: 'success',
+                duration: 2000
+              })
+            },
+            fail: (err) => {
+              console.error('[copyJsonToClipboard] 复制失败:', err)
+              uni.showToast({
+                title: '复制失败',
+                icon: 'none'
+              })
+            }
+          })
+          
+          this.copyingJson = false
+          return
+        }
+        
+        // 如果没有 json_url，但有 json_data，则生成临时云存储URL
+        if (!this.scriptDetail.json_data) {
+          uni.showToast({
+            title: '该剧本暂无JSON数据',
+            icon: 'none',
+            duration: 2000
+          })
+          this.copyingJson = false
+          return
+        }
+        
+        // 调用云函数生成临时URL
+        console.log('[copyJsonToClipboard] 调用云函数生成临时URL')
+        const result = await uniCloud.callFunction({
+          name: 'script-generate-json-url',
+          data: {
+            scriptId: this.scriptId
+          }
+        })
+        
+        if (result.result.code === 0) {
+          const jsonUrl = result.result.data.url
+          console.log('[copyJsonToClipboard] 临时URL生成成功:', jsonUrl)
+          
+          // 复制URL到剪贴板
+          uni.setClipboardData({
+            data: jsonUrl,
+            success: () => {
+              uni.showToast({
+                title: '✅ JSON链接已复制',
+                icon: 'success',
+                duration: 2000
+              })
+              
+              // 显示提示信息
+              setTimeout(() => {
+                uni.showModal({
+                  title: '链接已复制',
+                  content: '临时链接有效期7天，可在浏览器中打开查看JSON内容',
+                  showCancel: false,
+                  confirmText: '知道了'
+                })
+              }, 2000)
+            },
+            fail: (err) => {
+              console.error('[copyJsonToClipboard] 复制失败:', err)
+              uni.showToast({
+                title: '复制失败',
+                icon: 'none'
+              })
+            }
+          })
+        } else {
+          throw new Error(result.result.message || '生成链接失败')
+        }
+        
+      } catch (error) {
+        console.error('[copyJsonToClipboard] 生成JSON URL失败:', error)
+        uni.showToast({
+          title: '生成链接失败: ' + (error.message || '未知错误'),
+          icon: 'none',
+          duration: 2000
+        })
+      } finally {
+        this.copyingJson = false
+      }
     },
     
     // 生成JSON链接
@@ -1445,10 +1561,20 @@ export default {
 
 .json-btn.btn-copy {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  box-shadow: 0 6rpx 20rpx rgba(79, 172, 254, 0.3);
+}
+
+.json-btn.btn-copy:active {
+  box-shadow: 0 4rpx 12rpx rgba(79, 172, 254, 0.2);
 }
 
 .json-btn.btn-download {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 6rpx 20rpx rgba(102, 126, 234, 0.3);
+}
+
+.json-btn.btn-download:active {
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.2);
 }
 
 /* 相关帖子区 */

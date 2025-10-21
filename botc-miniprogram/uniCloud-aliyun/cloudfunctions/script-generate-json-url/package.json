@@ -1,0 +1,11 @@
+{
+  "name": "script-generate-json-url",
+  "version": "1.0.0",
+  "description": "生成剧本JSON临时访问URL",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
+
