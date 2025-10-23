@@ -32,9 +32,9 @@ exports.main = async (event, context) => {
       parsedJson = jsonData
     }
     
-    // 预处理：将外部图片转换为base64
-    console.log('[script-generate-preview] 开始预处理图片...')
-    const processedJson = await preprocessImages(parsedJson)
+    // 预处理：将外部图片上传到云存储
+    console.log('[script-generate-preview] 开始上传图片到云存储...')
+    const processedJson = await uploadImagesToCloud(parsedJson)
     
     // 构建剧本数据
     const scriptData = {
@@ -51,9 +51,29 @@ exports.main = async (event, context) => {
     // 生成SVG预览图
     const svgContent = generateScriptPreviewSVG(scriptData)
     
-    // 转换为base64
-    const svgBase64 = Buffer.from(svgContent, 'utf-8').toString('base64')
-    const previewDataUrl = `data:image/svg+xml;base64,${svgBase64}`
+    // 将SVG也上传到云存储，而不是转base64
+    const svgCloudPath = `preview-images/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.svg`
+    
+    const svgUploadResult = await uniCloud.uploadFile({
+      cloudPath: svgCloudPath,
+      fileContent: Buffer.from(svgContent, 'utf-8')
+    })
+    
+    if (!svgUploadResult.fileID) {
+      throw new Error('SVG上传到云存储失败')
+    }
+    
+    // 获取SVG的云存储URL
+    const svgTempUrlRes = await uniCloud.getTempFileURL({
+      fileList: [svgUploadResult.fileID],
+      maxAge: 365 * 24 * 60 * 60  // 1年有效期
+    })
+    
+    if (!svgTempUrlRes.fileList || svgTempUrlRes.fileList.length === 0) {
+      throw new Error('获取SVG云存储URL失败')
+    }
+    
+    const previewDataUrl = svgTempUrlRes.fileList[0].tempFileURL
     
     console.log('[script-generate-preview] 预览图生成成功')
     
@@ -76,49 +96,90 @@ exports.main = async (event, context) => {
 }
 
 /**
- * 预处理图片：逐个转换，限制数量避免请求过大
+ * 上传图片到云存储：下载外部图片并上传到云存储，返回云存储URL
  */
-async function preprocessImages(jsonData) {
+async function uploadImagesToCloud(jsonData) {
   if (!Array.isArray(jsonData)) return jsonData
   
   const processedData = []
-  let convertedCount = 0
+  let uploadedCount = 0
+  const maxUpload = 15  // 限制上传数量
   
-  for (const item of jsonData) {
-    if (item.image && typeof item.image === 'string' && item.image.startsWith('http')) {
+  // 优先上传重要角色
+  const priorityTeams = ['demon', 'minion', 'townsfolk', 'outsider', 'traveler', 'fabled']
+  const sortedData = [...jsonData].sort((a, b) => {
+    const aIndex = priorityTeams.indexOf(a.team) 
+    const bIndex = priorityTeams.indexOf(b.team)
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex)
+  })
+  
+  for (const item of sortedData) {
+    if (item.image && typeof item.image === 'string' && item.image.startsWith('http') && uploadedCount < maxUpload) {
       try {
-        console.log(`[图片预处理] 转换图片 ${convertedCount + 1}: ${item.name}`)
-        const base64Image = await downloadImageAsBase64(item.image)
+        console.log(`[云存储上传] 上传图片 ${uploadedCount + 1}/${maxUpload}: ${item.name}`)
         
-        processedData.push({
-          ...item,
-          image: base64Image,
-          originalImage: item.image
+        // 下载图片
+        const imageBuffer = await downloadImageAsBuffer(item.image)
+        
+        // 生成云存储路径
+        const timestamp = Date.now()
+        const random = Math.random().toString(36).substring(2, 8)
+        const ext = item.image.split('.').pop() || 'png'
+        const cloudPath = `role-images/${timestamp}-${random}.${ext}`
+        
+        // 上传到云存储
+        const uploadResult = await uniCloud.uploadFile({
+          cloudPath: cloudPath,
+          fileContent: imageBuffer
         })
         
-        convertedCount++
-        console.log(`[图片预处理] 转换成功: ${item.name}`)
+        if (uploadResult.fileID) {
+          // 获取云存储的HTTP访问URL
+          const tempUrlRes = await uniCloud.getTempFileURL({
+            fileList: [uploadResult.fileID],
+            maxAge: 365 * 24 * 60 * 60  // 1年有效期
+          })
+          
+          if (tempUrlRes.fileList && tempUrlRes.fileList.length > 0) {
+            const cloudUrl = tempUrlRes.fileList[0].tempFileURL
+            
+            processedData.push({
+              ...item,
+              image: cloudUrl,
+              originalImage: item.image,
+              cloudFileID: uploadResult.fileID
+            })
+            
+            uploadedCount++
+            console.log(`[云存储上传] 上传成功: ${item.name} → ${cloudUrl}`)
+          } else {
+            throw new Error('获取云存储URL失败')
+          }
+        } else {
+          throw new Error('上传到云存储失败')
+        }
+        
       } catch (error) {
-        console.error(`[图片预处理] 转换失败: ${item.name} - ${error.message}`)
-        processedData.push(item)
+        console.error(`[云存储上传] 上传失败: ${item.name} - ${error.message}`)
+        processedData.push(item)  // 保留原始数据
       }
     } else {
       processedData.push(item)
     }
   }
   
-  console.log(`[图片预处理] 完成，转换了 ${convertedCount} 张图片`)
+  console.log(`[云存储上传] 完成，上传了 ${uploadedCount} 张图片到云存储`)
   return processedData
 }
 
 /**
- * 下载图片并转换为压缩的base64
+ * 下载图片为Buffer（用于上传到云存储）
  */
-function downloadImageAsBase64(imageUrl) {
+function downloadImageAsBuffer(imageUrl) {
   return new Promise((resolve, reject) => {
     const protocol = imageUrl.startsWith('https:') ? https : http
     
-    const timeout = 3000  // 减少超时时间到3秒
+    const timeout = 5000  // 5秒超时
     
     const req = protocol.get(imageUrl, (res) => {
       if (res.statusCode !== 200) {
@@ -128,7 +189,7 @@ function downloadImageAsBase64(imageUrl) {
       
       const chunks = []
       let totalSize = 0
-      const maxSize = 100 * 1024  // 限制单个图片最大100KB
+      const maxSize = 500 * 1024  // 限制单个图片最大500KB
       
       res.on('data', (chunk) => {
         totalSize += chunk.length
@@ -143,20 +204,8 @@ function downloadImageAsBase64(imageUrl) {
       res.on('end', () => {
         try {
           const buffer = Buffer.concat(chunks)
-          
-          // 压缩策略：如果图片过大，进行简单压缩
-          let finalBuffer = buffer
-          if (buffer.length > 50 * 1024) {  // 大于50KB的图片进行压缩
-            // 简单压缩：截取前50KB（粗暴但有效）
-            finalBuffer = buffer.slice(0, 50 * 1024)
-            console.log(`[图片压缩] ${imageUrl} 从 ${buffer.length} 压缩到 ${finalBuffer.length}`)
-          }
-          
-          const contentType = res.headers['content-type'] || 'image/png'
-          const base64 = finalBuffer.toString('base64')
-          const dataUrl = `data:${contentType};base64,${base64}`
-          
-          resolve(dataUrl)
+          console.log(`[图片下载] ${imageUrl} 大小: ${buffer.length} bytes`)
+          resolve(buffer)
         } catch (error) {
           reject(error)
         }

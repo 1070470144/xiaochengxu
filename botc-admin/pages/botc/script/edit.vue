@@ -559,8 +559,46 @@ export default {
 
         const data = { ...this.formData }
         
-        // 异步生成预览图方案：先保存剧本，后台生成预览图
-        let scriptId = null
+        // 同步生成预览图（使用压缩）
+        if (data.json_data) {
+          try {
+            uni.showLoading({
+              title: '生成预览图...'
+            })
+            
+            console.log('[保存剧本] 开始生成预览图（压缩版）')
+            
+            // 调用云函数生成预览图
+            const previewRes = await uniCloud.callFunction({
+              name: 'script-generate-preview',
+              data: {
+                title: data.title,
+                author: data.author || '未知',
+                jsonData: data.json_data
+              }
+            })
+            
+            if (previewRes.result && previewRes.result.code === 0) {
+              data.preview_image = previewRes.result.data.previewImage
+              console.log('[保存剧本] 预览图生成成功')
+            }
+            
+            uni.showLoading({
+              title: '保存中...'
+            })
+          } catch (error) {
+            console.error('[保存剧本] 生成预览图失败:', error)
+            
+            if (error.message && (error.message.includes('413') || error.message.includes('Too Large'))) {
+              uni.showToast({
+                title: '图片过多，将不生成预览图',
+                icon: 'none',
+                duration: 2000
+              })
+            }
+            // 预览图生成失败不影响保存，继续执行
+          }
+        }
         
         // 如果是发布状态且没有发布时间，添加发布时间
         if (data.status === 1 && !data.published_at) {
@@ -583,19 +621,11 @@ export default {
           await db.collection('botc-scripts')
             .doc(this.scriptId)
             .update(updateData)
-          
-          scriptId = this.scriptId
         } else {
           // 创建
           const addResult = await db.collection('botc-scripts')
             .add(data)
           console.log('保存结果：', addResult)
-          scriptId = addResult.id
-        }
-        
-        // 异步生成预览图（不阻塞保存）
-        if (data.json_data && scriptId) {
-          this.generatePreviewAsync(scriptId, data.title, data.author, data.json_data)
         }
 
         uni.hideLoading()
@@ -616,64 +646,6 @@ export default {
           title: error.message || '保存失败',
           icon: 'none'
         })
-      }
-    },
-
-    // 异步生成预览图
-    async generatePreviewAsync(scriptId, title, author, jsonData) {
-      try {
-        console.log('[异步生成] 开始后台生成预览图...')
-        
-        uni.showToast({
-          title: '剧本已保存，正在后台生成预览图...',
-          icon: 'none',
-          duration: 3000
-        })
-        
-        // 异步调用云函数生成预览图
-        const previewRes = await uniCloud.callFunction({
-          name: 'script-generate-preview',
-          data: {
-            title: title,
-            author: author || '未知',
-            jsonData: jsonData
-          }
-        })
-        
-        if (previewRes.result && previewRes.result.code === 0) {
-          // 更新数据库中的预览图
-          await db.collection('botc-scripts')
-            .doc(scriptId)
-            .update({
-              preview_image: previewRes.result.data.previewImage
-            })
-          
-          console.log('[异步生成] 预览图生成成功，已更新到数据库')
-          
-          uni.showToast({
-            title: '✅ 预览图生成完成',
-            icon: 'success'
-          })
-        } else {
-          throw new Error(previewRes.result?.message || '生成失败')
-        }
-        
-      } catch (error) {
-        console.error('[异步生成] 预览图生成失败:', error)
-        
-        if (error.message.includes('413') || error.message.includes('Too Large')) {
-          uni.showToast({
-            title: '图片过多，预览图生成失败',
-            icon: 'none',
-            duration: 3000
-          })
-        } else {
-          uni.showToast({
-            title: '预览图生成失败，但剧本已保存',
-            icon: 'none',
-            duration: 3000
-          })
-        }
       }
     },
 
