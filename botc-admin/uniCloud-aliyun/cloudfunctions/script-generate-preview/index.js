@@ -32,9 +32,9 @@ exports.main = async (event, context) => {
       parsedJson = jsonData
     }
     
-    // 预处理：将外部图片上传到云存储
-    console.log('[script-generate-preview] 开始上传图片到云存储...')
-    const processedJson = await uploadImagesToCloud(parsedJson)
+    // 简化方案：不处理图片，直接使用首字母logo
+    console.log('[script-generate-preview] 使用首字母logo，无需处理图片')
+    const processedJson = parsedJson
     
     // 构建剧本数据
     const scriptData = {
@@ -51,29 +51,11 @@ exports.main = async (event, context) => {
     // 生成SVG预览图
     const svgContent = generateScriptPreviewSVG(scriptData)
     
-    // 将SVG也上传到云存储，而不是转base64
-    const svgCloudPath = `preview-images/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.svg`
+    // 简化方案：SVG转base64（但内容很小，因为不包含图片）
+    const svgBase64 = Buffer.from(svgContent, 'utf-8').toString('base64')
+    const previewDataUrl = `data:image/svg+xml;base64,${svgBase64}`
     
-    const svgUploadResult = await uniCloud.uploadFile({
-      cloudPath: svgCloudPath,
-      fileContent: Buffer.from(svgContent, 'utf-8')
-    })
-    
-    if (!svgUploadResult.fileID) {
-      throw new Error('SVG上传到云存储失败')
-    }
-    
-    // 获取SVG的云存储URL
-    const svgTempUrlRes = await uniCloud.getTempFileURL({
-      fileList: [svgUploadResult.fileID],
-      maxAge: 365 * 24 * 60 * 60  // 1年有效期
-    })
-    
-    if (!svgTempUrlRes.fileList || svgTempUrlRes.fileList.length === 0) {
-      throw new Error('获取SVG云存储URL失败')
-    }
-    
-    const previewDataUrl = svgTempUrlRes.fileList[0].tempFileURL
+    console.log(`[预览图生成] SVG大小: ${svgContent.length} 字符，base64大小: ${svgBase64.length} 字符`)
     
     console.log('[script-generate-preview] 预览图生成成功')
     

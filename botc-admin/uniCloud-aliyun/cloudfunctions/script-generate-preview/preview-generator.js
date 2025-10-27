@@ -103,14 +103,14 @@ function extractScriptInfo(scriptData) {
 function generateNightOrders(info, totalHeight) {
   const nightElements = []
   const leftNightX = 15
-  const rightNightX = 465
-  const logoSize = 22
+  const rightNightX = 460  // 左移到边框内（从480改为460）
+  const logoSize = 18  // 缩小夜晚行动的logo
   
   console.log(`[夜晚行动] 首夜角色数: ${info.nightOrders.firstNight.length}, 其他夜晚: ${info.nightOrders.otherNight.length}`)
   
   // 左侧：首夜行动
   if (info.nightOrders.firstNight.length > 0) {
-    const centerX = leftNightX + 25
+    const centerX = leftNightX + 20  // 稍微右移
     let startY = 100
     
     // 爪牙互认
@@ -127,60 +127,34 @@ function generateNightOrders(info, totalHeight) {
     `)
     startY += 35
     
-    // 首夜角色（只显示有图片的）
+    // 首夜角色（显示首字母logo）
     info.nightOrders.firstNight.forEach((action, index) => {
-      if (action.image) {
-        const y = startY + index * 30
-        const clipId = `clip-night-first-${index}`
-        nightElements.push(`
-          <defs>
-            <clipPath id="${clipId}">
-              <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}"/>
-            </clipPath>
-          </defs>
-          <circle cx="${centerX}" cy="${y}" r="${logoSize / 2 + 1}" fill="white" opacity="0.9"/>
-          <image 
-            href="${action.image}" 
-            x="${centerX - logoSize / 2}" 
-            y="${y - logoSize / 2}" 
-            width="${logoSize}" 
-            height="${logoSize}" 
-            clip-path="url(#${clipId})" 
-            preserveAspectRatio="xMidYMid slice"
-          />
-        `)
-      }
+      const y = startY + index * 30
+      const initial = action.name.charAt(0) || '?'
+      
+      nightElements.push(`
+        <circle cx="${centerX}" cy="${y}" r="${logoSize / 2 + 1}" fill="white" opacity="0.9"/>
+        <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}" fill="#8b5cf6" opacity="0.8"/>
+        <text x="${centerX}" y="${y + 4}" font-size="12" font-weight="bold" fill="white" text-anchor="middle">${initial}</text>
+      `)
     })
   }
   
   // 右侧：其他夜晚行动
   if (info.nightOrders.otherNight.length > 0) {
-    const centerX = rightNightX + 25
+    const centerX = rightNightX + 15  // 进一步左移（从20改为15）
     let startY = 100
     
-    // 其他夜晚角色（只显示有图片的）
+    // 其他夜晚角色（显示首字母logo）
     info.nightOrders.otherNight.forEach((action, index) => {
-      if (action.image) {
-        const y = startY + index * 30
-        const clipId = `clip-night-other-${index}`
-        nightElements.push(`
-          <defs>
-            <clipPath id="${clipId}">
-              <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}"/>
-            </clipPath>
-          </defs>
-          <circle cx="${centerX}" cy="${y}" r="${logoSize / 2 + 1}" fill="white" opacity="0.9"/>
-          <image 
-            href="${action.image}" 
-            x="${centerX - logoSize / 2}" 
-            y="${y - logoSize / 2}" 
-            width="${logoSize}" 
-            height="${logoSize}" 
-            clip-path="url(#${clipId})" 
-            preserveAspectRatio="xMidYMid slice"
-          />
-        `)
-      }
+      const y = startY + index * 35  // 增加间距，避免重叠
+      const initial = action.name.charAt(0) || '?'
+      
+      nightElements.push(`
+        <circle cx="${centerX}" cy="${y}" r="${logoSize / 2 + 1}" fill="white" opacity="0.9"/>
+        <circle cx="${centerX}" cy="${y}" r="${logoSize / 2}" fill="#8b5cf6" opacity="0.8"/>
+        <text x="${centerX}" y="${y + 3}" font-size="10" font-weight="bold" fill="white" text-anchor="middle">${initial}</text>
+      `)
     })
   }
   
@@ -202,14 +176,26 @@ function splitTextToLines(text, maxLength) {
   
   const lines = []
   let remaining = text
+  const punctuation = ['。', '，', '；', '：', '！', '？', '.', ',', ';', ':', '!', '?', ' ']
   
-  while (remaining.length > 0 && lines.length < 3) {
+  while (remaining.length > 0 && lines.length < 5) {
     if (remaining.length <= maxLength) {
       lines.push(remaining)
       break
     }
-    lines.push(remaining.substring(0, maxLength).trim())
-    remaining = remaining.substring(maxLength).trim()
+    
+    // 智能断句：优先在标点符号处断开
+    let cutPoint = maxLength
+    for (let i = maxLength; i > maxLength - 8 && i > 0; i--) {
+      if (punctuation.includes(remaining[i])) {
+        cutPoint = i + 1
+        break
+      }
+    }
+    
+    const currentLine = remaining.substring(0, cutPoint).trim()
+    lines.push(currentLine)
+    remaining = remaining.substring(cutPoint).trim()
   }
   
   return lines
@@ -245,14 +231,15 @@ function generateScriptPreviewSVG(scriptData) {
     console.log(`[预览图生成] 处理队伍 ${team}，角色数量: ${roles.length}`)
     
     // 队伍标题
+    const titleWidth = 360  // 标题宽度
     svgElements.push(`
-      <rect x="80" y="${y - 5}" width="360" height="18" fill="${teamColor}" opacity="0.2" rx="4"/>
+      <rect x="80" y="${y - 5}" width="${titleWidth}" height="18" fill="${teamColor}" opacity="0.2" rx="4"/>
       <text x="85" y="${y + 8}" font-size="10" font-weight="bold" fill="${teamColor}">
         ${teamEmoji} ${teamName} (${roles.length}个)
       </text>
     `)
     
-    y += 30
+    y += 40  // 增加队伍标题与角色的间距
     
     // 生成角色（两列布局）
     roles.forEach((char, index) => {
@@ -268,46 +255,42 @@ function generateScriptPreviewSVG(scriptData) {
       
       console.log(`[预览图生成] 角色 ${name} 坐标: (${logoX}, ${currentY})`)
       
-      // 只显示图片logo，不显示首字母
-      if (imageUrl) {
-        console.log(`[预览图生成] 渲染图片logo: ${imageUrl}`)
-        const logoSize = 28  // 放大logo尺寸
-        const clipId = `clip-${char.id || index}-${team}`
-        svgElements.push(`
-          <!-- ${name} 的图片logo -->
-          <defs>
-            <clipPath id="${clipId}">
-              <circle cx="${logoX}" cy="${currentY}" r="${logoSize / 2}"/>
-            </clipPath>
-          </defs>
-          <circle cx="${logoX}" cy="${currentY}" r="${logoSize / 2 + 1}" fill="white" opacity="0.9"/>
-          <image 
-            href="${imageUrl}" 
-            x="${logoX - logoSize / 2}" 
-            y="${currentY - logoSize / 2}" 
-            width="${logoSize}" 
-            height="${logoSize}" 
-            clip-path="url(#${clipId})" 
-            preserveAspectRatio="xMidYMid slice"
-          />
-        `)
-      } else {
-        console.log(`[预览图生成] 角色 ${name} 无图片，跳过logo渲染`)
-        // 无图片时不显示任何logo
-      }
+      // 缩小角色logo，避免与夜晚行动顺序重叠
+      const logoSize = 22  // 从28缩小到22
+      console.log(`[预览图生成] 角色 ${name} 使用首字母logo: ${initial}`)
+      
+      svgElements.push(`
+        <!-- ${name} 的精美首字母logo -->
+        <circle cx="${logoX}" cy="${currentY}" r="${logoSize / 2 + 2}" fill="white" opacity="0.95"/>
+        <circle cx="${logoX}" cy="${currentY}" r="${logoSize / 2}" fill="${teamColor}" opacity="0.9"/>
+        <circle cx="${logoX}" cy="${currentY}" r="${logoSize / 2 - 2}" fill="${teamColor}" opacity="0.6"/>
+        <text x="${logoX}" y="${currentY + 4}" font-size="14" font-weight="bold" fill="white" text-anchor="middle" 
+              style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8)">${initial}</text>
+      `)
       
       // 角色名称
       svgElements.push(`
         <text x="${textX}" y="${currentY - 5}" font-size="9" font-weight="bold" fill="#ffffff">${escapeXml(name)}</text>
       `)
       
-      // 角色能力（简化显示）
-      const abilityLines = splitTextToLines(ability, 25)
-      abilityLines.forEach((line, lineIndex) => {
+      // 角色能力（智能换行，限制宽度）
+      // 进一步缩短宽度，确保不超出标题边界
+      const maxLineWidth = isLeftColumn ? 130 : 100  // 左列130px，右列100px（再次缩短）
+      const abilityLines = splitTextToLines(ability, isLeftColumn ? 16 : 12)  // 左列16字符，右列12字符
+      const maxLines = 3  // 最多显示3行
+      
+      abilityLines.slice(0, maxLines).forEach((line, lineIndex) => {
         svgElements.push(`
-          <text x="${textX}" y="${currentY + 5 + lineIndex * 8}" font-size="7" fill="#94a3b8">${escapeXml(line)}</text>
+          <text x="${textX}" y="${currentY + 5 + lineIndex * 9}" font-size="7" fill="#94a3b8">${escapeXml(line)}</text>
         `)
       })
+      
+      // 如果超过3行，显示省略号
+      if (abilityLines.length > maxLines) {
+        svgElements.push(`
+          <text x="${textX}" y="${currentY + 5 + maxLines * 9}" font-size="7" fill="#94a3b8">...</text>
+        `)
+      }
     })
     
     // 更新Y坐标到下一个队伍
