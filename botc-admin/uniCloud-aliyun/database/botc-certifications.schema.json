@@ -1,0 +1,66 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "level", "status"],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "用户ID",
+      "foreignKey": "uni-id-users._id"
+    },
+    "user_nickname": {
+      "bsonType": "string",
+      "description": "用户昵称"
+    },
+    "user_mobile": {
+      "bsonType": "string",
+      "description": "用户手机号"
+    },
+    "level": {
+      "bsonType": "int",
+      "description": "认证级别：1-一星，2-二星",
+      "enum": [1, 2]
+    },
+    "images": {
+      "bsonType": "array",
+      "description": "证明材料图片",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "description": {
+      "bsonType": "string",
+      "description": "申请说明"
+    },
+    "status": {
+      "bsonType": "string",
+      "description": "状态：pending-待审核，approved-已通过，rejected-已拒绝",
+      "enum": ["pending", "approved", "rejected"]
+    },
+    "reject_reason": {
+      "bsonType": "string",
+      "description": "拒绝原因"
+    },
+    "approved_at": {
+      "bsonType": "timestamp",
+      "description": "审核通过时间"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间"
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间"
+    }
+  }
+}
+

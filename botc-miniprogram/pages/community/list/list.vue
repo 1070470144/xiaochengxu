@@ -13,7 +13,7 @@
       </view>
     </view>
 
-    <!-- 帖子列表 -->
+    <!-- 帖子列表 - 四宫格 -->
     <scroll-view 
       class="posts-scroll"
       scroll-y
@@ -22,85 +22,64 @@
       :refresher-triggered="refreshing"
       @refresherrefresh="onRefresh"
     >
-      <view class="posts-list">
+      <!-- 四宫格网格布局 -->
+      <view class="posts-grid">
         <view 
           v-for="post in postsList" 
           :key="post._id"
-          class="post-item"
+          class="grid-item"
           @click="goToDetail(post._id)"
         >
-          <!-- 用户信息 -->
-          <view class="post-header">
-            <image 
-              class="avatar clickable" 
-              :src="post.user?.avatar || '/static/default-avatar.png'"
-              mode="aspectFill"
-              @click.stop="handleUserClick(post.user_id, post.user)"
-            />
-            <view class="user-info" @click.stop="handleUserClick(post.user_id, post.user)">
-              <view class="nickname clickable">{{ post.user?.nickname || '匿名用户' }}</view>
-              <view class="time">{{ formatTime(post.created_at) }}</view>
-            </view>
-            <view v-if="post.is_top" class="top-tag">置顶</view>
-            <view v-if="post.is_hot" class="hot-tag">热门</view>
-          </view>
-
-          <!-- 帖子内容 -->
-          <view class="post-content">
-            <text class="content-text">{{ post.content }}</text>
-          </view>
-
-          <!-- 图片 -->
-          <view v-if="post.images && post.images.length > 0" class="post-images">
-            <view 
-              class="image-grid"
-              :class="`grid-${post.images.length > 3 ? '3' : post.images.length}`"
-            >
-              <image
-                v-for="(img, index) in post.images.slice(0, 9)"
-                :key="index"
-                class="post-image"
-                :src="img"
+          <!-- 卡片内容 -->
+          <view class="card-content">
+            <!-- 封面图片 -->
+            <view class="card-cover">
+              <image 
+                class="cover-image" 
+                :src="getCoverImage(post)"
                 mode="aspectFill"
-                @click.stop="previewImage(post.images, index)"
               />
+              <!-- 置顶或热门角标 -->
+              <view v-if="post.is_top" class="corner-badge top-badge">置顶</view>
+              <view v-else-if="post.is_hot" class="corner-badge hot-badge">🔥</view>
             </view>
-          </view>
-
-          <!-- 标签 -->
-          <view v-if="post.tags && post.tags.length > 0" class="tags">
-            <text 
-              v-for="tag in post.tags" 
-              :key="tag"
-              class="tag"
-            >
-              #{{ tag }}
-            </text>
-          </view>
-
-          <!-- 底部操作栏 -->
-          <view class="post-footer">
-            <view class="action-item">
-              <uni-icons type="eye" size="18" color="#999" />
-              <text>{{ post.view_count || 0 }}</text>
+            
+            <!-- 标题和内容 -->
+            <view class="card-text">
+              <text class="card-title">{{ post.content }}</text>
             </view>
-            <view class="action-item">
-              <uni-icons type="chat" size="18" color="#999" />
-              <text>{{ post.comment_count || 0 }}</text>
-            </view>
-            <view class="action-item">
-              <uni-icons type="heart" size="18" color="#999" />
-              <text>{{ post.like_count || 0 }}</text>
+            
+            <!-- 底部信息 -->
+            <view class="card-footer">
+              <!-- 用户头像 -->
+              <image 
+                class="mini-avatar" 
+                :src="post.user?.avatar || '/static/default-avatar.png'"
+                mode="aspectFill"
+                @click.stop="handleUserClick(post.user_id, post.user)"
+              />
+              
+              <!-- 互动数据 -->
+              <view class="meta-info">
+                <view class="meta-item">
+                  <uni-icons type="eye" size="14" color="#999" />
+                  <text>{{ formatCount(post.view_count || 0) }}</text>
+                </view>
+                <view class="meta-item">
+                  <uni-icons type="heart" size="14" color="#999" />
+                  <text>{{ formatCount(post.like_count || 0) }}</text>
+                </view>
+              </view>
             </view>
           </view>
         </view>
-
-        <!-- 加载状态 -->
-        <view class="loading-status">
-          <text v-if="loading">加载中...</text>
-          <text v-else-if="!hasMore">没有更多了</text>
-          <text v-else-if="postsList.length === 0">暂无帖子</text>
-        </view>
+      </view>
+      
+      <!-- 加载状态 -->
+      <view class="loading-status">
+        <text v-if="loading">加载中...</text>
+        <text v-else-if="!hasMore">没有更多了</text>
+        <text v-else-if="postsList.length === 0">暂无帖子</text>
       </view>
     </scroll-view>
 
@@ -287,6 +266,27 @@ export default {
       
       console.log('✅ 调用 UserAction.showUserMenu')
       UserAction.showUserMenu(userId, userInfo)
+    },
+    
+    // 获取封面图片
+    getCoverImage(post) {
+      // 1. 优先使用第一张上传的图片
+      if (post.images && post.images.length > 0) {
+        return post.images[0]
+      }
+      
+      // 2. 使用默认占位图
+      return '/static/community-default.png'
+    },
+    
+    // 格式化数量显示
+    formatCount(count) {
+      if (count >= 10000) {
+        return (count / 10000).toFixed(1) + 'w'
+      } else if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'k'
+      }
+      return count
     }
   }
 }
@@ -339,38 +339,107 @@ export default {
   overflow-y: auto;
 }
 
-.posts-list {
-  padding: 20rpx 0;
+/* 四宫格布局 */
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+  padding: 20rpx;
 }
 
-.post-item {
+/* 网格卡片 */
+.grid-item {
   background: #fff;
-  margin-bottom: 20rpx;
-  padding: 30rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
 }
 
-.post-header {
+.grid-item:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
+}
+
+/* 卡片内容 */
+.card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 封面图片区域 */
+.card-cover {
+  position: relative;
+  width: 100%;
+  height: 300rpx;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  overflow: hidden;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* 角标 */
+.corner-badge {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  padding: 6rpx 14rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  font-weight: bold;
+  backdrop-filter: blur(10rpx);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.top-badge {
+  background: rgba(255, 107, 107, 0.95);
+  color: #fff;
+}
+
+.hot-badge {
+  background: rgba(255, 149, 0, 0.95);
+  color: #fff;
+}
+
+/* 文本区域 */
+.card-text {
+  padding: 20rpx;
+  flex: 1;
   display: flex;
   align-items: center;
-  margin-bottom: 20rpx;
 }
 
-.avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 50%;
-  margin-right: 20rpx;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.nickname {
-  font-size: 28rpx;
-  font-weight: bold;
+.card-title {
+  font-size: 26rpx;
+  line-height: 1.5;
   color: #333;
-  margin-bottom: 5rpx;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+/* 底部信息 */
+.card-footer {
+  padding: 16rpx 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 迷你头像 */
+.mini-avatar {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #fff;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
 }
 
 .clickable {
@@ -382,106 +451,23 @@ export default {
   opacity: 0.6;
 }
 
-.time {
-  font-size: 24rpx;
+/* 互动数据 */
+.meta-info {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 20rpx;
   color: #999;
 }
 
-.top-tag, .hot-tag {
-  padding: 4rpx 12rpx;
-  border-radius: 4rpx;
-  font-size: 22rpx;
-  margin-left: 10rpx;
-}
-
-.top-tag {
-  background: #ff6b6b;
-  color: #fff;
-}
-
-.hot-tag {
-  background: #ff9500;
-  color: #fff;
-}
-
-.post-content {
-  margin-bottom: 20rpx;
-}
-
-.content-text {
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #333;
-  word-break: break-all;
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.post-images {
-  margin-bottom: 20rpx;
-}
-
-.image-grid {
-  display: grid;
-  gap: 10rpx;
-}
-
-.grid-1 {
-  grid-template-columns: 1fr;
-}
-
-.grid-2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.grid-3 {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-.post-image {
-  width: 100%;
-  height: 200rpx;
-  border-radius: 8rpx;
-}
-
-.grid-1 .post-image {
-  height: 400rpx;
-}
-
-.tags {
-  margin-bottom: 20rpx;
-}
-
-.tag {
-  display: inline-block;
-  padding: 4rpx 12rpx;
-  background: #f0f0f0;
-  color: #8B4513;
-  font-size: 24rpx;
-  border-radius: 4rpx;
-  margin-right: 10rpx;
-  margin-bottom: 10rpx;
-}
-
-.post-footer {
-  display: flex;
-  align-items: center;
-  padding-top: 20rpx;
-  border-top: 1px solid #f0f0f0;
-}
-
-.action-item {
-  display: flex;
-  align-items: center;
-  margin-right: 40rpx;
-  color: #999;
-  font-size: 24rpx;
-}
-
-.action-item text {
-  margin-left: 8rpx;
+.meta-item text {
+  line-height: 1;
 }
 
 .loading-status {

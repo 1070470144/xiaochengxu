@@ -200,6 +200,15 @@
 			}
 		},
 		{
+			"path": "pages/user/certification/certification",
+			"style": {
+				"navigationBarTitleText": "说书人认证",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/chat/list/list",
 			"style": {
 				"navigationBarTitleText": "私聊",

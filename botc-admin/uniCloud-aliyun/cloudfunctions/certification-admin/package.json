@@ -1,0 +1,7 @@
+{
+  "name": "certification-admin",
+  "version": "1.0.0",
+  "description": "说书人认证管理（管理端）",
+  "main": "index.js"
+}
+

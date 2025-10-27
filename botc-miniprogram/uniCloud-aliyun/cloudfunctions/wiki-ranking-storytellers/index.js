@@ -17,13 +17,16 @@ exports.main = async (event, context) => {
     
     const res = await db.collection('uni-id-users')
       .where({
-        [`storyteller_stats.${type}`]: db.command.gt(0)
+        [`storyteller_stats.${type}`]: db.command.gt(0),
+        storyteller_certified: true  // 只显示认证通过的说书人
       })
       .field({
         _id: true,
         nickname: true,
         avatar_file: true,
-        storyteller_stats: true
+        storyteller_stats: true,
+        storyteller_level: true,
+        storyteller_certified: true
       })
       .orderBy(orderField, 'desc')
       .limit(limit)

@@ -284,13 +284,6 @@ function generateScriptPreviewSVG(scriptData) {
           <text x="${textX}" y="${currentY + 2 + lineIndex * 10}" font-size="8" fill="#94a3b8">${escapeXml(line)}</text>
         `)
       })
-      
-      // 如果超过3行，显示省略号
-      if (abilityLines.length > maxLines) {
-        svgElements.push(`
-          <text x="${textX}" y="${currentY + 2 + maxLines * 10}" font-size="8" fill="#94a3b8">...</text>
-        `)
-      }
     })
     
     // 更新Y坐标到下一个队伍（增加间距，为更多文字行留空间）

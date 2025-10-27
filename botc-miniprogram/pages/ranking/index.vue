@@ -63,7 +63,13 @@
           />
           
           <view class="user-info">
-            <text class="user-name">{{ item.nickname || '匿名用户' }}</text>
+            <view class="name-row">
+              <text class="user-name">{{ item.nickname || '匿名用户' }}</text>
+              <!-- 认证标识 -->
+              <view v-if="item.storyteller_certified && item.storyteller_level" class="cert-badge-small">
+                <text class="cert-icon-small">{{ item.storyteller_level === 1 ? '⭐' : '⭐⭐' }}</text>
+              </view>
+            </view>
             <view class="user-stats">
               <text class="stat-text">👥 粉丝 {{ item.storyteller_stats?.fans_count || 0 }}</text>
               <text class="stat-text">📜 剧本 {{ item.storyteller_stats?.script_count || 0 }}</text>
@@ -468,10 +474,31 @@ export default {
   gap: 12rpx;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 8rpx;
+}
+
 .user-name {
   font-size: 32rpx;
   font-weight: bold;
   color: #1A1A1A;
+}
+
+.cert-badge-small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rpx 8rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.15) 100%);
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(255, 215, 0, 0.4);
+}
+
+.cert-icon-small {
+  font-size: 20rpx;
 }
 
 .user-stats {

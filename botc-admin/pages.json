@@ -339,6 +339,12 @@
 				"style": {
 					"navigationBarTitleText": "数据测试"
 				}
+			},
+			{
+				"path": "certification/list",
+				"style": {
+					"navigationBarTitleText": "说书人认证审核"
+				}
 			}
 		]
 	},

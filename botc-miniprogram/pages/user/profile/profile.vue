@@ -28,7 +28,13 @@
           </view>
         </view>
         <view class="user-details">
-          <text class="user-name">{{ userInfo.nickname || '血染玩家' }}</text>
+          <view class="name-row">
+            <text class="user-name">{{ userInfo.nickname || '血染玩家' }}</text>
+            <!-- 认证标识 -->
+            <view v-if="userInfo.storyteller_certified && userInfo.storyteller_level" class="cert-badge">
+              <text class="cert-icon">{{ userInfo.storyteller_level === 1 ? '⭐' : '⭐⭐' }}</text>
+            </view>
+          </view>
           <text class="user-mobile">{{ formatMobile(userInfo.mobile) }}</text>
           <view class="user-level-info">
             <text class="level-text">{{ levelInfo.name }}</text>
@@ -193,17 +199,18 @@
           <text class="card-title">🎭 说书人</text>
         </view>
         <view class="function-list">
-          <view class="function-row" @click="userInfo.role >= 3 ? goToStorytellerProfile() : goToStorytellerApply()">
+          <view class="function-row" @click="goToCertification">
             <view class="row-left">
               <view class="row-icon">🎭</view>
-              <text class="row-title">{{ userInfo.role >= 3 ? '我的主页' : '申请认证' }}</text>
+              <text class="row-title">说书人认证</text>
             </view>
             <view class="row-right">
+              <text class="cert-status" v-if="userInfo.storyteller_certified">{{ userInfo.storyteller_level === 1 ? '⭐' : '⭐⭐' }}</text>
               <text class="row-arrow">›</text>
             </view>
           </view>
-          </view>
         </view>
+      </view>
 
       <!-- 系统设置 -->
       <view class="function-card">
@@ -478,6 +485,12 @@ export default {
     goToStorytellerApply() {
       uni.navigateTo({
         url: '/pages/storyteller/apply/apply'
+      })
+    },
+    
+    goToCertification() {
+      uni.navigateTo({
+        url: '/pages/user/certification/certification'
       })
     },
 
@@ -860,11 +873,35 @@ export default {
   flex: 1;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 8rpx;
+}
+
 .user-name {
-  display: block;
   font-size: 36rpx;
   font-weight: bold;
-  margin-bottom: 8rpx;
+}
+
+.cert-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 12rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(255, 215, 0, 0.5);
+}
+
+.cert-icon {
+  font-size: 24rpx;
+}
+
+.cert-status {
+  font-size: 28rpx;
+  margin-right: 10rpx;
 }
 
 .user-mobile {

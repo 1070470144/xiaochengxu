@@ -283,7 +283,7 @@ export default {
         this.loading = false
       }
     },
-
+    
     // 加载相关帖子
     async loadRelatedPosts() {
       try {
@@ -476,7 +476,7 @@ export default {
                 console.log('Blob URL已释放')
                 
                 uni.hideLoading()
-                uni.showToast({
+        uni.showToast({
                   title: 'PNG图片已下载',
                   icon: 'success',
                   duration: 2000
@@ -519,8 +519,8 @@ export default {
           uni.hideLoading()
           uni.showToast({
             title: '预览图已保存到相册',
-            icon: 'success'
-          })
+          icon: 'success'
+        })
         } catch (saveError) {
           // 如果保存相册失败，尝试其他方式
           console.error('保存到相册失败:', saveError)
@@ -663,7 +663,7 @@ export default {
             img.onerror = (err) => {
               console.error('❌ SVG图片加载失败:', err)
               uni.hideLoading()
-              uni.showToast({
+          uni.showToast({
                 title: 'SVG加载失败',
                 icon: 'none'
               })
@@ -696,7 +696,7 @@ export default {
           
           // 提示用户
           setTimeout(() => {
-            uni.showModal({
+        uni.showModal({
               title: '💡 打印提示',
               content: 'SVG格式支持无损缩放\n从相册打开后可获得最佳打印效果',
               showCancel: false
@@ -710,8 +710,8 @@ export default {
           uni.showModal({
             title: '保存失败',
             content: '当前环境不支持保存到相册，是否复制图片数据？',
-            success: (res) => {
-              if (res.confirm) {
+          success: (res) => {
+            if (res.confirm) {
                 uni.setClipboardData({
                   data: previewImage,
                   success: () => {

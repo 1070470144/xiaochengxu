@@ -24,7 +24,13 @@
           </view>
         </view>
         <view class="user-details">
-          <text class="user-name">{{ profileData.user.nickname || '血染玩家' }}</text>
+          <view class="name-row">
+            <text class="user-name">{{ profileData.user.nickname || '血染玩家' }}</text>
+            <!-- 认证标识 -->
+            <view v-if="profileData.user.storyteller_certified && profileData.user.storyteller_level" class="cert-badge">
+              <text class="cert-icon">{{ profileData.user.storyteller_level === 1 ? '⭐' : '⭐⭐' }}</text>
+            </view>
+          </view>
           <view class="user-level-info">
             <text class="level-name">{{ genderText }} · {{ levelName }}</text>
             <text class="join-time">{{ formatJoinTime(profileData.user.register_date) }}</text>
@@ -627,12 +633,31 @@ export default {
   padding-top: 10rpx;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 12rpx;
+}
+
 .user-name {
   font-size: 40rpx;
   font-weight: bold;
   color: white;
-  margin-bottom: 12rpx;
-  display: block;
+}
+
+.cert-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 12rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(255, 215, 0, 0.5);
+}
+
+.cert-icon {
+  font-size: 24rpx;
 }
 
 .user-level-info {

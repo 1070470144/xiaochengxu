@@ -1,0 +1,11 @@
+{
+  "name": "certification-manage",
+  "version": "1.0.0",
+  "description": "说书人认证管理",
+  "main": "index.js",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}
+
