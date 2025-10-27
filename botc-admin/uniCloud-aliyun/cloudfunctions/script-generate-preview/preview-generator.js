@@ -244,9 +244,9 @@ function generateScriptPreviewSVG(scriptData) {
     // 生成角色（两列布局）
     roles.forEach((char, index) => {
       const isLeftColumn = index % 2 === 0
-      const logoX = isLeftColumn ? 100 : 320  // 固定X坐标
-      const textX = logoX + 30  // 增加文字距离
-      const currentY = y + Math.floor(index / 2) * 40  // 增加行高到40px
+      const logoX = isLeftColumn ? 90 : 280  // 收缩列间距：右列从340移到280
+      const textX = logoX + 30  // 文字距离
+      const currentY = y + Math.floor(index / 2) * 50  // 行高50px
       
       const name = char.name || char.id || '未知'
       const ability = char.ability || char.description || ''
@@ -268,33 +268,33 @@ function generateScriptPreviewSVG(scriptData) {
               style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8)">${initial}</text>
       `)
       
-      // 角色名称
+      // 角色名称（增大字体）
       svgElements.push(`
-        <text x="${textX}" y="${currentY - 5}" font-size="9" font-weight="bold" fill="#ffffff">${escapeXml(name)}</text>
+        <text x="${textX}" y="${currentY - 8}" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(name)}</text>
       `)
       
-      // 角色能力（智能换行，限制宽度）
-      // 进一步缩短宽度，确保不超出标题边界
-      const maxLineWidth = isLeftColumn ? 130 : 100  // 左列130px，右列100px（再次缩短）
-      const abilityLines = splitTextToLines(ability, isLeftColumn ? 16 : 12)  // 左列16字符，右列12字符
-      const maxLines = 3  // 最多显示3行
+      // 角色能力（统一左右列宽度，尽量长但不超出标题）
+      // 标题宽度360px，左右各180px可用，去掉logo(30px)和间距(10px)，剩余140px
+      const maxLineWidth = 135  // 统一宽度：135px（左右列一致）
+      const abilityLines = splitTextToLines(ability, 17)  // 统一字符数：17字符/行
+      const maxLines = 3  // 3行显示
       
       abilityLines.slice(0, maxLines).forEach((line, lineIndex) => {
         svgElements.push(`
-          <text x="${textX}" y="${currentY + 5 + lineIndex * 9}" font-size="7" fill="#94a3b8">${escapeXml(line)}</text>
+          <text x="${textX}" y="${currentY + 2 + lineIndex * 10}" font-size="8" fill="#94a3b8">${escapeXml(line)}</text>
         `)
       })
       
       // 如果超过3行，显示省略号
       if (abilityLines.length > maxLines) {
         svgElements.push(`
-          <text x="${textX}" y="${currentY + 5 + maxLines * 9}" font-size="7" fill="#94a3b8">...</text>
+          <text x="${textX}" y="${currentY + 2 + maxLines * 10}" font-size="8" fill="#94a3b8">...</text>
         `)
       }
     })
     
-    // 更新Y坐标到下一个队伍
-    y += Math.ceil(roles.length / 2) * 40 + 20  // 调整间距
+    // 更新Y坐标到下一个队伍（增加间距，为更多文字行留空间）
+    y += Math.ceil(roles.length / 2) * 50 + 25  // 增加行高和队伍间距
   }
   
   const dynamicHeight = y + 100  // 为夜晚行动顺序留出空间
