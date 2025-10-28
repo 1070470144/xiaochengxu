@@ -43,7 +43,7 @@
           <!-- 剧本封面 -->
           <image 
             class="script-cover" 
-            :src="script.cover_image || '/static/logo.png'" 
+            :src="getScriptCover(script)" 
             mode="aspectFill" />
 
           <!-- 剧本信息 -->
@@ -165,6 +165,79 @@ export default {
       if (index === 1) return 'rank-2'
       if (index === 2) return 'rank-3'
       return 'rank-normal'
+    },
+    
+    // 获取剧本封面（优先使用用户上传图片，其次生成艺术字）
+    getScriptCover(script) {
+      // 1. 优先使用用户上传的图片
+      if (script.user_images && script.user_images.length > 0) {
+        // 随机选择一张用户上传的图片
+        const randomIndex = Math.floor(Math.random() * script.user_images.length)
+        return script.user_images[randomIndex]
+      }
+      
+      // 2. 生成艺术字缩略图（使用剧本名称）
+      return this.generateTitleImage(script.title || '未命名')
+    },
+    
+    // 生成艺术字缩略图（使用 Canvas 或 SVG）
+    generateTitleImage(title) {
+      // 取标题前2-4个字
+      const displayText = title.length > 4 ? title.substring(0, 4) : title
+      
+      // 生成渐变色配置
+      const colors = [
+        ['#667eea', '#764ba2'],  // 紫色渐变
+        ['#f093fb', '#f5576c'],  // 粉红渐变
+        ['#4facfe', '#00f2fe'],  // 蓝色渐变
+        ['#43e97b', '#38f9d7'],  // 绿色渐变
+        ['#fa709a', '#fee140'],  // 橙粉渐变
+        ['#30cfd0', '#330867'],  // 蓝紫渐变
+        ['#a8edea', '#fed6e3'],  // 薄荷粉渐变
+        ['#ff9a9e', '#fecfef'],  // 柔粉渐变
+      ]
+      
+      // 根据标题生成固定的颜色索引（同一标题总是相同颜色）
+      const hash = this.hashCode(title)
+      const colorPair = colors[Math.abs(hash) % colors.length]
+      
+      // 生成 SVG 艺术字
+      const svg = `
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-${Date.now()}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${colorPair[0]};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:${colorPair[1]};stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#grad-${Date.now()})" />
+  <text x="50%" y="50%" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="white" 
+        font-size="${title.length <= 2 ? '56' : '48'}" 
+        font-weight="bold" 
+        font-family="Arial, sans-serif"
+        stroke="rgba(0,0,0,0.2)"
+        stroke-width="1">
+    ${displayText}
+  </text>
+</svg>`.trim()
+      
+      // 转换为 base64
+      const base64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)))
+      return base64
+    },
+    
+    // 生成字符串哈希值（确保同一标题总是得到相同的颜色）
+    hashCode(str) {
+      let hash = 0
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // 转换为32位整数
+      }
+      return hash
     }
   }
 }
