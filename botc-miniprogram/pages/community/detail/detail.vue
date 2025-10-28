@@ -114,8 +114,46 @@
           />
           <text :class="{ favorited: isFavorite }">{{ isFavorite ? '已收藏' : '收藏' }}</text>
         </view>
+        <view class="action-btn" @click="showReportDialog">
+          <uni-icons type="info" :size="24" color="#666" />
+          <text>举报</text>
+        </view>
       </view>
     </view>
+    
+    <!-- 举报对话框 -->
+    <uni-popup ref="reportPopup" type="bottom">
+      <view class="report-dialog">
+        <view class="report-header">
+          <text class="report-title">举报原因</text>
+          <text class="report-close" @click="closeReportDialog">取消</text>
+        </view>
+        
+        <view class="report-reasons">
+          <view 
+            v-for="item in reportReasons" 
+            :key="item.value"
+            class="reason-item"
+            :class="{ active: reportType === item.value }"
+            @click="selectReportType(item.value)"
+          >
+            <text class="reason-text">{{ item.label }}</text>
+            <uni-icons v-if="reportType === item.value" type="checkmarkempty" size="20" color="#1890FF" />
+          </view>
+        </view>
+        
+        <view class="report-detail">
+          <textarea 
+            v-model="reportReason" 
+            class="detail-input" 
+            placeholder="请详细说明举报原因（选填）"
+            maxlength="200"
+          />
+        </view>
+        
+        <button class="report-submit-btn" type="primary" @click="submitReport">提交举报</button>
+      </view>
+    </uni-popup>
 
     <!-- 评论输入弹窗 -->
     <view v-if="showCommentInput" class="comment-modal" @click="closeCommentInput">
@@ -158,7 +196,19 @@ export default {
       commentContent: '',
       commenting: false,
       isFavorite: false,
-      currentUserId: ''
+      currentUserId: '',
+      
+      // 举报相关
+      reportType: '',
+      reportReason: '',
+      reportReasons: [
+        { value: 'spam', label: '垃圾广告' },
+        { value: 'porn', label: '色情低俗' },
+        { value: 'violence', label: '暴力血腥' },
+        { value: 'ad', label: '恶意营销' },
+        { value: 'illegal', label: '违法违规' },
+        { value: 'other', label: '其他' }
+      ]
     }
   },
   
@@ -429,6 +479,67 @@ export default {
       
       console.log('✅ 调用 UserAction.showUserMenu')
       UserAction.showUserMenu(userId, userInfo)
+    },
+    
+    // 显示举报对话框
+    showReportDialog() {
+      if (!Auth.isLogin()) {
+        uni.showToast({ title: '请先登录', icon: 'none' })
+        return
+      }
+      
+      this.reportType = ''
+      this.reportReason = ''
+      this.$refs.reportPopup.open()
+    },
+    
+    // 关闭举报对话框
+    closeReportDialog() {
+      this.$refs.reportPopup.close()
+    },
+    
+    // 选择举报类型
+    selectReportType(type) {
+      this.reportType = type
+    },
+    
+    // 提交举报
+    async submitReport() {
+      if (!this.reportType) {
+        uni.showToast({ title: '请选择举报原因', icon: 'none' })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '提交中...' })
+        
+        const res = await uniCloud.callFunction({
+          name: 'post-report',
+          data: {
+            target_id: this.postId,
+            target_type: 'post',
+            report_type: this.reportType,
+            report_reason: this.reportReason,
+            token: Auth.getToken()
+          }
+        })
+        
+        uni.hideLoading()
+        
+        if (res.result.code === 0) {
+          uni.showToast({ title: '举报成功', icon: 'success' })
+          this.closeReportDialog()
+        } else {
+          uni.showToast({ 
+            title: res.result.message || '举报失败', 
+            icon: 'none' 
+          })
+        }
+      } catch (error) {
+        console.error('举报失败:', error)
+        uni.hideLoading()
+        uni.showToast({ title: '举报失败', icon: 'none' })
+      }
     }
   }
 }
@@ -729,6 +840,80 @@ export default {
 
 .send-btn[disabled] {
   opacity: 0.5;
+}
+
+/* 举报对话框 */
+.report-dialog {
+  background: #FFFFFF;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 32rpx;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32rpx;
+}
+
+.report-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.report-close {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.report-reasons {
+  margin-bottom: 32rpx;
+}
+
+.reason-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #E8E8E8;
+  transition: all 0.3s;
+}
+
+.reason-item.active {
+  border-color: #1890FF;
+  background: rgba(24, 144, 255, 0.05);
+}
+
+.reason-text {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.report-detail {
+  margin-bottom: 32rpx;
+}
+
+.detail-input {
+  width: 100%;
+  min-height: 150rpx;
+  padding: 20rpx;
+  border: 2rpx solid #E8E8E8;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.report-submit-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #1890FF, #096DD9);
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: bold;
+  border-radius: 12rpx;
+  padding: 24rpx;
 }
 </style>
 

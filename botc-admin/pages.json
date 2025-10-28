@@ -317,6 +317,18 @@
 				}
 			},
 			{
+				"path": "content/sensitive-words",
+				"style": {
+					"navigationBarTitleText": "敏感词管理"
+				}
+			},
+			{
+				"path": "content/reports",
+				"style": {
+					"navigationBarTitleText": "举报管理"
+				}
+			},
+			{
 				"path": "wiki/sync",
 				"style": {
 					"navigationBarTitleText": "百科同步"

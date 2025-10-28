@@ -1,0 +1,7 @@
+{
+  "name": "post-report",
+  "version": "1.0.0",
+  "description": "举报帖子云函数",
+  "main": "index.js"
+}
+

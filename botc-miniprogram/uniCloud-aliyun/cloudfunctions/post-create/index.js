@@ -67,6 +67,23 @@ exports.main = async (event, context) => {
   const postsCollection = db.collection('botc-posts')
   
   try {
+    // 🛡️ 内容过滤检查
+    const filterResult = await uniCloud.callFunction({
+      name: 'content-filter',
+      data: {
+        content: content
+      }
+    })
+    
+    if (filterResult.result.code !== 0) {
+      // 内容包含敏感词或违规内容
+      return {
+        code: filterResult.result.code,
+        message: filterResult.result.message,
+        data: filterResult.result.data
+      }
+    }
+    
     // 验证剧本是否存在
     const scriptsCollection = db.collection('botc-scripts')
     const scriptCheck = await scriptsCollection.doc(script_id).get()

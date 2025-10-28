@@ -1,0 +1,7 @@
+{
+  "name": "content-filter",
+  "version": "1.0.0",
+  "description": "内容过滤云函数",
+  "main": "index.js"
+}
+
