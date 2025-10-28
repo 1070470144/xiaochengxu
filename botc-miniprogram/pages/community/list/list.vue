@@ -100,10 +100,10 @@ export default {
   data() {
     return {
       tabs: [
-        { label: '推荐', value: 'time' },
-        { label: '热门', value: 'hot' }
+        { label: '热门', value: 'hot' },
+        { label: '关注', value: 'following' }
       ],
-      currentTab: 'time',
+      currentTab: 'hot',
       postsList: [],
       page: 1,
       pageSize: 10,
@@ -138,7 +138,8 @@ export default {
           data: {
             page: this.page,
             pageSize: this.pageSize,
-            sortBy: this.currentTab
+            sortBy: this.currentTab,
+            token: Auth.getToken() // 用于获取关注列表
           }
         })
         

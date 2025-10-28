@@ -11,7 +11,8 @@ exports.main = async (event, context) => {
     pageSize = 10,
     type,        // 帖子类型筛选
     userId,      // 用户ID筛选（查看某用户的帖子）
-    sortBy = 'time'  // 排序方式：time-时间 hot-热度
+    sortBy = 'time',  // 排序方式：time-时间 hot-热度 following-关注
+    token        // 用户token，用于获取关注列表
   } = event
   
   const db = uniCloud.database()
@@ -30,6 +31,47 @@ exports.main = async (event, context) => {
     
     if (userId) {
       whereCondition.user_id = userId
+    }
+    
+    // 如果是关注列表，需要获取当前用户关注的人
+    if (sortBy === 'following') {
+      if (!token) {
+        return {
+          code: 401,
+          message: '请先登录查看关注动态'
+        }
+      }
+      
+      const currentUserId = token.split('_')[0]
+      
+      // 获取关注列表
+      const followsResult = await db.collection('botc-user-follows')
+        .where({
+          follower_id: currentUserId,
+          status: 1
+        })
+        .field({ following_id: true })
+        .get()
+      
+      const followingIds = followsResult.data.map(item => item.following_id)
+      
+      if (followingIds.length === 0) {
+        // 没有关注任何人
+        return {
+          code: 0,
+          message: 'success',
+          data: {
+            list: [],
+            total: 0,
+            page: page,
+            pageSize: pageSize,
+            hasMore: false
+          }
+        }
+      }
+      
+      // 只查询关注的人发布的帖子
+      whereCondition.user_id = dbCmd.in(followingIds)
     }
     
     // 排序规则
