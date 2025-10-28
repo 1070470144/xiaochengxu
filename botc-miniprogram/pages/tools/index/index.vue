@@ -65,7 +65,28 @@ export default {
     }
   },
   
+  onShow() {
+    // 监听从首页跳转的事件
+    uni.$on('openRankingFromHome', this.handleOpenRanking)
+    uni.$on('openCarpoolFromHome', this.handleOpenCarpool)
+  },
+  
+  onHide() {
+    // 移除事件监听
+    uni.$off('openRankingFromHome', this.handleOpenRanking)
+    uni.$off('openCarpoolFromHome', this.handleOpenCarpool)
+  },
+  
   methods: {
+    // 处理从首页打开榜单
+    handleOpenRanking() {
+      this.goToRanking()
+    },
+    
+    // 处理从首页打开拼车
+    handleOpenCarpool() {
+      this.goToCarpool()
+    },
     // 跳转到拼车列表
     goToCarpool() {
       uni.navigateTo({

@@ -33,31 +33,26 @@
       <view class="section-header">
         <text class="section-title">核心功能</text>
       </view>
-      <view class="function-grid">
-        <view class="function-card primary" @click="goToScriptList">
+      <view class="function-grid-three">
+        <view class="function-card-large primary" @click="goToScriptRanking">
           <view class="card-icon">📚</view>
-          <text class="card-title">剧本库</text>
-          <text class="card-desc">{{ stats.scriptCount }}+ 官方/自制剧本</text>
+          <text class="card-title">剧本榜单</text>
+          <text class="card-desc">{{ stats.scriptCount }}+ 精选剧本</text>
           <view class="card-badge">热门</view>
         </view>
         
-        <view class="function-card primary" @click="goToCarpoolList">
-          <view class="card-icon">🚗</view>
-          <text class="card-title">拼车组局</text>
-          <text class="card-desc">{{ stats.carpoolCount }}+ 活跃拼车</text>
-          <view class="card-badge new">最新</view>
-        </view>
-        
-        <view class="function-card" @click="goToStorytellerList">
+        <view class="function-card-large primary" @click="goToStorytellerRanking">
           <view class="card-icon">🎭</view>
-          <text class="card-title">说书人</text>
-          <text class="card-desc">寻找优秀ST</text>
+          <text class="card-title">说书人榜单</text>
+          <text class="card-desc">认证说书人推荐</text>
+          <view class="card-badge new">推荐</view>
         </view>
         
-        <view class="function-card" @click="goToProfile">
-          <view class="card-icon">👤</view>
-          <text class="card-title">个人中心</text>
-          <text class="card-desc">我的资料</text>
+        <view class="function-card-large highlight" @click="goToCarpoolTool">
+          <view class="card-icon">🚗</view>
+          <text class="card-title">拼车组局工具</text>
+          <text class="card-desc">快速发起线下局</text>
+          <view class="card-badge active">快捷</view>
         </view>
       </view>
     </view>
@@ -206,6 +201,43 @@ export default {
       // 可以定期刷新统计数据
     },
     
+    // 跳转到剧本榜单（剧本-查看榜单）
+    goToScriptRanking() {
+      uni.switchTab({
+        url: '/pages/script/index/index',
+        success: () => {
+          // 切换到查看榜单标签
+          uni.$emit('switchScriptTab', 'ranking')
+        }
+      })
+    },
+    
+    // 跳转到说书人榜单（工具-榜单，默认说书人榜）
+    goToStorytellerRanking() {
+      uni.switchTab({
+        url: '/pages/tools/index/index',
+        success: () => {
+          // 延迟触发，确保页面已加载
+          setTimeout(() => {
+            uni.$emit('openRankingFromHome')
+          }, 100)
+        }
+      })
+    },
+    
+    // 跳转到拼车组局工具（工具-拼车）
+    goToCarpoolTool() {
+      uni.switchTab({
+        url: '/pages/tools/index/index',
+        success: () => {
+          // 延迟触发，确保页面已加载
+          setTimeout(() => {
+            uni.$emit('openCarpoolFromHome')
+          }, 100)
+        }
+      })
+    },
+    
     // 跳转到剧本列表
     goToScriptList() {
       uni.switchTab({
@@ -217,20 +249,6 @@ export default {
     goToCarpoolList() {
       uni.switchTab({
         url: '/pages/carpool/list/list'
-      })
-    },
-    
-    // 跳转到说书人列表
-    goToStorytellerList() {
-      uni.navigateTo({
-        url: '/pages/storyteller/list/list'
-      })
-    },
-    
-    // 跳转到个人中心
-    goToProfile() {
-      uni.switchTab({
-        url: '/pages/user/profile/profile'
       })
     },
     
@@ -373,19 +391,19 @@ export default {
 }
 
 /* ========== 功能卡片 ========== */
-.function-grid {
+.function-grid-three {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24rpx;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16rpx;
 }
 
-.function-card {
+.function-card-large {
   background: #FFFFFF;
   border-radius: 16rpx;
-  padding: 40rpx 24rpx;
+  padding: 32rpx 16rpx;
   text-align: center;
   box-shadow: 0 4rpx 20rpx rgba(139, 69, 19, 0.08);
-  min-height: 180rpx;
+  min-height: 200rpx;
   position: relative;
   transition: all 0.3s ease;
   display: flex;
@@ -394,52 +412,62 @@ export default {
   justify-content: center;
 }
 
-.function-card.primary {
+.function-card-large.primary {
   background: linear-gradient(135deg, rgba(139, 69, 19, 0.05) 0%, rgba(210, 105, 30, 0.05) 100%);
 }
 
-.function-card:active {
-  transform: scale(0.98);
+.function-card-large.highlight {
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.05) 0%, rgba(82, 196, 26, 0.1) 100%);
+}
+
+.function-card-large:active {
+  transform: scale(0.95);
   opacity: 0.9;
 }
 
 .card-icon {
-  font-size: 64rpx;
-  margin-bottom: 16rpx;
+  font-size: 56rpx;
+  margin-bottom: 12rpx;
   line-height: 1;
 }
 
 .card-title {
-  font-size: 30rpx;
+  font-size: 26rpx;
   font-weight: 600;
   color: #1A1A1A;
   display: block;
   margin-bottom: 8rpx;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .card-desc {
-  font-size: 22rpx;
+  font-size: 20rpx;
   font-weight: 400;
   color: #999999;
   line-height: 1.4;
+  text-align: center;
+  padding: 0 4rpx;
 }
 
 .card-badge {
   position: absolute;
-  top: 16rpx;
-  right: 16rpx;
+  top: 12rpx;
+  right: 12rpx;
   background: #FF6B35;
   color: #FFFFFF;
-  font-size: 20rpx;
+  font-size: 18rpx;
   font-weight: 500;
-  padding: 4rpx 12rpx;
-  border-radius: 12rpx;
+  padding: 4rpx 8rpx;
+  border-radius: 8rpx;
   line-height: 1;
 }
 
 .card-badge.new {
   background: #52C41A;
+}
+
+.card-badge.active {
+  background: #1890FF;
 }
 
 /* ========== 热门剧本 ========== */

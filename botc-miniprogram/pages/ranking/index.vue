@@ -155,7 +155,7 @@ export default {
   
   data() {
     return {
-      mainTab: 1, // 默认显示角色榜
+      mainTab: 0, // 默认显示说书人榜
       
       // 说书人榜单
       storytellerTab: 0,
@@ -180,7 +180,8 @@ export default {
   },
   
   onLoad() {
-    this.loadRoleRanking();
+    // 默认加载说书人榜
+    this.loadStorytellerRanking();
   },
   
   methods: {
