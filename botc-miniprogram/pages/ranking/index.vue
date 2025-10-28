@@ -221,7 +221,6 @@ export default {
         
         if (res.result.code === 0) {
           this.storytellerList = res.result.data.list || [];
-          console.log('[loadStorytellerRanking] 加载成功，共', this.storytellerList.length, '位');
         }
       } catch (error) {
         console.error('[loadStorytellerRanking] 加载失败:', error);

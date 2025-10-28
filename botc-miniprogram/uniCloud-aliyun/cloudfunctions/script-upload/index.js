@@ -146,6 +146,20 @@ exports.main = async (event, context) => {
     
     console.log('[SCRIPT-UPLOAD] Script saved:', insertRes.id)
     
+    // 更新说书人的剧本数统计
+    const usersCollection = db.collection('uni-id-users')
+    const userDoc = await usersCollection.doc(userId).get()
+    const user = userDoc.data && userDoc.data.length > 0 ? userDoc.data[0] : {}
+    
+    // 如果是认证说书人，更新 storyteller_stats.script_count
+    if (user.storyteller_certified && user.storyteller_stats) {
+      const currentScriptCount = user.storyteller_stats.script_count || 0
+      await usersCollection.doc(userId).update({
+        'storyteller_stats.script_count': currentScriptCount + 1
+      })
+      console.log('[SCRIPT-UPLOAD] Updated storyteller script count:', currentScriptCount + 1)
+    }
+    
     return {
       code: 0,
       message: '上传成功',

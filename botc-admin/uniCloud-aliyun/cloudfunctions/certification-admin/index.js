@@ -76,12 +76,31 @@ exports.main = async (event, context) => {
           updated_at: Date.now()
         })
       
+      // 获取用户当前信息
+      const userRes = await db.collection('uni-id-users')
+        .doc(cert.user_id)
+        .field({
+          storyteller_stats: true,
+          followers_count: true  // 正确的粉丝数字段
+        })
+        .get()
+      
+      const user = userRes.data && userRes.data.length > 0 ? userRes.data[0] : {}
+      
+      // 初始化或保留 storyteller_stats
+      const storyteller_stats = user.storyteller_stats || {
+        fans_count: user.followers_count || 0,  // 从 followers_count 复制
+        script_count: 0,
+        heat_score: 0
+      }
+      
       // 更新用户认证信息
       await db.collection('uni-id-users')
         .doc(cert.user_id)
         .update({
           storyteller_level: cert.level,
-          storyteller_certified: true
+          storyteller_certified: true,
+          storyteller_stats: storyteller_stats
         })
       
       return {

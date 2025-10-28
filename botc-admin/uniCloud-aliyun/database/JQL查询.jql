@@ -9,4 +9,29 @@
 // 详细JQL语法，请参考：https://uniapp.dcloud.net.cn/uniCloud/jql.html
 
 // 下面示例查询uni-id-users表的所有数据
-db.collection('uni-id-users').get();
+// 查询冉冉的用户数据
+const db = uniCloud.database()
+db.collection('uni-id-users')
+  .where({
+    nickname: '冉冉'
+  })
+  .field({
+    _id: true,
+    nickname: true,
+    storyteller_certified: true,
+    storyteller_level: true,
+    followers_count: true,
+    storyteller_stats: true
+  })
+  .get()
+  .then(res => {
+    console.log('用户数据:', JSON.stringify(res.data, null, 2))
+    
+    if (res.data.length > 0) {
+      const user = res.data[0]
+      console.log('\n=== 关键字段 ===')
+      console.log('storyteller_certified:', user.storyteller_certified)
+      console.log('storyteller_stats:', user.storyteller_stats)
+      console.log('followers_count:', user.followers_count)
+    }
+  })

@@ -1,0 +1,10 @@
+{
+  "name": "storyteller-calculate-heat",
+  "version": "1.0.0",
+  "description": "计算说书人热度分数",
+  "main": "index.js",
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}
+

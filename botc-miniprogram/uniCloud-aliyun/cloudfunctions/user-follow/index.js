@@ -95,9 +95,18 @@ exports.main = async (event, context) => {
       // 目标用户：粉丝数+1
       const targetUserDoc = await usersCollection.doc(target_user_id).get()
       const targetUser = targetUserDoc.data && targetUserDoc.data.length > 0 ? targetUserDoc.data[0] : {}
-      await usersCollection.doc(target_user_id).update({
-        followers_count: (targetUser.followers_count || 0) + 1
-      })
+      const newFollowersCount = (targetUser.followers_count || 0) + 1
+      
+      const updateData = {
+        followers_count: newFollowersCount
+      }
+      
+      // 如果目标用户是认证说书人，同步更新 storyteller_stats.fans_count
+      if (targetUser.storyteller_certified && targetUser.storyteller_stats) {
+        updateData['storyteller_stats.fans_count'] = newFollowersCount
+      }
+      
+      await usersCollection.doc(target_user_id).update(updateData)
       
       return {
         code: 0,
@@ -140,9 +149,18 @@ exports.main = async (event, context) => {
       // 目标用户：粉丝数-1
       const targetUserDoc = await usersCollection.doc(target_user_id).get()
       const targetUser = targetUserDoc.data && targetUserDoc.data.length > 0 ? targetUserDoc.data[0] : {}
-      await usersCollection.doc(target_user_id).update({
-        followers_count: Math.max(0, (targetUser.followers_count || 0) - 1)
-      })
+      const newFollowersCount = Math.max(0, (targetUser.followers_count || 0) - 1)
+      
+      const updateData = {
+        followers_count: newFollowersCount
+      }
+      
+      // 如果目标用户是认证说书人，同步更新 storyteller_stats.fans_count
+      if (targetUser.storyteller_certified && targetUser.storyteller_stats) {
+        updateData['storyteller_stats.fans_count'] = newFollowersCount
+      }
+      
+      await usersCollection.doc(target_user_id).update(updateData)
       
       return {
         code: 0,
