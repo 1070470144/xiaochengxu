@@ -7,187 +7,214 @@
 
     <!-- 拼车详情 -->
     <view v-else-if="carpoolDetail" class="carpool-detail">
-      <!-- 头部信息 -->
-      <view class="carpool-header clock-tower-gradient">
+      <!-- 头部信息 - 渐变背景 -->
+      <view class="detail-header">
         <view class="header-content">
-          <text class="carpool-title">{{ carpoolDetail.title }}</text>
-          <text class="room-number">房间号：{{ carpoolDetail.room_number }}</text>
-          <view class="status-info">
-            <text class="status-badge" :class="getStatusClass(carpoolDetail.status)">
-              {{ getStatusText(carpoolDetail.status) }}
-            </text>
-            <text class="player-count">{{ carpoolDetail.current_players }}/{{ carpoolDetail.max_players }}人</text>
+          <view class="title-row">
+            <text class="detail-title">{{ carpoolDetail.title }}</text>
+            <text class="room-badge">#{{ carpoolDetail.room_number }}</text>
+          </view>
+          <view class="status-row">
+            <view class="status-tag" :class="getStatusClass(carpoolDetail.status)">
+              <text class="status-dot">●</text>
+              <text class="status-label">{{ getStatusText(carpoolDetail.status) }}</text>
+            </view>
+            <view class="player-info">
+              <text class="player-icon">👥</text>
+              <text class="player-count">{{ carpoolDetail.current_players }}/{{ carpoolDetail.max_players }}人</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- 基础信息卡片 -->
-      <view class="info-card card">
-        <view class="card-body">
-          <view class="info-section">
-            <view class="info-row">
-              <text class="info-icon">⏰</text>
-              <text class="info-label">游戏时间：</text>
-              <text class="info-value">{{ formatGameTime(carpoolDetail.game_time) }}</text>
-            </view>
-            <view class="info-row">
-              <text class="info-icon">📍</text>
-              <text class="info-label">游戏地点：</text>
-              <text class="info-value">{{ carpoolDetail.location }}</text>
-            </view>
-            <view v-if="carpoolDetail.location_detail" class="info-row">
-              <text class="info-icon">🗺️</text>
-              <text class="info-label">详细地址：</text>
-              <text class="info-value">{{ carpoolDetail.location_detail }}</text>
+      <!-- 基础信息卡片 - 网格布局 -->
+      <view class="section-card info-grid-card">
+        <view class="grid-container">
+          <!-- 时间 -->
+          <view class="grid-item">
+            <view class="grid-icon">⏰</view>
+            <view class="grid-content">
+              <text class="grid-label">游戏时间</text>
+              <text class="grid-value">{{ formatGameTime(carpoolDetail.game_time) }}</text>
             </view>
           </view>
+          
+          <!-- 地点 -->
+          <view class="grid-item">
+            <view class="grid-icon">📍</view>
+            <view class="grid-content">
+              <text class="grid-label">游戏地点</text>
+              <text class="grid-value">{{ carpoolDetail.location }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 详细地址（如果有） -->
+        <view v-if="carpoolDetail.location_detail" class="detail-address">
+          <view class="address-icon">🗺️</view>
+          <text class="address-text">{{ carpoolDetail.location_detail }}</text>
         </view>
       </view>
 
       <!-- 关联剧本信息 -->
-      <view v-if="carpoolDetail.script" class="script-card card">
-        <view class="card-header">
-          <text class="card-title">关联剧本</text>
+      <view v-if="carpoolDetail.script" class="section-card script-card-simple">
+        <view class="section-header-inline">
+          <view class="section-icon">🎭</view>
+          <text class="section-title">关联剧本</text>
         </view>
-        <view class="card-body">
-          <view class="script-info" @click="goToScript(carpoolDetail.script._id)">
-            <text class="script-title">{{ carpoolDetail.script.title }}</text>
-            <text class="script-meta">
-              {{ carpoolDetail.script.author }} · {{ carpoolDetail.script.player_count }} · 
-              难度{{ getDifficultyText(carpoolDetail.script.difficulty) }}
-            </text>
-            <text class="script-desc">{{ carpoolDetail.script.description }}</text>
+        <view class="section-body">
+          <view class="script-simple-content" @click="goToScript(carpoolDetail.script._id)">
+            <image 
+              class="script-logo" 
+              :src="getScriptCover(carpoolDetail.script)"
+              mode="aspectFill">
+            </image>
+            <text class="script-simple-name">{{ carpoolDetail.script.title }}</text>
+            <text class="view-arrow">›</text>
           </view>
         </view>
       </view>
 
-      <!-- 发起人信息 -->
-      <view class="host-card card">
-        <view class="card-header">
-          <text class="card-title">发起人</text>
+      <!-- 人员信息卡片 -->
+      <view class="section-card people-card">
+        <view class="section-header-inline">
+          <view class="section-icon">👤</view>
+          <text class="section-title">人员信息</text>
         </view>
-        <view class="card-body">
-          <view class="user-info" @click="chatWithHost">
-            <image class="user-avatar" :src="carpoolDetail.host.avatar || '/static/images/default-avatar.png'"></image>
-            <view class="user-details">
-              <text class="user-name">{{ carpoolDetail.host.nickname }}</text>
-              <text class="user-level">Lv.{{ carpoolDetail.host.level || 1 }}</text>
+        <view class="section-body">
+          <!-- 发起人 -->
+          <view class="person-row" @click="chatWithHost">
+            <image class="person-avatar" :src="carpoolDetail.host.avatar || '/static/images/default-avatar.png'"></image>
+            <view class="person-info">
+              <view class="person-name-row">
+                <text class="person-name">{{ carpoolDetail.host.nickname }}</text>
+                <view class="person-badge host-badge">发起人</view>
+              </view>
+              <text class="person-level">Lv.{{ carpoolDetail.host.level || 1 }}</text>
             </view>
-            <view class="contact-btn">
-              <text class="contact-text">私聊</text>
+            <view class="action-link">
+              <text class="link-text">私聊</text>
+              <text class="link-arrow">›</text>
             </view>
           </view>
-        </view>
-      </view>
-
-      <!-- 说书人信息 -->
-      <view v-if="carpoolDetail.storyteller" class="storyteller-card card">
-        <view class="card-header">
-          <text class="card-title">说书人</text>
-        </view>
-        <view class="card-body">
-          <view class="user-info" @click="goToStorytellerProfile(carpoolDetail.storyteller._id)">
-            <image class="user-avatar" :src="carpoolDetail.storyteller.avatar || '/static/images/default-avatar.png'"></image>
-            <view class="user-details">
-              <text class="user-name storyteller-name">{{ carpoolDetail.storyteller.nickname }}</text>
-              <text class="user-tag">认证说书人</text>
+          
+          <!-- 说书人 -->
+          <view v-if="carpoolDetail.storyteller" class="person-row storyteller-row" @click="goToStorytellerProfile(carpoolDetail.storyteller._id)">
+            <image class="person-avatar" :src="carpoolDetail.storyteller.avatar || '/static/images/default-avatar.png'"></image>
+            <view class="person-info">
+              <view class="person-name-row">
+                <text class="person-name storyteller-highlight">{{ carpoolDetail.storyteller.nickname }}</text>
+                <view class="person-badge storyteller-badge">说书人</view>
+              </view>
+              <text class="person-tag">认证说书人</text>
+            </view>
+            <view class="action-link">
+              <text class="link-arrow">›</text>
             </view>
           </view>
         </view>
       </view>
 
       <!-- 详细说明 -->
-      <view v-if="carpoolDetail.description" class="desc-card card">
-        <view class="card-header">
-          <text class="card-title">详细说明</text>
+      <view v-if="carpoolDetail.description" class="section-card">
+        <view class="section-header-inline">
+          <view class="section-icon">📋</view>
+          <text class="section-title">详细说明</text>
         </view>
-        <view class="card-body">
-          <text class="carpool-desc">{{ carpoolDetail.description }}</text>
+        <view class="section-body">
+          <text class="content-text">{{ carpoolDetail.description }}</text>
         </view>
       </view>
 
       <!-- 玩家要求 -->
-      <view v-if="carpoolDetail.requirements" class="requirements-card card">
-        <view class="card-header">
-          <text class="card-title">玩家要求</text>
+      <view v-if="carpoolDetail.requirements" class="section-card">
+        <view class="section-header-inline">
+          <view class="section-icon">✓</view>
+          <text class="section-title">玩家要求</text>
         </view>
-        <view class="card-body">
-          <text class="requirements-text">{{ carpoolDetail.requirements }}</text>
+        <view class="section-body">
+          <text class="content-text">{{ carpoolDetail.requirements }}</text>
         </view>
       </view>
 
       <!-- 联系方式（只有报名成功后才显示） -->
-      <view v-if="showContactInfo" class="contact-card card">
-        <view class="card-header">
-          <text class="card-title">联系方式</text>
+      <view v-if="showContactInfo" class="section-card">
+        <view class="section-header-inline">
+          <view class="section-icon">📞</view>
+          <text class="section-title">联系方式</text>
         </view>
-        <view class="card-body">
-          <view v-if="carpoolDetail.contact_wechat" class="contact-row">
-            <text class="contact-label">微信号：</text>
-            <text class="contact-value" @click="copyContact(carpoolDetail.contact_wechat)">
-              {{ carpoolDetail.contact_wechat }}
-            </text>
+        <view class="section-body">
+          <view v-if="carpoolDetail.contact_wechat" class="contact-item" @click="copyContact(carpoolDetail.contact_wechat)">
+            <view class="contact-label-box">
+              <text class="contact-icon">💬</text>
+              <text class="contact-label">微信号</text>
+            </view>
+            <text class="contact-value">{{ carpoolDetail.contact_wechat }}</text>
+            <text class="copy-hint">点击复制</text>
           </view>
-          <view v-if="carpoolDetail.contact_phone" class="contact-row">
-            <text class="contact-label">手机号：</text>
-            <text class="contact-value" @click="callPhone(carpoolDetail.contact_phone)">
-              {{ carpoolDetail.contact_phone }}
-            </text>
+          <view v-if="carpoolDetail.contact_phone" class="contact-item" @click="callPhone(carpoolDetail.contact_phone)">
+            <view class="contact-label-box">
+              <text class="contact-icon">📱</text>
+              <text class="contact-label">手机号</text>
+            </view>
+            <text class="contact-value">{{ carpoolDetail.contact_phone }}</text>
+            <text class="copy-hint">点击拨打</text>
           </view>
         </view>
       </view>
 
       <!-- 参与成员 -->
-      <view class="members-card card">
-        <view class="card-header">
-          <text class="card-title">参与成员 ({{ carpoolDetail.current_players }}/{{ carpoolDetail.max_players }})</text>
+      <view class="section-card members-card-new">
+        <view class="section-header-inline">
+          <view class="section-icon">👥</view>
+          <text class="section-title">参与成员</text>
+          <view class="member-count-badge">
+            <text>{{ carpoolDetail.current_players }}/{{ carpoolDetail.max_players }}</text>
+          </view>
         </view>
-        <view class="card-body">
-          <view v-if="carpoolDetail.members && carpoolDetail.members.length > 0" class="members-list">
-            <view v-for="member in carpoolDetail.members" :key="member._id" class="member-item">
-              <image class="member-avatar" :src="member.user.avatar || '/static/images/default-avatar.png'"></image>
-              <view class="member-info">
-                <text class="member-name">{{ member.user.nickname }}</text>
-                <text class="member-level">Lv.{{ member.user.level || 1 }}</text>
-                <text v-if="member.message" class="member-message">{{ member.message }}</text>
+        <view class="section-body">
+          <view v-if="carpoolDetail.members && carpoolDetail.members.length > 0" class="members-grid">
+            <view v-for="member in carpoolDetail.members" :key="member._id" class="member-card">
+              <image class="member-avatar-large" :src="member.user.avatar || '/static/images/default-avatar.png'"></image>
+              <view class="member-details">
+                <text class="member-name-text">{{ member.user.nickname }}</text>
+                <text class="member-level-text">Lv.{{ member.user.level || 1 }}</text>
+                <view class="member-status-tag" :class="getMemberStatusClass(member.status)">
+                  <text>{{ getMemberStatusText(member.status) }}</text>
+                </view>
               </view>
-              <view class="member-status">
-                <text class="status-text" :class="getMemberStatusClass(member.status)">
-                  {{ getMemberStatusText(member.status) }}
-                </text>
-              </view>
+              <text v-if="member.message" class="member-msg-text">{{ member.message }}</text>
             </view>
           </view>
-          <view v-else class="no-members">
-            <text class="no-members-text">暂无其他成员</text>
+          <view v-else class="empty-members">
+            <text class="empty-icon">👤</text>
+            <text class="empty-text">暂无其他成员</text>
           </view>
         </view>
       </view>
 
       <!-- 底部操作按钮 -->
-      <view class="action-bar">
+      <view class="bottom-action-bar">
         <button v-if="!isHost && !hasApplied && carpoolDetail.status === 1" 
-                class="action-btn btn-primary" 
+                class="action-button action-primary" 
                 @click="showApplyModal">
-          报名参加
+          <text class="button-text">立即报名</text>
         </button>
         
         <button v-else-if="hasApplied && !isConfirmed" 
-                class="action-btn btn-secondary" 
+                class="action-button action-secondary" 
                 @click="quitCarpool">
-          取消报名
+          <text class="button-text">取消报名</text>
         </button>
         
         <button v-else-if="isHost" 
-                class="action-btn btn-secondary" 
+                class="action-button action-manage" 
                 @click="manageRoom">
-          管理房间
+          <text class="button-text">管理房间</text>
         </button>
         
-        <view v-else class="action-info">
-          <text class="info-text">
-            {{ getActionText() }}
-          </text>
+        <view v-else class="action-status">
+          <text class="status-info-text">{{ getActionText() }}</text>
         </view>
       </view>
     </view>
@@ -580,6 +607,79 @@ export default {
       } else {
         return '可以报名参加'
       }
+    },
+
+    // 获取剧本封面（优先使用用户上传图片，其次生成艺术字）
+    getScriptCover(script) {
+      // 1. 优先使用用户上传的图片
+      if (script.user_images && script.user_images.length > 0) {
+        // 随机选择一张用户上传的图片
+        const randomIndex = Math.floor(Math.random() * script.user_images.length)
+        return script.user_images[randomIndex]
+      }
+      
+      // 2. 生成艺术字缩略图（使用剧本名称）
+      return this.generateTitleImage(script.title || '未命名')
+    },
+    
+    // 生成艺术字缩略图（使用 Canvas 或 SVG）
+    generateTitleImage(title) {
+      // 取标题前2-4个字
+      const displayText = title.length > 4 ? title.substring(0, 4) : title
+      
+      // 生成渐变色配置
+      const colors = [
+        ['#667eea', '#764ba2'],  // 紫色渐变
+        ['#f093fb', '#f5576c'],  // 粉红渐变
+        ['#4facfe', '#00f2fe'],  // 蓝色渐变
+        ['#43e97b', '#38f9d7'],  // 绿色渐变
+        ['#fa709a', '#fee140'],  // 橙粉渐变
+        ['#30cfd0', '#330867'],  // 蓝紫渐变
+        ['#a8edea', '#fed6e3'],  // 薄荷粉渐变
+        ['#ff9a9e', '#fecfef'],  // 柔粉渐变
+      ]
+      
+      // 根据标题生成固定的颜色索引（同一标题总是相同颜色）
+      const hash = this.hashCode(title)
+      const colorPair = colors[Math.abs(hash) % colors.length]
+      
+      // 生成 SVG 艺术字
+      const svg = `
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-${Date.now()}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${colorPair[0]};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:${colorPair[1]};stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#grad-${Date.now()})" />
+  <text x="50%" y="50%" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="white" 
+        font-size="${title.length <= 2 ? '56' : '48'}" 
+        font-weight="bold" 
+        font-family="Arial, sans-serif"
+        stroke="rgba(0,0,0,0.2)"
+        stroke-width="1">
+    ${displayText}
+  </text>
+</svg>`.trim()
+      
+      // 转换为 base64
+      const base64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)))
+      return base64
+    },
+    
+    // 生成字符串哈希值（确保同一标题总是得到相同的颜色）
+    hashCode(str) {
+      let hash = 0
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // 转换为32位整数
+      }
+      return hash
     }
   },
 
@@ -594,293 +694,644 @@ export default {
 </script>
 
 <style scoped>
-.carpool-header {
-  color: white;
-  padding: 40rpx 30rpx;
-  text-align: center;
+/* 页面背景 - 温暖米色调 */
+.page {
+  background: #FAF9F7;
+  min-height: 100vh;
+  padding-bottom: 160rpx;
 }
 
-.carpool-title {
-  display: block;
-  font-size: 36rpx;
-  font-weight: bold;
-  margin-bottom: 10rpx;
-}
-
-.room-number {
-  display: block;
-  font-size: 24rpx;
-  opacity: 0.8;
-  margin-bottom: 20rpx;
-}
-
-.status-info {
+/* 加载状态 */
+.loading-container {
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 60vh;
+}
+
+.carpool-detail {
+  min-height: 100vh;
+}
+
+/* === 头部信息区域 === */
+.detail-header {
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  padding: 48rpx 32rpx 40rpx;
+  box-shadow: 0 4rpx 20rpx rgba(139, 99, 71, 0.15);
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
   gap: 20rpx;
 }
 
-.status-badge {
-  font-size: 26rpx;
-  padding: 8rpx 16rpx;
-  border-radius: 12rpx;
-  font-weight: 500;
-}
-
-.status-recruiting { background-color: rgba(255, 255, 255, 0.2); }
-.status-full { background-color: rgba(250, 173, 20, 0.2); }
-.status-confirmed { background-color: rgba(24, 144, 255, 0.2); }
-
-.player-count {
-  font-size: 28rpx;
-  font-weight: bold;
-}
-
-.info-card, .script-card, .host-card, .storyteller-card, .desc-card, .requirements-card, .contact-card, .members-card {
-  margin: 20rpx;
-}
-
-.info-section {
-  padding: 0;
-}
-
-.info-row {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 20rpx;
-}
-
-.info-row:last-child {
-  margin-bottom: 0;
-}
-
-.info-icon {
-  font-size: 28rpx;
-  width: 50rpx;
-  flex-shrink: 0;
-}
-
-.info-label {
-  font-size: 28rpx;
-  color: #666666;
-  width: 120rpx;
-  flex-shrink: 0;
-}
-
-.info-value {
-  font-size: 28rpx;
-  color: #333333;
-  flex: 1;
-  line-height: 1.4;
-}
-
-.script-info {
-  padding: 20rpx;
-  background-color: #f9f9f9;
-  border-radius: 8rpx;
-  border: 1rpx solid #e8e8e8;
-}
-
-.script-title {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #8B4513;
-  margin-bottom: 8rpx;
-}
-
-.script-meta {
-  font-size: 24rpx;
-  color: #999999;
-  margin-bottom: 12rpx;
-}
-
-.script-desc {
-  font-size: 26rpx;
-  color: #666666;
-  line-height: 1.4;
-}
-
-.user-info {
+.title-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
 }
 
-.user-avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 40rpx;
-  margin-right: 20rpx;
+.detail-title {
+  flex: 1;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.3;
+  letter-spacing: 1rpx;
 }
 
-.user-details {
+.room-badge {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8rpx 16rpx;
+  border-radius: 12rpx;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.status-tag {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10rpx);
+}
+
+.status-dot {
+  font-size: 16rpx;
+  line-height: 1;
+}
+
+.status-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+/* 状态样式 */
+.status-recruiting {
+  background: rgba(127, 176, 105, 0.3);
+}
+
+.status-recruiting .status-dot {
+  color: #7FB069;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-full {
+  background: rgba(232, 184, 97, 0.3);
+}
+
+.status-full .status-dot {
+  color: #E8B861;
+}
+
+.status-confirmed {
+  background: rgba(93, 173, 226, 0.3);
+}
+
+.status-confirmed .status-dot {
+  color: #5DADE2;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 10rpx 16rpx;
+  border-radius: 16rpx;
+  backdrop-filter: blur(10rpx);
+}
+
+.player-icon {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.player-count {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+/* === 通用卡片样式 === */
+.section-card {
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  margin: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(139, 99, 71, 0.08);
+  border: 1rpx solid rgba(139, 99, 71, 0.06);
+  overflow: hidden;
+}
+
+.section-header-inline {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx 24rpx 20rpx;
+  border-bottom: 1rpx solid #F5F0EB;
+}
+
+.section-icon {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #5D4E37;
+  line-height: 1;
   flex: 1;
 }
 
-.user-name {
-  font-size: 30rpx;
-  color: #333333;
-  font-weight: 500;
-  margin-bottom: 8rpx;
+.section-body {
+  padding: 24rpx;
 }
 
-.storyteller-name {
-  color: #8B4513 !important;
+/* === 基础信息网格 === */
+.info-grid-card {
+  margin-top: -20rpx;
 }
 
-.user-level {
-  font-size: 22rpx;
-  color: #FF6B35;
-  background-color: rgba(255, 107, 53, 0.1);
-  padding: 4rpx 8rpx;
-  border-radius: 8rpx;
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+  padding: 24rpx;
 }
 
-.user-tag {
-  font-size: 22rpx;
-  color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.1);
-  padding: 4rpx 8rpx;
-  border-radius: 8rpx;
+.grid-item {
+  display: flex;
+  gap: 12rpx;
+  background: #FAF8F5;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.08);
 }
 
-.contact-btn {
-  background-color: #8B4513;
-  color: white;
-  padding: 12rpx 20rpx;
-  border-radius: 20rpx;
+.grid-icon {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.grid-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.grid-label {
   font-size: 24rpx;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1;
 }
 
-.carpool-desc, .requirements-text {
+.grid-value {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.4;
+}
+
+.detail-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  padding: 20rpx 24rpx;
+  background: linear-gradient(135deg, #FAF8F5 0%, #F5F0EB 100%);
+  border-top: 1rpx solid rgba(160, 120, 90, 0.08);
+}
+
+.address-icon {
   font-size: 28rpx;
-  color: #333333;
-  line-height: 1.6;
+  line-height: 1;
+  margin-top: 2rpx;
+}
+
+.address-text {
+  flex: 1;
+  font-size: 26rpx;
+  font-weight: 400;
+  color: #6B5744;
+  line-height: 1.5;
+}
+
+/* === 剧本卡片（简化版） === */
+.script-simple-content {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx;
+  background: #FAF8F5;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.script-simple-content:active {
+  background: #F5F0EB;
+  transform: scale(0.98);
+}
+
+.script-logo {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid rgba(160, 120, 90, 0.1);
+  flex-shrink: 0;
+}
+
+.script-logo-placeholder {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, #F5F0EB 0%, #E8E0D5 100%);
+  border: 2rpx solid rgba(160, 120, 90, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.placeholder-icon {
+  font-size: 48rpx;
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.script-simple-name {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #8B6F47;
+  line-height: 1.3;
+}
+
+.view-arrow {
+  font-size: 40rpx;
+  font-weight: 300;
+  color: #A0785A;
+  line-height: 1;
+}
+
+/* === 人员信息卡片 === */
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 0;
+}
+
+.person-row + .person-row {
+  border-top: 1rpx solid #F5F0EB;
+  padding-top: 20rpx;
+}
+
+.person-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  border: 2rpx solid #F0EBE6;
+  flex-shrink: 0;
+}
+
+.storyteller-row .person-avatar {
+  border-color: rgba(160, 120, 90, 0.2);
+}
+
+.person-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.person-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.person-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  line-height: 1;
+}
+
+.storyteller-highlight {
+  color: #8B6F47;
+}
+
+.person-badge {
+  font-size: 22rpx;
+  font-weight: 500;
+  padding: 6rpx 10rpx;
+  border-radius: 8rpx;
+  line-height: 1;
+}
+
+.host-badge {
+  color: #7FB069;
+  background: rgba(127, 176, 105, 0.12);
+}
+
+.storyteller-badge {
+  color: #8B6F47;
+  background: rgba(160, 120, 90, 0.12);
+}
+
+.person-level {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #D4A86A;
+  background: rgba(212, 168, 106, 0.15);
+  padding: 4rpx 10rpx;
+  border-radius: 8rpx;
+  line-height: 1;
+  align-self: flex-start;
+}
+
+.person-tag {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #8B6F47;
+  line-height: 1;
+}
+
+.action-link {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.link-text {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #A0785A;
+  line-height: 1;
+}
+
+.link-arrow {
+  font-size: 32rpx;
+  font-weight: 300;
+  color: #A0785A;
+  line-height: 1;
+}
+
+/* === 内容文本 === */
+.content-text {
+  font-size: 28rpx;
+  font-weight: 400;
+  color: #1A1A1A;
+  line-height: 1.7;
   white-space: pre-line;
 }
 
-.contact-row {
+/* === 联系方式卡片 === */
+.contact-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 20rpx;
+  background: #FAF8F5;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.08);
   margin-bottom: 16rpx;
+}
+
+.contact-item:last-child {
+  margin-bottom: 0;
+}
+
+.contact-label-box {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.contact-icon {
+  font-size: 32rpx;
+  line-height: 1;
 }
 
 .contact-label {
   font-size: 28rpx;
-  color: #666666;
-  width: 120rpx;
+  font-weight: 500;
+  color: #6B5744;
+  line-height: 1;
 }
 
 .contact-value {
   font-size: 28rpx;
-  color: #8B4513;
-  font-weight: bold;
+  font-weight: 600;
+  color: #A0785A;
+  line-height: 1;
+  flex: 1;
+  text-align: center;
 }
 
-.members-list {
-  max-height: 400rpx;
-  overflow-y: auto;
+.copy-hint {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1;
 }
 
-.member-item {
+/* === 参与成员卡片 === */
+.member-count-badge {
+  background: rgba(160, 120, 90, 0.12);
+  color: #A0785A;
+  font-size: 24rpx;
+  font-weight: 600;
+  padding: 8rpx 12rpx;
+  border-radius: 10rpx;
+  line-height: 1;
+}
+
+.members-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.member-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 20rpx;
+  background: #FAF8F5;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.08);
+}
+
+.member-avatar-large {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  border: 2rpx solid #F0EBE6;
+  margin-bottom: 4rpx;
+}
+
+.member-details {
   display: flex;
   align-items: center;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  gap: 12rpx;
 }
 
-.member-item:last-child {
-  border-bottom: none;
-}
-
-.member-avatar {
-  width: 60rpx;
-  height: 60rpx;
-  border-radius: 30rpx;
-  margin-right: 16rpx;
-}
-
-.member-info {
-  flex: 1;
-}
-
-.member-name {
+.member-name-text {
   font-size: 28rpx;
-  color: #333333;
-  font-weight: 500;
-  margin-bottom: 4rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  line-height: 1;
 }
 
-.member-level {
+.member-level-text {
   font-size: 22rpx;
-  color: #FF6B35;
-  margin-bottom: 4rpx;
-}
-
-.member-message {
-  font-size: 24rpx;
-  color: #666666;
-  line-height: 1.3;
-}
-
-.member-status {
-  text-align: right;
-}
-
-.status-text {
-  font-size: 24rpx;
+  font-weight: 500;
+  color: #D4A86A;
+  background: rgba(212, 168, 106, 0.15);
   padding: 4rpx 8rpx;
+  border-radius: 6rpx;
+  line-height: 1;
+}
+
+.member-status-tag {
+  font-size: 22rpx;
+  font-weight: 500;
+  padding: 6rpx 10rpx;
   border-radius: 8rpx;
+  line-height: 1;
+  margin-left: auto;
 }
 
 .member-applied {
-  background-color: rgba(250, 173, 20, 0.1);
-  color: #faad14;
+  background: rgba(232, 184, 97, 0.15);
+  color: #E8B861;
 }
 
 .member-confirmed {
-  background-color: rgba(82, 196, 26, 0.1);
-  color: #52c41a;
+  background: rgba(127, 176, 105, 0.15);
+  color: #7FB069;
 }
 
-.no-members {
-  text-align: center;
-  padding: 40rpx 0;
-  color: #999999;
+.member-msg-text {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #6B5744;
+  line-height: 1.5;
 }
 
-.action-bar {
+.empty-members {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 60rpx 20rpx;
+}
+
+.empty-icon {
+  font-size: 64rpx;
+  opacity: 0.3;
+  line-height: 1;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1;
+}
+
+/* === 底部操作栏 === */
+.bottom-action-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: white;
-  padding: 20rpx;
-  border-top: 1rpx solid #f0f0f0;
-  box-shadow: 0 -4rpx 12rpx rgba(0, 0, 0, 0.1);
+  background: #FFFFFF;
+  padding: 20rpx 24rpx;
+  padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid rgba(139, 99, 71, 0.06);
+  box-shadow: 0 -4rpx 20rpx rgba(139, 99, 71, 0.08);
+  z-index: 100;
 }
 
-.action-btn {
+.action-button {
   width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 44rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(160, 120, 90, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-button:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 4rpx 16rpx rgba(160, 120, 90, 0.2);
+}
+
+.action-primary {
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+}
+
+.action-secondary {
+  background: linear-gradient(135deg, #E8B861 0%, #D4A856 100%);
+  box-shadow: 0 8rpx 24rpx rgba(232, 184, 97, 0.25);
+}
+
+.action-manage {
+  background: linear-gradient(135deg, #7FB069 0%, #8BC34A 100%);
+  box-shadow: 0 8rpx 24rpx rgba(127, 176, 105, 0.25);
+}
+
+.button-text {
   font-size: 32rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 2rpx;
+  line-height: 1;
 }
 
-.action-info {
-  text-align: center;
-  padding: 20rpx 0;
+.action-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 0;
 }
 
-.info-text {
+.status-info-text {
   font-size: 28rpx;
-  color: #999999;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1.5;
 }
 
-/* 弹窗样式 */
+/* === 报名弹窗 === */
 .apply-popup {
-  background: white;
+  background: #FFFFFF;
   border-radius: 24rpx 24rpx 0 0;
   max-height: 60vh;
 }
@@ -889,67 +1340,79 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 32rpx 32rpx 24rpx;
+  border-bottom: 1rpx solid #F5F0EB;
 }
 
 .popup-title {
-  font-size: 32rpx;
-  font-weight: bold;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #5D4E37;
+  line-height: 1;
 }
 
 .popup-close {
-  font-size: 40rpx;
-  color: #999999;
+  font-size: 48rpx;
+  font-weight: 300;
+  color: #BFBFBF;
+  line-height: 1;
 }
 
 .popup-body {
-  padding: 30rpx;
+  padding: 32rpx;
 }
 
 .form-item {
-  margin-bottom: 30rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 .form-label {
   font-size: 28rpx;
-  color: #333333;
-  margin-bottom: 12rpx;
-  display: block;
+  font-weight: 500;
+  color: #5D4E37;
+  line-height: 1;
 }
 
 .apply-textarea {
   width: 100%;
-  min-height: 160rpx;
+  min-height: 180rpx;
   padding: 20rpx;
-  border: 1rpx solid #e8e8e8;
-  border-radius: 8rpx;
+  background: #FAF8F5;
+  border: 1rpx solid rgba(160, 120, 90, 0.15);
+  border-radius: 12rpx;
   font-size: 28rpx;
-  line-height: 1.5;
+  line-height: 1.6;
+  color: #1A1A1A;
+  box-sizing: border-box;
 }
 
 .popup-footer {
-  padding: 20rpx 30rpx;
-  border-top: 1rpx solid #f0f0f0;
+  padding: 20rpx 32rpx 32rpx;
 }
 
 .submit-btn {
   width: 100%;
-  height: 80rpx;
-  line-height: 80rpx;
-  border-radius: 40rpx;
+  height: 88rpx;
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  border-radius: 44rpx;
+  border: none;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  box-shadow: 0 8rpx 24rpx rgba(160, 120, 90, 0.3);
 }
 
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 60vh;
-}
-
-/* 底部安全区域 */
-.action-bar {
-  padding-bottom: constant(safe-area-inset-bottom);
-  padding-bottom: env(safe-area-inset-bottom);
+/* 脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 </style>

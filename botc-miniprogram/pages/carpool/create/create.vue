@@ -1,10 +1,19 @@
 <template>
   <view class="page">
+    <!-- 页面标题 -->
+    <view class="page-header">
+      <text class="page-title">发起拼车</text>
+      <text class="page-subtitle">填写拼车信息，邀请志同道合的玩家</text>
+    </view>
+
     <view class="container">
-      <!-- 表单卡片 -->
-      <view class="form-card card">
-        <view class="card-body">
-          <!-- 基础信息 -->
+      <!-- 基础信息卡片 -->
+      <view class="section-card">
+        <view class="section-header">
+          <view class="section-icon">📝</view>
+          <text class="section-title">基础信息</text>
+        </view>
+        <view class="section-body">
           <uni-forms :model="formData" ref="form" :rules="formRules">
             <uni-forms-item label="拼车标题" required name="title">
               <uni-easyinput v-model="formData.title" placeholder="请输入拼车标题" maxlength="100"></uni-easyinput>
@@ -61,45 +70,59 @@
         </view>
       </view>
 
-      <!-- 详细说明 -->
-      <view class="desc-card card">
-        <view class="card-header">
-          <text class="card-title">详细说明</text>
+      <!-- 详细描述卡片 -->
+      <view class="section-card">
+        <view class="section-header">
+          <view class="section-icon">📋</view>
+          <text class="section-title">详细说明</text>
         </view>
-        <view class="card-body">
-          <textarea 
-            v-model="formData.description"
-            placeholder="描述拼车详情、游戏安排等..."
-            maxlength="500"
-            class="desc-textarea">
-          </textarea>
-          <text class="char-count">{{ formData.description.length }}/500</text>
-        </view>
-      </view>
-
-      <!-- 玩家要求 -->
-      <view class="requirements-card card">
-        <view class="card-header">
-          <text class="card-title">玩家要求</text>
-        </view>
-        <view class="card-body">
-          <textarea 
-            v-model="formData.requirements"
-            placeholder="对玩家的要求，如经验、时间等..."
-            maxlength="300"
-            class="requirements-textarea">
-          </textarea>
-          <text class="char-count">{{ formData.requirements.length }}/300</text>
+        <view class="section-body">
+          <view class="textarea-wrapper">
+            <textarea 
+              v-model="formData.description"
+              placeholder="描述拼车详情、游戏安排、注意事项等..."
+              maxlength="500"
+              class="custom-textarea"
+              placeholder-class="textarea-placeholder">
+            </textarea>
+            <view class="char-count">
+              <text>{{ formData.description.length }}/500</text>
+            </view>
+          </view>
         </view>
       </view>
 
-      <!-- 联系方式 -->
-      <view class="contact-card card">
-        <view class="card-header">
-          <text class="card-title">联系方式</text>
-          <text class="card-subtitle">（至少填写一种）</text>
+      <!-- 玩家要求卡片 -->
+      <view class="section-card">
+        <view class="section-header">
+          <view class="section-icon">👥</view>
+          <text class="section-title">玩家要求</text>
+          <text class="section-hint">可选</text>
         </view>
-        <view class="card-body">
+        <view class="section-body">
+          <view class="textarea-wrapper">
+            <textarea 
+              v-model="formData.requirements"
+              placeholder="对玩家的要求，如经验、时间、水平等..."
+              maxlength="300"
+              class="custom-textarea"
+              placeholder-class="textarea-placeholder">
+            </textarea>
+            <view class="char-count">
+              <text>{{ formData.requirements.length }}/300</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 联系方式卡片 -->
+      <view class="section-card">
+        <view class="section-header">
+          <view class="section-icon">📞</view>
+          <text class="section-title">联系方式</text>
+          <text class="section-required">至少填写一种</text>
+        </view>
+        <view class="section-body">
           <uni-forms :model="formData" ref="contactForm">
             <uni-forms-item label="微信号" name="contactWechat">
               <uni-easyinput v-model="formData.contactWechat" placeholder="请输入微信号" maxlength="50"></uni-easyinput>
@@ -117,29 +140,32 @@
         </view>
       </view>
 
-      <!-- 标签 -->
-      <view class="tags-card card">
-        <view class="card-header">
-          <text class="card-title">标签</text>
+      <!-- 标签卡片 -->
+      <view class="section-card">
+        <view class="section-header">
+          <view class="section-icon">🏷️</view>
+          <text class="section-title">特色标签</text>
+          <text class="section-hint">最多5个</text>
         </view>
-        <view class="card-body">
+        <view class="section-body">
           <view class="tag-selector">
-            <text 
+            <view 
               v-for="tag in availableTags"
               :key="tag"
-              :class="['tag-item', formData.tags.includes(tag) ? 'selected' : '']"
+              :class="['tag-chip', formData.tags.includes(tag) ? 'tag-selected' : '']"
               @click="toggleTag(tag)">
-              {{ tag }}
-            </text>
+              <text class="tag-text">{{ tag }}</text>
+            </view>
           </view>
         </view>
       </view>
 
       <!-- 提交按钮 -->
-      <view class="submit-container">
-        <button class="submit-btn btn-primary" @click="submitCarpool" :loading="submitting">
-          发起拼车
+      <view class="submit-section">
+        <button class="submit-btn" @click="submitCarpool" :loading="submitting" :disabled="submitting">
+          <text class="submit-text">{{ submitting ? '发起中...' : '立即发起拼车' }}</text>
         </button>
+        <text class="submit-hint">发起后将自动成为房主，可以管理拼车</text>
       </view>
     </view>
   </view>
@@ -385,64 +411,234 @@ export default {
 </script>
 
 <style scoped>
-.form-card, .desc-card, .requirements-card, .contact-card, .tags-card {
-  margin: 20rpx;
+/* 页面背景 - 温暖米色调 */
+.page {
+  background: #FAF9F7;
+  min-height: 100vh;
+  padding-bottom: 40rpx;
 }
 
-.card-subtitle {
-  font-size: 24rpx;
-  color: #999999;
-  margin-left: 10rpx;
+/* 页面标题区域 */
+.page-header {
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  padding: 60rpx 32rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
 }
 
-.desc-textarea, .requirements-textarea {
-  width: 100%;
-  min-height: 160rpx;
-  padding: 20rpx;
-  border: 1rpx solid #e8e8e8;
-  border-radius: 8rpx;
-  font-size: 28rpx;
+.page-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.2;
+  letter-spacing: 1rpx;
+}
+
+.page-subtitle {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.5;
 }
 
-.char-count {
-  font-size: 22rpx;
-  color: #999999;
-  text-align: right;
-  margin-top: 8rpx;
+/* 内容容器 */
+.container {
+  padding: 24rpx;
 }
 
+/* 分组卡片 */
+.section-card {
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(139, 99, 71, 0.08);
+  border: 1rpx solid rgba(139, 99, 71, 0.06);
+  overflow: hidden;
+}
+
+/* 分组头部 */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx 24rpx 20rpx;
+  border-bottom: 1rpx solid #F5F0EB;
+}
+
+.section-icon {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #5D4E37;
+  line-height: 1;
+  flex: 1;
+}
+
+.section-hint {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1;
+}
+
+.section-required {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #E8B861;
+  background: rgba(232, 184, 97, 0.12);
+  padding: 6rpx 12rpx;
+  border-radius: 8rpx;
+  line-height: 1;
+}
+
+/* 分组内容 */
+.section-body {
+  padding: 24rpx;
+}
+
+/* 文本域包装器 */
+.textarea-wrapper {
+  position: relative;
+}
+
+.custom-textarea {
+  width: 100%;
+  min-height: 180rpx;
+  padding: 20rpx;
+  background: #FAF8F5;
+  border: 1rpx solid rgba(160, 120, 90, 0.15);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #1A1A1A;
+  box-sizing: border-box;
+}
+
+.textarea-placeholder {
+  color: #BFBFBF;
+}
+
+.char-count {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.char-count text {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1;
+}
+
+/* 标签选择器 */
 .tag-selector {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
 }
 
-.tag-item {
-  font-size: 26rpx;
-  color: #666666;
-  background-color: #f5f5f5;
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
   padding: 12rpx 20rpx;
-  border-radius: 20rpx;
-  border: 1rpx solid transparent;
+  background: #F5F0EB;
+  border-radius: 16rpx;
+  border: 2rpx solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.tag-item.selected {
-  background-color: #8B4513;
-  color: white;
+.tag-chip.tag-selected {
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  border-color: rgba(160, 120, 90, 0.2);
+  box-shadow: 0 4rpx 12rpx rgba(160, 120, 90, 0.2);
 }
 
-.submit-container {
-  padding: 40rpx 20rpx;
-  padding-bottom: constant(safe-area-inset-bottom);
-  padding-bottom: env(safe-area-inset-bottom);
+.tag-text {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #6B5744;
+  line-height: 1;
+}
+
+.tag-chip.tag-selected .tag-text {
+  color: #FFFFFF;
+}
+
+/* 提交区域 */
+.submit-section {
+  padding: 32rpx 24rpx;
+  padding-bottom: calc(40rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
 }
 
 .submit-btn {
   width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 44rpx;
+  height: 96rpx;
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  border-radius: 48rpx;
+  border: none;
+  box-shadow: 0 8rpx 24rpx rgba(160, 120, 90, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-btn:active:not([disabled]) {
+  transform: translateY(2rpx);
+  box-shadow: 0 4rpx 16rpx rgba(160, 120, 90, 0.25);
+}
+
+.submit-btn[disabled] {
+  opacity: 0.6;
+  box-shadow: 0 4rpx 16rpx rgba(160, 120, 90, 0.15);
+}
+
+.submit-text {
   font-size: 32rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 2rpx;
+  line-height: 1;
+}
+
+.submit-hint {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #BFBFBF;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* uni-forms 样式覆盖 */
+/deep/ .uni-forms-item__label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #5D4E37;
+}
+
+/deep/ .uni-easyinput__content {
+  background: #FAF8F5;
+  border: 1rpx solid rgba(160, 120, 90, 0.15);
+  border-radius: 12rpx;
+}
+
+/deep/ .uni-easyinput__content-input {
+  font-size: 28rpx;
+  color: #1A1A1A;
+}
+
+/deep/ .uni-easyinput__placeholder-class {
+  color: #BFBFBF;
 }
 </style>

@@ -1,30 +1,42 @@
 <template>
   <view class="page">
-    <!-- 筛选栏 -->
-    <view class="filter-bar">
-      <scroll-view scroll-x="true" class="filter-scroll">
+    <!-- 顶部栏 - 整合筛选和创建 -->
+    <view class="top-bar">
+      <!-- 筛选区域 - 不折叠 -->
+      <view class="filter-container">
         <view class="filter-items">
-          <text 
-            :class="['filter-item', currentType === 'all' ? 'active' : '']"
-            @click="changeType('all')">全部</text>
-          <text 
-            :class="['filter-item', currentType === 'urgent' ? 'active' : '']"
-            @click="changeType('urgent')">即将开始</text>
-          <text 
-            :class="['filter-item', currentType === 'recruiting' ? 'active' : '']"
-            @click="changeType('recruiting')">招募中</text>
-          <text 
-            :class="['filter-item', currentType === 'today' ? 'active' : '']"
-            @click="changeType('today')">今日</text>
+          <view 
+            :class="['filter-chip', currentType === 'all' ? 'active' : '']"
+            @click="changeType('all')">
+            <text class="filter-text">全部</text>
+          </view>
+          <view 
+            :class="['filter-chip', currentType === 'urgent' ? 'active' : '']"
+            @click="changeType('urgent')">
+            <text class="filter-icon">🔥</text>
+            <text class="filter-text">即将开始</text>
+          </view>
+          <view 
+            :class="['filter-chip', currentType === 'recruiting' ? 'active' : '']"
+            @click="changeType('recruiting')">
+            <text class="filter-icon">👥</text>
+            <text class="filter-text">招募中</text>
+          </view>
+          <view 
+            :class="['filter-chip', currentType === 'today' ? 'active' : '']"
+            @click="changeType('today')">
+            <text class="filter-icon">📅</text>
+            <text class="filter-text">今日</text>
+          </view>
         </view>
-      </scroll-view>
-    </view>
-
-    <!-- 发起拼车按钮 -->
-    <view class="create-btn-container">
-      <button class="create-btn btn-primary" @click="goToCreate">
-        <text>发起拼车</text>
-      </button>
+      </view>
+      
+      <!-- 创建按钮 -->
+      <view class="create-btn-wrapper">
+        <view class="create-btn" @click="goToCreate">
+          <text class="create-icon">+</text>
+        </view>
+      </view>
     </view>
 
     <!-- 拼车列表 -->
@@ -43,70 +55,95 @@
         <view 
           v-for="room in carpoolList" 
           :key="room._id"
-          class="carpool-card card"
+          class="carpool-card"
           @click="goToDetail(room._id)">
           
-          <view class="card-body">
-            <!-- 拼车标题和状态 -->
-            <view class="carpool-header flex-between">
+          <!-- 卡片头部 - 状态标签 -->
+          <view class="card-status-bar" :class="getStatusClass(room.status)">
+            <text class="status-text">{{ getStatusText(room.status) }}</text>
+            <text v-if="room.status === 1" class="status-icon">●</text>
+          </view>
+          
+          <!-- 卡片内容 -->
+          <view class="card-content">
+            <!-- 标题区域 -->
+            <view class="title-section">
               <text class="carpool-title">{{ room.title }}</text>
-              <text class="status-badge" :class="getStatusClass(room.status)">
-                {{ getStatusText(room.status) }}
-              </text>
+              <text class="room-number">#{{ room.room_number }}</text>
             </view>
 
             <!-- 关联剧本信息 -->
-            <view v-if="room.script" class="related-script">
-              <text class="script-info">🎭 {{ room.script.title }}</text>
+            <view v-if="room.script" class="script-tag">
+              <text class="script-icon">🎭</text>
+              <text class="script-name">{{ room.script.title }}</text>
             </view>
 
-            <!-- 基础信息 -->
-            <view class="carpool-info">
-              <view class="info-row">
-                <text class="info-icon">📍</text>
-                <text class="info-text">{{ room.location }}</text>
-              </view>
-              <view class="info-row">
+            <!-- 核心信息网格 -->
+            <view class="info-grid">
+              <!-- 时间 -->
+              <view class="info-item time-item">
                 <text class="info-icon">⏰</text>
-                <text class="info-text">{{ formatGameTime(room.game_time) }}</text>
+                <view class="info-content">
+                  <text class="info-label">开始时间</text>
+                  <text class="info-value">{{ formatGameTime(room.game_time) }}</text>
+                </view>
               </view>
-              <view class="info-row">
-                <text class="info-icon">👥</text>
-                <text class="info-text">{{ room.current_players }}/{{ room.max_players }}人</text>
-                <view class="progress-bar">
+              
+              <!-- 地点 -->
+              <view class="info-item location-item">
+                <text class="info-icon">📍</text>
+                <view class="info-content">
+                  <text class="info-label">活动地点</text>
+                  <text class="info-value">{{ room.location }}</text>
+                </view>
+              </view>
+            </view>
+
+            <!-- 人数进度条 -->
+            <view class="players-section">
+              <view class="players-header">
+                <text class="players-icon">👥</text>
+                <text class="players-count">{{ room.current_players }}/{{ room.max_players }}人</text>
+                <text class="players-status" :class="room.current_players === room.max_players ? 'full' : ''">
+                  {{ room.current_players === room.max_players ? '已满员' : `还差${room.max_players - room.current_players}人` }}
+                </text>
+              </view>
+              <view class="players-progress">
+                <view class="progress-track">
                   <view 
-                    class="progress-fill" 
+                    class="progress-bar-fill" 
+                    :class="room.current_players === room.max_players ? 'full' : ''"
                     :style="{ width: getProgressWidth(room.current_players, room.max_players) }">
                   </view>
                 </view>
               </view>
             </view>
 
-            <!-- 发起人和说书人信息 -->
-            <view class="people-info flex-between">
-              <view class="host-info">
-                <text class="people-label">发起人：</text>
-                <text class="people-name">{{ room.host ? room.host.nickname : '未知' }}</text>
-                <text v-if="room.host && room.host.level" class="user-level">Lv.{{ room.host.level }}</text>
+            <!-- 人员信息 -->
+            <view class="people-section">
+              <view class="person-item">
+                <text class="person-role">发起人</text>
+                <text class="person-name">{{ room.host ? room.host.nickname : '未知' }}</text>
+                <text v-if="room.host && room.host.level" class="level-badge">Lv{{ room.host.level }}</text>
               </view>
-              <view v-if="room.storyteller" class="storyteller-info">
-                <text class="people-label">说书人：</text>
-                <text class="people-name storyteller-name">{{ room.storyteller.nickname }}</text>
+              <view v-if="room.storyteller" class="person-item storyteller">
+                <text class="person-role">说书人</text>
+                <text class="person-name">{{ room.storyteller.nickname }}</text>
               </view>
             </view>
 
             <!-- 描述 -->
-            <text v-if="room.description" class="carpool-desc">{{ room.description }}</text>
+            <text v-if="room.description" class="description">{{ room.description }}</text>
 
-            <!-- 标签 -->
-            <view v-if="room.tags && room.tags.length > 0" class="carpool-tags">
-              <text v-for="tag in room.tags.slice(0, 3)" :key="tag" class="tag">{{ tag }}</text>
-            </view>
-
-            <!-- 底部信息 -->
-            <view class="carpool-footer">
+            <!-- 底部标签和时间 -->
+            <view class="card-footer">
+              <!-- 标签 -->
+              <view v-if="room.tags && room.tags.length > 0" class="tags-row">
+                <text v-for="tag in room.tags.slice(0, 3)" :key="tag" class="tag-item">
+                  {{ tag }}
+                </text>
+              </view>
               <text class="create-time">{{ formatTime(room.created_at) }}</text>
-              <text class="room-number">房间号：{{ room.room_number }}</text>
             </view>
           </view>
         </view>
@@ -335,64 +372,100 @@ export default {
 </script>
 
 <style scoped>
-/* 筛选栏 */
-.filter-bar {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E8E8E8;
+/* 页面背景 - 温暖的米色调 */
+.page {
+  background: #FAF9F7;
+  min-height: 100vh;
 }
 
-.filter-scroll {
-  white-space: nowrap;
-  padding: 24rpx 0;
+/* 顶部栏 - 整合筛选和创建按钮 */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(139, 69, 19, 0.08);
+}
+
+/* 筛选容器 - 不折叠 */
+.filter-container {
+  flex: 1;
+  overflow: visible;
 }
 
 .filter-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+/* 筛选芯片 - 柔和配色 */
+.filter-chip {
   display: inline-flex;
-  padding: 0 24rpx;
-}
-
-/* 筛选项 - Apple HIG触摸区域 */
-.filter-item {
-  display: inline-block;
-  padding: 16rpx 24rpx;
-  margin-right: 16rpx;
-  font-size: 28rpx;
-  font-weight: 400;
-  color: #666666;
-  background-color: #F5F5F5;
+  align-items: center;
+  gap: 6rpx;
+  padding: 12rpx 16rpx;
+  background: #F5F0EB;
   border-radius: 16rpx;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  min-height: 60rpx;
-  line-height: 1.4;
-  transition: all 0.2s ease;
+  border: 2rpx solid transparent;
 }
 
-.filter-item.active {
-  background-color: #8B4513;
+.filter-chip.active {
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  box-shadow: 0 4rpx 16rpx rgba(160, 120, 90, 0.25);
+  border-color: rgba(160, 120, 90, 0.2);
+}
+
+.filter-icon {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.filter-text {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #6B5744;
+  line-height: 1;
+}
+
+.filter-chip.active .filter-text,
+.filter-chip.active .filter-icon {
   color: #FFFFFF;
-  font-weight: 500;
 }
 
-/* 创建按钮容器 */
-.create-btn-container {
-  padding: 24rpx;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E8E8E8;
+/* 创建按钮包装器 */
+.create-btn-wrapper {
+  margin-left: 16rpx;
 }
 
-/* 主要按钮 - Apple HIG规范 */
+/* 创建按钮 - 柔和配色 */
 .create-btn {
-  width: 100%;
+  width: 88rpx;
   height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 12rpx;
-  font-size: 30rpx;
-  font-weight: 500;
-  transition: opacity 0.2s ease;
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6rpx 20rpx rgba(160, 120, 90, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .create-btn:active {
-  opacity: 0.6;
+  transform: scale(0.92);
+  box-shadow: 0 4rpx 12rpx rgba(160, 120, 90, 0.25);
+}
+
+.create-icon {
+  font-size: 48rpx;
+  font-weight: 300;
+  color: #FFFFFF;
+  line-height: 1;
 }
 
 /* 拼车列表容器 */
@@ -400,225 +473,373 @@ export default {
   padding: 24rpx;
 }
 
-/* 拼车卡片 - 增强交互反馈 */
+/* 拼车卡片 - 柔和卡片设计 */
 .carpool-card {
+  background: #FFFFFF;
+  border-radius: 20rpx;
   margin-bottom: 24rpx;
-  transition: all 0.3s ease;
-  min-height: 200rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 20rpx rgba(139, 99, 71, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1rpx solid rgba(139, 99, 71, 0.06);
 }
 
 .carpool-card:active {
-  transform: scale(0.98);
-  opacity: 0.95;
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 12rpx rgba(139, 99, 71, 0.12);
 }
 
-/* 拼车标题区域 */
-.carpool-header {
-  margin-bottom: 16rpx;
+/* 卡片状态栏 - 顶部彩色条 - 柔和配色 */
+.card-status-bar {
+  height: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 24rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
 }
 
-/* 拼车标题 - 次级标题规范 */
+.card-status-bar.status-recruiting {
+  background: linear-gradient(90deg, #7FB069 0%, #8BC34A 100%);
+}
+
+.card-status-bar.status-full {
+  background: linear-gradient(90deg, #E8B861 0%, #F4C542 100%);
+}
+
+.card-status-bar.status-confirmed {
+  background: linear-gradient(90deg, #5DADE2 0%, #7FC8F8 100%);
+}
+
+.card-status-bar.status-finished {
+  background: linear-gradient(90deg, #C8B8A8 0%, #D8CABD 100%);
+}
+
+.status-text {
+  color: #FFFFFF;
+  font-size: 22rpx;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1rpx;
+}
+
+.status-icon {
+  color: #FFFFFF;
+  font-size: 16rpx;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* 卡片内容区 */
+.card-content {
+  padding: 24rpx;
+}
+
+/* 标题区域 */
+.title-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
 .carpool-title {
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 700;
   color: #1A1A1A;
   flex: 1;
-  margin-right: 24rpx;
-  line-height: 1.4;
+  line-height: 1.3;
+  margin-right: 16rpx;
 }
 
-/* 状态标签 */
-.status-badge {
-  font-size: 24rpx;
-  font-weight: 500;
-  padding: 8rpx 16rpx;
-  border-radius: 8rpx;
-  color: #FFFFFF;
+.room-number {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #A0785A;
+  background: #F5F0EB;
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  letter-spacing: 0.5rpx;
+}
+
+/* 剧本标签 */
+.script-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  background: linear-gradient(135deg, #F9F5F0 0%, #F5F0EB 100%);
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.15);
+}
+
+.script-icon {
+  font-size: 28rpx;
   line-height: 1;
 }
 
-/* Apple HIG辅助色系 */
-.status-recruiting { background-color: #52C41A; }
-.status-full { background-color: #FAAD14; }
-.status-confirmed { background-color: #1890FF; }
-.status-finished { background-color: #D9D9D9; color: #666666 !important; }
-
-/* 关联剧本 */
-.related-script {
-  margin-bottom: 16rpx;
-}
-
-.script-info {
+.script-name {
   font-size: 26rpx;
-  font-weight: 400;
-  color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.08);
-  padding: 8rpx 16rpx;
-  border-radius: 8rpx;
-  line-height: 1.5;
+  font-weight: 500;
+  color: #8B6F47;
+  line-height: 1;
 }
 
-/* 拼车信息区域 */
-.carpool-info {
-  margin-bottom: 16rpx;
+/* 信息网格 */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
 }
 
-.info-row {
+.info-item {
   display: flex;
-  align-items: center;
-  margin-bottom: 16rpx;
-  min-height: 40rpx;
-}
-
-.info-row:last-child {
-  margin-bottom: 0;
+  align-items: flex-start;
+  gap: 12rpx;
+  background: #FAF8F5;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.08);
 }
 
 .info-icon {
-  font-size: 24rpx;
-  width: 48rpx;
-  flex-shrink: 0;
+  font-size: 28rpx;
+  line-height: 1;
+  margin-top: 2rpx;
 }
 
-.info-text {
-  font-size: 26rpx;
-  font-weight: 400;
-  color: #1A1A1A;
+.info-content {
   flex: 1;
-  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
 }
 
-/* 进度条 */
-.progress-bar {
-  width: 80rpx;
-  height: 8rpx;
-  background-color: #F0F0F0;
-  border-radius: 4rpx;
-  overflow: hidden;
-  margin-left: 16rpx;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #8B4513;
-  border-radius: 4rpx;
-  transition: width 0.3s ease;
-}
-
-/* 人员信息 */
-.people-info {
-  margin-bottom: 16rpx;
-  font-size: 24rpx;
-  line-height: 1.4;
-}
-
-.people-label {
-  color: #999999;
-  font-weight: 400;
-}
-
-.people-name {
-  color: #1A1A1A;
-  font-weight: 400;
-  margin-left: 8rpx;
-}
-
-.storyteller-name {
-  color: #8B4513;
-  font-weight: 500;
-}
-
-/* 用户等级标签 */
-.user-level {
-  color: #FF6B35;
+.info-label {
   font-size: 22rpx;
-  font-weight: 500;
-  background-color: rgba(255, 107, 53, 0.08);
-  padding: 4rpx 8rpx;
-  border-radius: 8rpx;
-  margin-left: 8rpx;
+  font-weight: 400;
+  color: #8C8C8C;
   line-height: 1;
 }
 
-/* 拼车描述 */
-.carpool-desc {
+.info-value {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.3;
+}
+
+/* 人数区域 - 柔和配色 */
+.players-section {
+  background: linear-gradient(135deg, #F9F7F4 0%, #F5F2EE 100%);
+  padding: 16rpx;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.1);
+}
+
+.players-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.players-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.players-count {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #5D4E37;
+  line-height: 1;
+}
+
+.players-status {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #7FB069;
+  background: rgba(127, 176, 105, 0.12);
+  padding: 6rpx 12rpx;
+  border-radius: 8rpx;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.players-status.full {
+  color: #E8B861;
+  background: rgba(232, 184, 97, 0.12);
+}
+
+.players-progress {
+  margin-top: 12rpx;
+}
+
+.progress-track {
+  height: 10rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #A0785A 0%, #8B6F47 100%);
+  border-radius: 8rpx;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-bar-fill.full {
+  background: linear-gradient(90deg, #E8B861 0%, #D4A856 100%);
+}
+
+/* 人员区域 */
+.people-section {
+  display: flex;
+  gap: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.person-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: #FAF8F5;
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #F0EBE6;
+}
+
+.person-item.storyteller {
+  background: linear-gradient(135deg, rgba(160, 120, 90, 0.08) 0%, rgba(160, 120, 90, 0.12) 100%);
+  border-color: rgba(160, 120, 90, 0.2);
+}
+
+.person-role {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #8C8C8C;
+  line-height: 1;
+}
+
+.person-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  line-height: 1;
+}
+
+.person-item.storyteller .person-name {
+  color: #8B6F47;
+}
+
+.level-badge {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #D4A86A;
+  background: rgba(212, 168, 106, 0.15);
+  padding: 4rpx 8rpx;
+  border-radius: 6rpx;
+  line-height: 1;
+  margin-left: auto;
+}
+
+/* 描述 */
+.description {
   font-size: 26rpx;
   font-weight: 400;
-  color: #666666;
+  color: #595959;
   line-height: 1.6;
-  margin-bottom: 16rpx;
+  margin-bottom: 20rpx;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* 标签区域 */
-.carpool-tags {
+/* 底部区域 */
+.card-footer {
+  padding-top: 16rpx;
+  border-top: 1rpx solid #F0F0F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 标签行 */
+.tags-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8rpx;
-  margin-bottom: 16rpx;
+  flex: 1;
 }
 
-.tag {
+.tag-item {
   font-size: 22rpx;
-  font-weight: 400;
-  color: #8B4513;
-  background-color: rgba(139, 69, 19, 0.08);
-  padding: 8rpx 16rpx;
+  font-weight: 500;
+  color: #8B6F47;
+  background: #F5F0EB;
+  padding: 6rpx 12rpx;
   border-radius: 8rpx;
   line-height: 1;
 }
 
-/* 页脚信息 */
-.carpool-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.create-time {
   font-size: 22rpx;
   font-weight: 400;
-  color: #999999;
-  line-height: 1.4;
+  color: #BFBFBF;
+  line-height: 1;
+  white-space: nowrap;
+  margin-left: 16rpx;
 }
 
-.room-number {
-  color: #8B4513;
-  font-weight: 500;
-}
-
-/* 加载状态 */
+/* 加载和空状态 */
 .loading-state, .empty-state {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 400rpx;
+  padding: 100rpx 40rpx;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  margin: 24rpx;
 }
 
 .empty-icon {
-  width: 120rpx;
-  height: 120rpx;
-  margin-bottom: 24rpx;
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 32rpx;
+  opacity: 0.6;
 }
 
 .empty-text {
-  color: #666666;
-  font-size: 28rpx;
-  font-weight: 400;
-  margin-bottom: 8rpx;
-  line-height: 1.5;
+  color: #595959;
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-bottom: 12rpx;
+  line-height: 1.4;
 }
 
 .empty-subtitle {
-  color: #999999;
-  font-size: 24rpx;
+  color: #BFBFBF;
+  font-size: 26rpx;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 /* 加载更多区域 */
 .load-more {
-  padding: 24rpx;
+  padding: 32rpx 24rpx;
 }
 </style>
