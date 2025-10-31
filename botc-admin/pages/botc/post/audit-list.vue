@@ -6,12 +6,62 @@
     
     <view class="uni-container">
       <!-- 筛选条件 -->
-      <view class="uni-stat--x flex">
-        <view class="uni-stat__select">
-          <uni-stat-tabs label="状态" type="box" mode="status" 
-            :current="where.status" 
-            @change="changeStatus" 
-            :tabs="statusTabs" />
+      <view class="filter-section">
+        <!-- 筛选条件行 -->
+        <view class="filter-row">
+          <!-- 状态筛选 -->
+          <view class="filter-item">
+            <text class="filter-label">状态：</text>
+            <uni-data-select
+              v-model="where.status"
+              :localdata="statusOptions"
+              placeholder="请选择状态"
+              @change="onStatusChange"
+              :clear="false"
+              style="flex: 1; min-width: 150px;"
+            ></uni-data-select>
+          </view>
+          
+          <!-- 时间筛选 -->
+          <view class="filter-item">
+            <text class="filter-label">发布时间：</text>
+            <view class="date-range">
+              <uni-datetime-picker 
+                v-model="where.startDate" 
+                type="date"
+                placeholder="开始日期"
+                @change="onDateChange"
+                :clear-icon="true"
+              />
+              <text style="margin: 0 10px;">至</text>
+              <uni-datetime-picker 
+                v-model="where.endDate" 
+                type="date"
+                placeholder="结束日期"
+                @change="onDateChange"
+                :clear-icon="true"
+              />
+            </view>
+          </view>
+        </view>
+        
+        <view class="filter-row">
+          <!-- 玩家筛选 -->
+          <view class="filter-item">
+            <text class="filter-label">发布者：</text>
+            <input 
+              v-model="where.userKeyword" 
+              placeholder="输入用户昵称或ID搜索"
+              class="search-input"
+              @confirm="search"
+            />
+          </view>
+          
+          <!-- 操作按钮 -->
+          <view class="filter-buttons">
+            <button type="primary" size="mini" @click="search">搜索</button>
+            <button type="default" size="mini" @click="resetFilter">重置</button>
+          </view>
         </view>
       </view>
       
@@ -44,15 +94,12 @@
           </uni-td>
           <uni-td align="center">{{ formatTime(item.created_at) }}</uni-td>
           <uni-td align="center">
-            <view class="uni-group">
-              <button class="uni-button-small" type="primary" size="mini" 
-                @click="viewDetail(item)">查看</button>
-              <button v-if="item.status === 1" class="uni-button-small" 
-                type="warn" size="mini" @click="hidePost(item)">隐藏</button>
-              <button v-if="item.status === 3" class="uni-button-small" 
-                type="primary" size="mini" @click="showPost(item)">显示</button>
-              <button class="uni-button-small" type="warn" size="mini" 
-                @click="deleteItem(item)">删除</button>
+            <view class="action-buttons">
+              <button class="action-btn action-btn-primary" @click="viewDetail(item)">查看</button>
+              <button v-if="item.status === 1" class="action-btn action-btn-warning" @click="hidePost(item)">隐藏</button>
+              <button v-if="item.status === 3" class="action-btn action-btn-primary" @click="showPost(item)">显示</button>
+              <button v-if="item.status !== 0" class="action-btn action-btn-danger" @click="deleteItem(item)">删除</button>
+              <button v-if="item.status === 0" class="action-btn action-btn-danger" @click="permanentDelete(item)">彻底删除</button>
             </view>
           </uni-td>
         </uni-tr>
@@ -122,7 +169,10 @@ export default {
   data() {
     return {
       where: {
-        status: 1
+        status: '', // 默认为空，显示所有状态
+        startDate: '',
+        endDate: '',
+        userKeyword: ''
       },
       tableData: [],
       loading: false,
@@ -130,13 +180,15 @@ export default {
       pageCurrent: 1,
       pageSize: 20,
       total: 0,
-      statusTabs: [
+      statusOptions: [
+        { value: '', text: '全部' },
         { value: 1, text: '正常' },
         { value: 2, text: '审核中' },
         { value: 3, text: '已隐藏' },
         { value: 0, text: '已删除' }
       ],
-      currentItem: null
+      currentItem: null,
+      userMap: {} // 缓存用户信息
     }
   },
   
@@ -161,16 +213,73 @@ export default {
       
       try {
         console.log('=== 开始查询帖子列表 ===')
-        console.log('当前状态筛选:', this.where.status)
-        console.log('页码:', this.pageCurrent)
+        console.log('筛选条件:', this.where)
         
+        // 构建查询条件
         const whereCondition = {}
-        // 只有明确指定状态时才添加状态筛选
+        const dbCmd = db.command
+        
+        // 状态筛选
         if (this.where.status !== undefined && this.where.status !== null && this.where.status !== '') {
           whereCondition.status = this.where.status
+          console.log('✓ 添加状态筛选:', this.where.status)
+        } else {
+          console.log('✓ 不限制状态（查询所有）')
         }
         
-        console.log('查询条件:', whereCondition)
+        // 时间范围筛选
+        if (this.where.startDate || this.where.endDate) {
+          whereCondition.created_at = {}
+          if (this.where.startDate) {
+            const startTime = new Date(this.where.startDate).getTime()
+            whereCondition.created_at = dbCmd.gte(startTime)
+            console.log('✓ 添加开始时间:', this.where.startDate)
+          }
+          if (this.where.endDate) {
+            const endTime = new Date(this.where.endDate + ' 23:59:59').getTime()
+            if (whereCondition.created_at.gte) {
+              whereCondition.created_at = dbCmd.and([
+                dbCmd.gte(new Date(this.where.startDate).getTime()),
+                dbCmd.lte(endTime)
+              ])
+            } else {
+              whereCondition.created_at = dbCmd.lte(endTime)
+            }
+            console.log('✓ 添加结束时间:', this.where.endDate)
+          }
+        }
+        
+        console.log('最终查询条件:', whereCondition)
+        
+        // 如果有用户关键词筛选，先查询用户
+        let userIds = []
+        if (this.where.userKeyword && this.where.userKeyword.trim()) {
+          const keyword = this.where.userKeyword.trim()
+          console.log('搜索用户关键词:', keyword)
+          
+          // 同时支持昵称和ID搜索
+          const userRes = await db.collection('uni-id-users')
+            .where(dbCmd.or([
+              { nickname: new RegExp(keyword, 'i') },
+              { _id: keyword }
+            ]))
+            .field({ _id: true })
+            .limit(100)
+            .get()
+          
+          userIds = userRes.result.data.map(u => u._id)
+          console.log('找到匹配用户:', userIds.length, '个')
+          
+          if (userIds.length === 0) {
+            // 没有找到匹配的用户
+            this.tableData = []
+            this.total = 0
+            this.loading = false
+            return
+          }
+          
+          whereCondition.user_id = dbCmd.in(userIds)
+        }
         
         // 查询帖子列表
         const res = await db.collection('botc-posts')
@@ -183,34 +292,30 @@ export default {
         console.log('查询结果:', res.result.data.length, '条')
         
         // 获取所有发布者ID
-        const userIds = [...new Set(res.result.data.map(item => item.user_id).filter(Boolean))]
+        const allUserIds = [...new Set(res.result.data.map(item => item.user_id).filter(Boolean))]
         
         // 查询发布者信息
-        let userMap = {}
-        if (userIds.length > 0) {
+        if (allUserIds.length > 0) {
           const userRes = await db.collection('uni-id-users')
             .where({
-              _id: db.command.in(userIds)
+              _id: dbCmd.in(allUserIds)
             })
             .field({ _id: true, nickname: true })
             .get()
           
           userRes.result.data.forEach(user => {
-            userMap[user._id] = user
+            this.userMap[user._id] = user
           })
         }
         
         // 组合数据
         this.tableData = res.result.data.map(item => ({
           ...item,
-          user_nickname: userMap[item.user_id]?.nickname || '-'
+          user_nickname: this.userMap[item.user_id]?.nickname || '-',
+          user_id_display: item.user_id
         }))
         
         console.log('数据组合完成，共', this.tableData.length, '条')
-        console.log('状态分布:', this.tableData.reduce((acc, item) => {
-          acc[item.status] = (acc[item.status] || 0) + 1
-          return acc
-        }, {}))
         
         // 查询总数
         const countRes = await db.collection('botc-posts')
@@ -233,17 +338,27 @@ export default {
       this.getList()
     },
     
-    changeStatus(index) {
-      console.log('=== 切换状态 ===')
-      console.log('index:', index)
-      
-      if (typeof index === 'number' && this.statusTabs[index]) {
-        this.where.status = this.statusTabs[index].value
-      } else {
-        this.where.status = index
+    resetFilter() {
+      console.log('=== 重置筛选条件 ===')
+      this.where = {
+        status: '', // 重置为空，显示所有状态
+        startDate: '',
+        endDate: '',
+        userKeyword: ''
       }
-      
-      console.log('新状态:', this.where.status)
+      this.pageCurrent = 1
+      this.getList()
+    },
+    
+    onDateChange() {
+      // 时间选择器变化时自动搜索（可选）
+      // this.search()
+    },
+    
+    onStatusChange(value) {
+      console.log('=== 状态选择变化 ===')
+      console.log('选择的状态值:', value)
+      // uni-data-select 会自动更新 v-model，所以这里只需要触发搜索
       this.search()
     },
     
@@ -366,18 +481,67 @@ export default {
     deleteItem(item) {
       uni.showModal({
         title: '确认删除',
-        content: `确定删除此帖子吗？此操作不可恢复。`,
+        content: `确定删除此帖子吗？删除后将移至"已删除"状态。`,
         success: async (res) => {
           if (res.confirm) {
             try {
               await db.collection('botc-posts').doc(item._id).update({
-                status: 0
+                status: 0,
+                deleted_at: Date.now()
               })
-              uni.showToast({ title: '删除成功', icon: 'success' })
+              uni.showToast({ title: '已删除', icon: 'success' })
               this.getList()
             } catch (e) {
               uni.showToast({ title: '删除失败', icon: 'none' })
               console.error(e)
+            }
+          }
+        }
+      })
+    },
+    
+    permanentDelete(item) {
+      uni.showModal({
+        title: '⚠️ 彻底删除',
+        content: `此操作将永久删除该帖子及所有相关数据，无法恢复！确定要继续吗？`,
+        confirmColor: '#FF0000',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              console.log('=== 彻底删除帖子 ===')
+              console.log('帖子ID:', item._id)
+              console.log('帖子内容:', item.content.substring(0, 20))
+              
+              // 1. 删除帖子相关的评论
+              const commentsRes = await db.collection('botc-post-comments')
+                .where({ post_id: item._id })
+                .remove()
+              console.log('删除评论数:', commentsRes.deleted)
+              
+              // 2. 删除帖子相关的点赞记录
+              const likesRes = await db.collection('botc-post-likes')
+                .where({ post_id: item._id })
+                .remove()
+              console.log('删除点赞记录数:', likesRes.deleted)
+              
+              // 3. 删除帖子相关的收藏记录
+              const favoritesRes = await db.collection('botc-favorites')
+                .where({ 
+                  target_type: 'post',
+                  target_id: item._id 
+                })
+                .remove()
+              console.log('删除收藏记录数:', favoritesRes.deleted)
+              
+              // 4. 删除帖子本身
+              await db.collection('botc-posts').doc(item._id).remove()
+              
+              console.log('✅ 彻底删除成功')
+              uni.showToast({ title: '彻底删除成功', icon: 'success' })
+              this.getList()
+            } catch (e) {
+              console.error('彻底删除失败:', e)
+              uni.showToast({ title: '删除失败: ' + e.message, icon: 'none' })
             }
           }
         }
@@ -408,6 +572,73 @@ export default {
   padding: 15px;
 }
 
+/* 筛选区域 */
+.filter-section {
+  background: #ffffff;
+  padding: 20px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.filter-label {
+  font-weight: 500;
+  color: #333;
+  min-width: 80px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 10px;
+}
+
+.search-input {
+  flex: 1;
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.search-input:focus {
+  border-color: #409eff;
+  outline: none;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
 .uni-stat--x {
   display: flex;
   gap: 15px;
@@ -425,15 +656,54 @@ export default {
   white-space: nowrap;
 }
 
-.uni-group {
+/* 操作按钮区域 */
+.action-buttons {
   display: flex;
-  gap: 5px;
+  gap: 8px;
   justify-content: center;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: 8px 0;
 }
 
-.uni-button-small {
-  margin: 2px;
+.action-btn {
+  min-width: 70px;
+  height: 32px;
+  line-height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.action-btn-primary {
+  background: #409eff;
+  color: white;
+}
+
+.action-btn-primary:hover {
+  background: #66b1ff;
+}
+
+.action-btn-warning {
+  background: #e6a23c;
+  color: white;
+}
+
+.action-btn-warning:hover {
+  background: #ebb563;
+}
+
+.action-btn-danger {
+  background: #f56c6c;
+  color: white;
+}
+
+.action-btn-danger:hover {
+  background: #f78989;
 }
 
 .uni-pagination-box {
