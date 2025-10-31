@@ -231,14 +231,82 @@ export default {
     async hidePost(item) {
       uni.showModal({
         title: '确认隐藏',
-        content: `确定隐藏此帖子吗？用户将无法看到该帖子。`,
+        content: `确定隐藏此帖子吗？用户将无法看到该帖子。是否同时发送警告消息？`,
+        confirmText: '隐藏并警告',
+        cancelText: '仅隐藏',
+        showCancel: true,
         success: async (res) => {
-          if (res.confirm) {
+          if (res.confirm || res.cancel) {
             try {
+              // 隐藏帖子
               await db.collection('botc-posts').doc(item._id).update({
                 status: 3
               })
-              uni.showToast({ title: '已隐藏', icon: 'success' })
+              
+              // 如果点击"隐藏并警告"，发送系统消息
+              if (res.confirm) {
+                const now = Date.now()
+                console.log('=== 准备发送系统消息 [VERSION 2.0] ===')
+                console.log('帖子完整信息:', item)
+                console.log('目标用户ID:', item.user_id)
+                console.log('用户ID类型:', typeof item.user_id)
+                console.log('用户ID长度:', item.user_id ? item.user_id.length : 0)
+                console.log('帖子ID:', item._id)
+                console.log('帖子内容:', item.content.substring(0, 20))
+                
+                const messageData = {
+                  user_id: item.user_id,
+                  type: 'warning',
+                  title: '内容违规警告',
+                  content: `您发布的帖子"${item.content.substring(0, 20)}..."因违反社区规范已被隐藏。请遵守社区规则，避免发布违规内容。`,
+                  related_type: 'post',
+                  related_id: item._id,
+                  is_read: false
+                  // created_at 会由数据库默认值自动填充
+                }
+                
+                console.log('>>> 即将通过云函数发送系统消息:')
+                console.log('  userId:', messageData.user_id, '(类型:', typeof messageData.user_id, ')')
+                console.log('  type:', messageData.type)
+                console.log('  title:', messageData.title)
+                console.log('  content:', messageData.content)
+                
+                try {
+                  // 调用云函数发送系统消息（云函数有完全权限）
+                  const cloudRes = await uniCloud.callFunction({
+                    name: 'send-system-message',
+                    data: {
+                      userId: messageData.user_id,
+                      type: messageData.type,
+                      title: messageData.title,
+                      content: messageData.content,
+                      relatedType: messageData.related_type,
+                      relatedId: messageData.related_id
+                    }
+                  })
+                  
+                  console.log('>>> 云函数调用结果:', cloudRes)
+                  
+                  if (cloudRes.result && cloudRes.result.code === 0) {
+                    const messageId = cloudRes.result.data?.messageId
+                    console.log('✅ 系统消息发送成功！')
+                    console.log('  消息ID:', messageId)
+                    console.log('  目标用户ID:', messageData.user_id)
+                    
+                  } else {
+                    console.error('❌ 系统消息发送失败')
+                    console.error('云函数返回:', cloudRes.result)
+                  }
+                } catch (error) {
+                  console.error('❌ 调用云函数发送系统消息时出错:', error)
+                  console.error('错误详情:', error.message)
+                }
+              }
+              
+              uni.showToast({ 
+                title: res.confirm ? '已隐藏并发送警告' : '已隐藏', 
+                icon: 'success' 
+              })
               this.getList()
             } catch (e) {
               uni.showToast({ title: '操作失败', icon: 'none' })

@@ -2,9 +2,17 @@
   <view class="page">
     <!-- 用户信息头部 -->
     <view class="profile-header" :class="{ 'clock-tower-gradient': !userInfo.background_image }" :style="backgroundStyle">
-      <!-- 背景图片编辑按钮 -->
-      <view class="bg-edit-btn" @click="changeBackgroundImage">
-        <text class="bg-edit-icon">🖼️</text>
+      <!-- 右上角按钮组 -->
+      <view class="header-buttons">
+        <!-- 系统消息按钮 -->
+        <view class="header-btn message-btn" @click="goToSystemMessages">
+          <text class="header-btn-icon">🔔</text>
+          <view v-if="unreadCount > 0" class="message-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</view>
+        </view>
+        <!-- 背景图片编辑按钮 -->
+        <view class="header-btn bg-edit-btn" @click="changeBackgroundImage">
+          <text class="header-btn-icon">🖼️</text>
+        </view>
       </view>
       <view class="user-info">
         <view class="avatar-section">
@@ -253,7 +261,8 @@ export default {
       userInfo: {},
       userStats: {},
       levelInfo: {},
-      loading: false
+      loading: false,
+      unreadCount: 0  // 未读消息数量
     }
   },
   
@@ -280,6 +289,7 @@ export default {
   onShow() {
     // 每次显示时刷新用户数据
     this.loadUserData()
+    this.loadUnreadCount()
   },
 
   methods: {
@@ -498,6 +508,46 @@ export default {
       uni.navigateTo({
         url: '/pages/user/settings/settings'
       })
+    },
+    
+    // 跳转到系统消息列表
+    goToSystemMessages() {
+      uni.navigateTo({
+        url: '/pages/user/system-messages/list'
+      })
+    },
+    
+    // 加载未读消息数量
+    async loadUnreadCount() {
+      try {
+        const userInfo = Auth.getUserInfo()
+        if (!userInfo) {
+          console.log('未登录，跳过加载未读消息')
+          return
+        }
+        
+        const userId = userInfo.uid || userInfo._id || userInfo.id
+        if (!userId) {
+          console.log('用户ID为空，跳过加载未读消息')
+          return
+        }
+        
+        const db = uniCloud.database()
+        
+        const res = await db.collection('botc-system-messages')
+          .where({
+            user_id: userId,
+            is_read: false
+          })
+          .count()
+        
+        this.unreadCount = res.total || 0
+        console.log('未读消息数量:', this.unreadCount)
+      } catch (error) {
+        console.error('加载未读消息数量失败:', error)
+        // 如果表不存在，设置为0
+        this.unreadCount = 0
+      }
     },
 
     // 跳转到店铺列表
@@ -759,11 +809,16 @@ export default {
   min-height: 300rpx;
 }
 
-/* 背景编辑按钮 */
-.bg-edit-btn {
+/* 右上角按钮组 */
+.header-buttons {
   position: absolute;
   top: 20rpx;
   right: 20rpx;
+  display: flex;
+  gap: 16rpx;
+}
+
+.header-btn {
   width: 60rpx;
   height: 60rpx;
   background: rgba(0, 0, 0, 0.5);
@@ -773,16 +828,37 @@ export default {
   justify-content: center;
   cursor: pointer;
   backdrop-filter: blur(10rpx);
+  position: relative;
 }
 
-.bg-edit-btn:active {
+.header-btn:active {
   background: rgba(0, 0, 0, 0.7);
   transform: scale(0.95);
 }
 
-.bg-edit-icon {
+.header-btn-icon {
   font-size: 32rpx;
   color: white;
+}
+
+/* 消息红点 */
+.message-badge {
+  position: absolute;
+  top: -5rpx;
+  right: -5rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  background: #FF4D4F;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  color: white;
+  font-weight: bold;
+  border: 2rpx solid white;
+  box-sizing: border-box;
 }
 
 .user-info {
