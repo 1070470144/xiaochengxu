@@ -61,13 +61,13 @@
     <view class="section">
       <view class="section-header">
         <text class="section-title">热门剧本</text>
-        <text class="section-more" @click="goToScriptList">查看全部 ></text>
+        <text class="section-more" @click="refreshScripts">换一批 ></text>
       </view>
-      <scroll-view scroll-x class="hot-scripts">
+      <scroll-view scroll-x class="hot-scripts" v-if="hotScripts.length > 0">
         <view 
           v-for="script in hotScripts" 
           :key="script.id" 
-          class="script-item"
+          class="script-item fade-in"
           @click="goToScriptDetail(script.id)">
           <view class="script-cover">
             <text class="script-icon">📖</text>
@@ -76,19 +76,25 @@
           <text class="script-rating">⭐ {{ script.rating }}</text>
         </view>
       </scroll-view>
+      
+      <!-- 空状态 -->
+      <view v-else class="empty-state">
+        <text class="empty-icon">📚</text>
+        <text class="empty-text">暂无剧本数据</text>
+      </view>
     </view>
     
     <!-- 最新拼车 -->
     <view class="section">
       <view class="section-header">
         <text class="section-title">最新拼车</text>
-        <text class="section-more" @click="goToCarpoolList">查看全部 ></text>
+        <text class="section-more" @click="refreshCarpools">换一批 ></text>
       </view>
-      <view class="carpool-list">
+      <view class="carpool-list" v-if="latestCarpools.length > 0">
         <view 
           v-for="carpool in latestCarpools" 
           :key="carpool.id" 
-          class="carpool-item"
+          class="carpool-item fade-in"
           @click="goToCarpoolDetail(carpool.id)">
           <view class="carpool-header">
             <text class="carpool-title">{{ carpool.title }}</text>
@@ -99,6 +105,92 @@
             <text class="info-text">👥 {{ carpool.currentPlayers }}/{{ carpool.maxPlayers }}</text>
           </view>
         </view>
+      </view>
+      
+      <!-- 空状态 -->
+      <view v-else class="empty-state">
+        <text class="empty-icon">🚗</text>
+        <text class="empty-text">暂无拼车信息</text>
+      </view>
+    </view>
+    
+    <!-- 社区动态 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">社区动态</text>
+        <text class="section-more" @click="refreshPosts">换一批 ></text>
+      </view>
+      
+      <!-- 帖子类型切换 -->
+      <view class="post-tabs">
+        <view 
+          class="post-tab" 
+          :class="{ active: currentPostTab === 'latest' }"
+          @click="switchPostTab('latest')">
+          <text class="tab-text">最新</text>
+        </view>
+        <view 
+          class="post-tab" 
+          :class="{ active: currentPostTab === 'hot' }"
+          @click="switchPostTab('hot')">
+          <text class="tab-text">火热</text>
+        </view>
+      </view>
+      
+      <!-- 帖子列表 - 四宫格 -->
+      <view class="post-grid" v-if="currentPostList.length > 0">
+        <view 
+          v-for="post in currentPostList" 
+          :key="post._id" 
+          class="grid-item fade-in"
+          @click="goToPostDetail(post._id)">
+          <!-- 卡片内容 -->
+          <view class="card-content">
+            <!-- 封面图片 -->
+            <view class="card-cover">
+              <image 
+                class="cover-image" 
+                :src="getCoverImage(post)"
+                mode="aspectFill"
+              />
+              <!-- 火热角标 -->
+              <view v-if="currentPostTab === 'hot'" class="corner-badge hot-badge">🔥</view>
+            </view>
+            
+            <!-- 标题和内容 -->
+            <view class="card-text">
+              <text class="card-title">{{ post.content }}</text>
+            </view>
+            
+            <!-- 底部信息 -->
+            <view class="card-footer">
+              <!-- 用户头像 -->
+              <image 
+                class="mini-avatar" 
+                :src="post.userAvatar || '/static/default-avatar.png'"
+                mode="aspectFill"
+              />
+              
+              <!-- 互动数据 -->
+              <view class="meta-info">
+                <view class="meta-item">
+                  <text class="meta-icon">👁️</text>
+                  <text class="meta-text">{{ formatCount(post.view_count || 0) }}</text>
+                </view>
+                <view class="meta-item">
+                  <text class="meta-icon">❤️</text>
+                  <text class="meta-text">{{ formatCount(post.like_count || 0) }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 空状态 -->
+      <view v-else class="empty-state">
+        <text class="empty-icon">📭</text>
+        <text class="empty-text">暂无{{ currentPostTab === 'latest' ? '最新' : '火热' }}帖子</text>
       </view>
     </view>
     
@@ -138,37 +230,38 @@ export default {
         userCount: 500
       },
       
-      // 热门剧本（模拟数据）
-      hotScripts: [
-        { id: 1, name: '暗流涌动', rating: 4.8 },
-        { id: 2, name: '上帝缺席', rating: 4.9 },
-        { id: 3, name: '坏月亮', rating: 4.7 },
-        { id: 4, name: '无神论者', rating: 4.6 }
-      ],
+      // 帖子相关
+      currentPostTab: 'latest', // 当前选中的帖子标签：latest 或 hot
+      latestPosts: [], // 最新帖子
+      hotPosts: [], // 火热帖子
+      postPage: 1, // 帖子页码
       
-      // 最新拼车（模拟数据）
-      latestCarpools: [
-        { 
-          id: 1, 
-          title: '周末上帝缺席车', 
-          location: '北京朝阳区',
-          currentPlayers: 8,
-          maxPlayers: 15
-        },
-        { 
-          id: 2, 
-          title: '暗流涌动开车啦', 
-          location: '上海浦东新区',
-          currentPlayers: 5,
-          maxPlayers: 12
-        }
-      ]
+      // 防抖标记
+      isRefreshingPosts: false,
+      isRefreshingScripts: false,
+      isRefreshingCarpools: false,
+      
+      // 热门剧本
+      hotScripts: [],
+      
+      // 最新拼车
+      latestCarpools: []
+    }
+  },
+  
+  computed: {
+    // 当前显示的帖子列表
+    currentPostList() {
+      return this.currentPostTab === 'latest' ? this.latestPosts : this.hotPosts
     }
   },
 
   onLoad() {
     console.log('血染钟楼首页加载')
     this.loadHomeData()
+    this.loadPosts()
+    this.initScripts()
+    this.initCarpools()
   },
   
   onShow() {
@@ -187,12 +280,372 @@ export default {
         
         if (res.result.code === 0) {
           this.stats = res.result.data.stats
-          this.hotScripts = res.result.data.hotScripts
-          this.latestCarpools = res.result.data.latestCarpools
         }
       } catch (error) {
         console.error('加载首页数据失败:', error)
         // 使用默认数据
+      }
+    },
+    
+    // 加载帖子数据
+    async loadPosts() {
+      console.log('=== 加载首页帖子（使用云函数）===')
+      
+      try {
+        // 使用云函数查询最新帖子
+        console.log('1. 查询最新帖子...')
+        const latestRes = await uniCloud.callFunction({
+          name: 'post-list',
+          data: {
+            page: 1,
+            pageSize: 5,
+            sortBy: 'time'
+          }
+        })
+        
+        console.log('最新帖子云函数返回:', latestRes.result)
+        
+        if (latestRes.result.code === 0) {
+          this.latestPosts = latestRes.result.data.list.map(post => ({
+            ...post,
+            userName: post.user?.nickname || '匿名用户',
+            userAvatar: post.user?.avatar || ''
+          }))
+          console.log('✅ 最新帖子加载成功，数量:', this.latestPosts.length)
+        } else {
+          console.error('最新帖子查询失败:', latestRes.result.message)
+        }
+        
+        // 使用云函数查询火热帖子
+        console.log('2. 查询火热帖子...')
+        const hotRes = await uniCloud.callFunction({
+          name: 'post-list',
+          data: {
+            page: 1,
+            pageSize: 5,
+            sortBy: 'hot'
+          }
+        })
+        
+        console.log('火热帖子云函数返回:', hotRes.result)
+        
+        if (hotRes.result.code === 0) {
+          this.hotPosts = hotRes.result.data.list.map(post => ({
+            ...post,
+            userName: post.user?.nickname || '匿名用户',
+            userAvatar: post.user?.avatar || ''
+          }))
+          console.log('✅ 火热帖子加载成功，数量:', this.hotPosts.length)
+        } else {
+          console.error('火热帖子查询失败:', hotRes.result.message)
+        }
+        
+        console.log('🎉 所有帖子加载完成')
+        console.log('最新帖子数组长度:', this.latestPosts.length)
+        console.log('火热帖子数组长度:', this.hotPosts.length)
+        
+      } catch (error) {
+        console.error('❌ 加载帖子失败:', error)
+        console.error('错误详情:', error.message)
+      }
+    },
+    
+    // 切换帖子标签
+    switchPostTab(tab) {
+      console.log('切换到:', tab)
+      this.currentPostTab = tab
+    },
+    
+    // 刷新帖子（换一批）- 带防抖
+    refreshPosts() {
+      // 防抖：如果正在刷新，直接返回
+      if (this.isRefreshingPosts) {
+        console.log('⚠️ 正在刷新中，请稍候')
+        return
+      }
+      
+      console.log('🔄 换一批帖子')
+      this.isRefreshingPosts = true
+      this.postPage++
+      
+      uni.showLoading({ title: '加载中...' })
+      
+      // 使用新的页码查询
+      Promise.all([
+        uniCloud.callFunction({
+          name: 'post-list',
+          data: { page: this.postPage, pageSize: 4, sortBy: 'time' }
+        }),
+        uniCloud.callFunction({
+          name: 'post-list',
+          data: { page: this.postPage, pageSize: 4, sortBy: 'hot' }
+        })
+      ]).then(([latestRes, hotRes]) => {
+        if (latestRes.result.code === 0 && latestRes.result.data.list.length > 0) {
+          this.latestPosts = latestRes.result.data.list.map(post => ({
+            ...post,
+            userName: post.user?.nickname || '匿名用户',
+            userAvatar: post.user?.avatar || ''
+          }))
+        } else {
+          // 没有更多数据，重置到第一页
+          this.postPage = 1
+          this.loadPosts()
+        }
+        
+        if (hotRes.result.code === 0 && hotRes.result.data.list.length > 0) {
+          this.hotPosts = hotRes.result.data.list.map(post => ({
+            ...post,
+            userName: post.user?.nickname || '匿名用户',
+            userAvatar: post.user?.avatar || ''
+          }))
+        }
+        
+        uni.hideLoading()
+        uni.showToast({ title: '换好了', icon: 'success', duration: 1000 })
+        
+        // 1秒后解除防抖
+        setTimeout(() => {
+          this.isRefreshingPosts = false
+        }, 1000)
+      }).catch(() => {
+        uni.hideLoading()
+        uni.showToast({ title: '加载失败', icon: 'none' })
+        this.isRefreshingPosts = false
+      })
+    },
+    
+    // 初始化剧本数据
+    async initScripts() {
+      console.log('=== 初始化剧本数据 ===')
+      await this.refreshScripts()
+    },
+    
+    // 刷新剧本（换一批）- 从数据库随机查询 + 防抖（允许重复）
+    async refreshScripts() {
+      // 防抖：如果正在刷新，直接返回
+      if (this.isRefreshingScripts) {
+        console.log('⚠️ 正在刷新中，请稍候')
+        return
+      }
+      
+      console.log('🔄 换一批剧本')
+      this.isRefreshingScripts = true
+      
+      try {
+        const db = uniCloud.database()
+        
+        // 简化查询条件：只查询已发布的剧本，不排除已显示的
+        const whereCondition = { status: 1 }
+        
+        console.log('剧本查询条件:', JSON.stringify(whereCondition))
+        
+        // 先获取总数
+        console.log('开始查询剧本总数...')
+        const countRes = await db.collection('botc-scripts')
+          .where(whereCondition)
+          .count()
+        
+        // 修正：uniCloud 返回的是 result.total
+        const total = parseInt(countRes.result?.total || countRes.total || 0)
+        
+        console.log('剧本总数:', total, '类型:', typeof total)
+        
+        // 检查是否有数据
+        if (total === 0) {
+          console.warn('数据库中没有剧本')
+          this.hotScripts = []
+          this.isRefreshingScripts = false
+          uni.showToast({ title: '暂无剧本数据', icon: 'none' })
+          return
+        }
+        
+        // 随机生成跳过的数量（必须是整数）
+        // 如果总数少于4个，就显示全部
+        const limitCount = Math.min(4, total)
+        const maxSkip = Math.max(0, total - limitCount)
+        const randomSkip = Math.floor(Math.random() * (maxSkip + 1))
+        
+        console.log('total:', total, 'limitCount:', limitCount, 'maxSkip:', maxSkip, 'randomSkip:', randomSkip)
+        
+        // 查询随机剧本
+        const res = await db.collection('botc-scripts')
+          .where(whereCondition)
+          .field('_id,title,author,rating')
+          .orderBy('rating', 'desc')
+          .skip(parseInt(randomSkip))
+          .limit(limitCount)
+          .get()
+        
+        // 处理返回数据
+        const scriptData = res.result?.data || res.data || []
+        console.log('查询返回的剧本数据:', scriptData)
+        
+        if (scriptData && scriptData.length > 0) {
+          this.hotScripts = scriptData.map(script => ({
+            id: script._id,
+            name: script.title,
+            rating: script.rating || 4.5
+          }))
+          
+          console.log('✅ 加载剧本成功:', this.hotScripts.length, '个')
+        } else {
+          // 查询不到数据
+          this.hotScripts = []
+          console.warn('未查询到剧本数据')
+        }
+        
+        uni.showToast({ title: '换好了', icon: 'success', duration: 1000 })
+        
+        // 1秒后解除防抖
+        setTimeout(() => {
+          this.isRefreshingScripts = false
+        }, 1000)
+      } catch (error) {
+        console.error('加载剧本失败:', error)
+        this.hotScripts = []
+        this.isRefreshingScripts = false
+        uni.showToast({ title: '加载失败', icon: 'none' })
+      }
+    },
+    
+    // 初始化拼车数据
+    async initCarpools() {
+      console.log('=== 初始化拼车数据 ===')
+      await this.refreshCarpools()
+    },
+    
+    // 刷新拼车（换一批）- 从数据库随机查询 + 防抖（允许重复）
+    async refreshCarpools() {
+      // 防抖：如果正在刷新，直接返回
+      if (this.isRefreshingCarpools) {
+        console.log('⚠️ 正在刷新中，请稍候')
+        return
+      }
+      
+      console.log('🔄 换一批拼车')
+      this.isRefreshingCarpools = true
+      
+      try {
+        const db = uniCloud.database()
+        const dbCmd = db.command
+        
+        // 简化查询条件：只查询招募中且未过期的拼车，不排除已显示的
+        const now = new Date()
+        const whereCondition = { 
+          status: 1,  // 招募中
+          game_time: dbCmd.gt(now)  // 未过期
+        }
+        
+        console.log('=== 拼车查询详情 ===')
+        console.log('查询条件:', JSON.stringify(whereCondition))
+        console.log('当前时间:', now.toLocaleString())
+        
+        // 先获取总数
+        console.log('开始查询拼车总数...')
+        const countRes = await db.collection('botc-carpool-rooms')
+          .where(whereCondition)
+          .count()
+        
+        // 修正：uniCloud 返回的是 result.total
+        const total = parseInt(countRes.result?.total || countRes.total || 0)
+        
+        console.log('拼车总数:', total, '类型:', typeof total)
+        
+        // 检查是否有数据
+        if (total === 0) {
+          console.warn('数据库中没有未过期的拼车')
+          this.latestCarpools = []
+          this.isRefreshingCarpools = false
+          uni.showToast({ title: '暂无拼车信息', icon: 'none' })
+          return
+        }
+        
+        // 随机生成跳过的数量（必须是整数）
+        // 如果总数少于2个，就显示全部
+        const limitCount = Math.min(2, total)
+        const maxSkip = Math.max(0, total - limitCount)
+        const randomSkip = Math.floor(Math.random() * (maxSkip + 1))
+        
+        console.log('total:', total, 'limitCount:', limitCount, 'maxSkip:', maxSkip, 'randomSkip:', randomSkip)
+        
+        // 查询随机拼车（按游戏时间升序，最近要开始的排前面）
+        const res = await db.collection('botc-carpool-rooms')
+          .where(whereCondition)
+          .field('_id,title,location,current_players,max_players,game_time,status')
+          .orderBy('game_time', 'asc')  // 按游戏时间升序，即将开始的在前
+          .skip(parseInt(randomSkip))
+          .limit(limitCount)
+          .get()
+        
+        // 处理返回数据
+        const carpoolData = res.result?.data || res.data || []
+        console.log('查询返回的拼车数据:', carpoolData)
+        
+        if (carpoolData && carpoolData.length > 0) {
+          this.latestCarpools = carpoolData.map(carpool => {
+            // 计算游戏时间距离现在的时间差
+            const gameTime = new Date(carpool.game_time)
+            const timeLeft = gameTime - now
+            const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60))
+            const daysLeft = Math.floor(hoursLeft / 24)
+            
+            console.log('拼车:', carpool.title, '游戏时间:', gameTime.toLocaleString(), '剩余:', daysLeft, '天', hoursLeft % 24, '小时')
+            
+            return {
+              id: carpool._id,
+              title: carpool.title,
+              location: carpool.location || '未知地点',
+              currentPlayers: carpool.current_players || 0,
+              maxPlayers: carpool.max_players || 10,
+              gameTime: carpool.game_time,
+              status: carpool.status
+            }
+          })
+          
+          console.log('✅ 加载拼车成功:', this.latestCarpools.length, '个')
+        } else {
+          // 查询不到数据
+          this.latestCarpools = []
+          console.warn('未查询到拼车数据')
+        }
+        
+        uni.showToast({ title: '换好了', icon: 'success', duration: 1000 })
+        
+        // 1秒后解除防抖
+        setTimeout(() => {
+          this.isRefreshingCarpools = false
+        }, 1000)
+      } catch (error) {
+        console.error('加载拼车失败:', error)
+        this.latestCarpools = []
+        this.isRefreshingCarpools = false
+        uni.showToast({ title: '加载失败', icon: 'none' })
+      }
+    },
+    
+    // 格式化帖子时间
+    formatPostTime(timestamp) {
+      if (!timestamp) return ''
+      
+      const now = Date.now()
+      const diff = now - timestamp
+      
+      const minute = 60 * 1000
+      const hour = 60 * minute
+      const day = 24 * hour
+      
+      if (diff < minute) {
+        return '刚刚'
+      } else if (diff < hour) {
+        return `${Math.floor(diff / minute)}分钟前`
+      } else if (diff < day) {
+        return `${Math.floor(diff / hour)}小时前`
+      } else if (diff < 7 * day) {
+        return `${Math.floor(diff / day)}天前`
+      } else {
+        const date = new Date(timestamp)
+        return `${date.getMonth() + 1}-${date.getDate()}`
       }
     },
     
@@ -264,6 +717,40 @@ export default {
       uni.navigateTo({
         url: `/pages/carpool/detail/detail?id=${id}`
       })
+    },
+    
+    // 跳转到帖子列表
+    goToPostList() {
+      uni.switchTab({
+        url: '/pages/community/index'
+      })
+    },
+    
+    // 跳转到帖子详情
+    goToPostDetail(postId) {
+      console.log('跳转到帖子详情，ID:', postId)
+      uni.navigateTo({
+        url: `/pages/community/detail/detail?id=${postId}`
+      })
+    },
+    
+    // 获取封面图
+    getCoverImage(post) {
+      if (post.images && post.images.length > 0) {
+        return post.images[0]
+      }
+      // 默认占位图
+      return 'https://via.placeholder.com/400x300/8B4513/FFFFFF?text=BOTC'
+    },
+    
+    // 格式化数字
+    formatCount(num) {
+      if (num >= 10000) {
+        return (num / 10000).toFixed(1) + 'w'
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k'
+      }
+      return num.toString()
     }
   }
 }
@@ -385,9 +872,53 @@ export default {
 
 .section-more {
   font-size: 26rpx;
-  font-weight: 400;
+  font-weight: 500;
   color: #8B4513;
   line-height: 1.4;
+  transition: all 0.3s;
+}
+
+.section-more:active {
+  opacity: 0.6;
+  transform: scale(0.95);
+}
+
+/* ========== 通用动画 ========== */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== 空状态 ========== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+  min-height: 200rpx;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+  line-height: 1.5;
 }
 
 /* ========== 功能卡片 ========== */
@@ -468,6 +999,173 @@ export default {
 
 .card-badge.active {
   background: #1890FF;
+}
+
+/* ========== 帖子标签切换 ========== */
+.post-tabs {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.post-tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  background: #FFFFFF;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(139, 69, 19, 0.06);
+  transition: all 0.3s ease;
+}
+
+.post-tab.active {
+  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+}
+
+.post-tab .tab-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.post-tab.active .tab-text {
+  color: #FFFFFF;
+}
+
+/* ========== 帖子四宫格 ========== */
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+}
+
+.grid-item {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 20rpx rgba(139, 69, 19, 0.08);
+  transition: all 0.3s ease;
+}
+
+.grid-item:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 封面图片 */
+.card-cover {
+  width: 100%;
+  height: 280rpx;
+  position: relative;
+  background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(210, 105, 30, 0.1) 100%);
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.corner-badge {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  backdrop-filter: blur(10rpx);
+  line-height: 1;
+}
+
+.hot-badge {
+  background: rgba(255, 107, 53, 0.9);
+  color: #FFFFFF;
+}
+
+/* 卡片文字 */
+.card-text {
+  padding: 20rpx;
+  flex: 1;
+}
+
+.card-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #1A1A1A;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 卡片底部 */
+.card-footer {
+  padding: 16rpx 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #F0F0F0;
+}
+
+.mini-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #F0F0F0;
+}
+
+.meta-info {
+  display: flex;
+  gap: 24rpx;
+  align-items: center;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.meta-icon {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.meta-text {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #666666;
+  line-height: 1.4;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 80rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  display: block;
+  margin-bottom: 16rpx;
+  line-height: 1;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: #999999;
+  line-height: 1.4;
 }
 
 /* ========== 热门剧本 ========== */
