@@ -24,7 +24,7 @@ exports.main = async (event, context) => {
       
       // 获取用户的所有评分
       case 'getUserRatings':
-        return await getUserRatings(user_id, event.page, event.limit)
+        return await getUserRatings(user_id, event.page, event.limit, event.searchKeyword, event.rating)
       
       default:
         return {
@@ -178,8 +178,8 @@ async function getScriptStats(script_id) {
   }
 }
 
-// 获取用户的所有评分（分页）
-async function getUserRatings(user_id, page = 1, limit = 20) {
+// 获取用户的所有评分（分页 + 搜索 + 筛选）
+async function getUserRatings(user_id, page = 1, limit = 20, searchKeyword = '', rating = 0) {
   if (!user_id) {
     return {
       code: 400,
@@ -189,17 +189,23 @@ async function getUserRatings(user_id, page = 1, limit = 20) {
   
   const skip = (page - 1) * limit
   
+  // 构建匹配条件
+  const matchCondition = { user_id }
+  
+  // 评分筛选
+  if (rating > 0) {
+    matchCondition.rating = rating
+  }
+  
+  console.log('getUserRatings 查询条件:', { user_id, page, limit, searchKeyword, rating, matchCondition })
+  
   // 使用聚合查询，关联剧本信息
-  const result = await db.collection('botc-script-ratings')
+  let aggregation = db.collection('botc-script-ratings')
     .aggregate()
-    .match({
-      user_id
-    })
+    .match(matchCondition)
     .sort({
       updated_at: -1
     })
-    .skip(skip)
-    .limit(limit)
     .lookup({
       from: 'botc-scripts',
       localField: 'script_id',
@@ -207,6 +213,21 @@ async function getUserRatings(user_id, page = 1, limit = 20) {
       as: 'script_info'
     })
     .unwind('$script_info')
+  
+  // 搜索筛选（在关联剧本信息后）
+  if (searchKeyword && searchKeyword.trim()) {
+    const keyword = searchKeyword.trim()
+    aggregation = aggregation.match({
+      $or: [
+        { 'script_info.title': new RegExp(keyword, 'i') },
+        { 'script_info.author': new RegExp(keyword, 'i') }
+      ]
+    })
+  }
+  
+  const result = await aggregation
+    .skip(skip)
+    .limit(limit)
     .project({
       _id: 1,
       script_id: 1,
@@ -223,19 +244,48 @@ async function getUserRatings(user_id, page = 1, limit = 20) {
     })
     .end()
   
-  // 获取总数
-  const countResult = await db.collection('botc-script-ratings')
-    .where({
-      user_id
+  // 获取总数（需要应用相同的筛选条件）
+  let countAggregation = db.collection('botc-script-ratings')
+    .aggregate()
+    .match(matchCondition)
+    .lookup({
+      from: 'botc-scripts',
+      localField: 'script_id',
+      foreignField: '_id',
+      as: 'script_info'
     })
-    .count()
+    .unwind('$script_info')
+  
+  if (searchKeyword && searchKeyword.trim()) {
+    const keyword = searchKeyword.trim()
+    countAggregation = countAggregation.match({
+      $or: [
+        { 'script_info.title': new RegExp(keyword, 'i') },
+        { 'script_info.author': new RegExp(keyword, 'i') }
+      ]
+    })
+  }
+  
+  const countResult = await countAggregation.group({
+    _id: null,
+    total: dbCmd.aggregate.sum(1)
+  }).end()
+  
+  const total = countResult.data.length > 0 ? countResult.data[0].total : 0
+  
+  console.log('getUserRatings 结果:', { 
+    count: result.data.length, 
+    total,
+    hasSearchKeyword: !!searchKeyword,
+    hasRatingFilter: rating > 0
+  })
   
   return {
     code: 0,
     message: 'success',
     data: {
       list: result.data,
-      total: countResult.total,
+      total,
       page,
       limit
     }
