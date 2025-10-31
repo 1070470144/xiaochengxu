@@ -299,6 +299,14 @@
 			}
 		},
 		{
+			"path": "pages/carpool/map-picker/map-picker",
+			"style": {
+				"navigationBarTitleText": "选择位置",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/storyteller/list/list",
 			"style": {
 				"navigationBarTitleText": "说书人",

@@ -40,11 +40,15 @@
           </view>
           
           <!-- 地点 -->
-          <view class="grid-item">
+          <view class="grid-item" @click="openMap">
             <view class="grid-icon">📍</view>
             <view class="grid-content">
               <text class="grid-label">游戏地点</text>
               <text class="grid-value">{{ carpoolDetail.location }}</text>
+              <view v-if="carpoolDetail.latitude && carpoolDetail.longitude" class="map-hint">
+                <text class="hint-text">点击查看地图</text>
+                <text class="hint-arrow">›</text>
+              </view>
             </view>
           </view>
         </view>
@@ -680,6 +684,65 @@ export default {
         hash = hash & hash // 转换为32位整数
       }
       return hash
+    },
+
+    // 打开地图查看位置
+    openMap() {
+      if (!this.carpoolDetail) {
+        return
+      }
+
+      const latitude = this.carpoolDetail.latitude
+      const longitude = this.carpoolDetail.longitude
+
+      // 如果没有经纬度，提示用户
+      if (!latitude || !longitude) {
+        uni.showToast({
+          title: '该拼车未设置地图位置',
+          icon: 'none',
+          duration: 2000
+        })
+        return
+      }
+
+      console.log('=== 打开地图 ===')
+      console.log('位置名称:', this.carpoolDetail.location)
+      console.log('详细地址:', this.carpoolDetail.location_detail)
+      console.log('纬度:', latitude)
+      console.log('经度:', longitude)
+
+      // 检查当前平台
+      // #ifdef H5
+      // H5环境 - 显示地址信息
+      uni.showModal({
+        title: '游戏地点',
+        content: `${this.carpoolDetail.location}\n\n${this.carpoolDetail.location_detail || ''}\n\n纬度: ${latitude}\n经度: ${longitude}\n\nH5环境暂不支持打开地图，请在微信小程序或App中查看`,
+        showCancel: false,
+        confirmText: '知道了'
+      })
+      return
+      // #endif
+
+      // #ifdef MP-WEIXIN || APP-PLUS
+      // 微信小程序或App环境 - 打开地图
+      uni.openLocation({
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        name: this.carpoolDetail.location,
+        address: this.carpoolDetail.location_detail || this.carpoolDetail.location,
+        scale: 15, // 缩放级别（5-18），默认18
+        success: () => {
+          console.log('✅ 地图打开成功')
+        },
+        fail: (err) => {
+          console.error('❌ 打开地图失败:', err)
+          uni.showToast({
+            title: '打开地图失败',
+            icon: 'none'
+          })
+        }
+      })
+      // #endif
     }
   },
 
@@ -909,6 +972,33 @@ export default {
   font-weight: 500;
   color: #1A1A1A;
   line-height: 1.4;
+}
+
+.map-hint {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  margin-top: 8rpx;
+}
+
+.map-hint .hint-text {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #A0785A;
+  line-height: 1;
+}
+
+.map-hint .hint-arrow {
+  font-size: 24rpx;
+  font-weight: 300;
+  color: #A0785A;
+  line-height: 1;
+}
+
+.grid-item:active {
+  background: #F5F0EB;
+  transform: scale(0.98);
+  transition: all 0.2s;
 }
 
 .detail-address {

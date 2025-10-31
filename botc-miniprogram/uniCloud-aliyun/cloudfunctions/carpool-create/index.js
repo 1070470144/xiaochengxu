@@ -11,6 +11,8 @@ exports.main = async (event, context) => {
     game_time,
     location,
     location_detail,
+    latitude,      // 纬度
+    longitude,     // 经度
     max_players = 7,
     description,
     requirements,
@@ -77,6 +79,8 @@ exports.main = async (event, context) => {
       game_time: gameTime,
       location,
       location_detail,
+      latitude: latitude ? parseFloat(latitude) : null,     // 纬度（可选）
+      longitude: longitude ? parseFloat(longitude) : null,  // 经度（可选）
       max_players: parseInt(max_players),
       current_players: 1, // 创建者自动算1人
       description,
@@ -88,6 +92,8 @@ exports.main = async (event, context) => {
       tags,
       created_at: new Date()
     }
+    
+    console.log('✅ 拼车数据（含经纬度）:', carpoolData)
     
     const result = await collection.add(carpoolData)
     

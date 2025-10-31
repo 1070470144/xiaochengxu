@@ -29,7 +29,17 @@
             </uni-forms-item>
 
             <uni-forms-item label="游戏地点" required name="location">
-              <uni-easyinput v-model="formData.location" placeholder="请输入游戏地点" maxlength="200"></uni-easyinput>
+              <view class="location-input-wrapper">
+                <uni-easyinput 
+                  v-model="formData.location" 
+                  placeholder="请选择或输入游戏地点" 
+                  maxlength="200">
+                </uni-easyinput>
+                <button class="map-select-btn" @click="chooseLocation">
+                  <text class="btn-icon">📍</text>
+                  <text class="btn-text">选择位置</text>
+                </button>
+              </view>
             </uni-forms-item>
 
             <uni-forms-item label="详细地址" name="locationDetail">
@@ -37,8 +47,13 @@
                 v-model="formData.locationDetail" 
                 placeholder="详细地址、交通指引等（可选）" 
                 type="textarea"
-                maxlength="500">
+                maxlength="500"
+                :disabled="locationFromMap">
               </uni-easyinput>
+              <view v-if="locationFromMap" class="location-tip">
+                <text class="tip-icon">ℹ️</text>
+                <text class="tip-text">地址已从地图自动获取</text>
+              </view>
             </uni-forms-item>
 
             <uni-forms-item label="需要人数" required name="maxPlayers">
@@ -184,6 +199,8 @@ export default {
         gameTime: '',
         location: '',
         locationDetail: '',
+        latitude: null,        // 纬度
+        longitude: null,       // 经度
         maxPlayers: 7,
         scriptId: '',
         storytellerId: '',
@@ -193,6 +210,8 @@ export default {
         contactPhone: '',
         tags: []
       },
+      
+      locationFromMap: false,  // 标记地址是否来自地图选择
       
       formRules: {
         title: {
@@ -246,7 +265,281 @@ export default {
     this.loadOptions()
   },
 
+  onShow() {
+    // 接收从地图选点页面返回的数据（使用全局事件）
+    uni.$off('selectLocation')  // 先移除旧监听
+    uni.$on('selectLocation', (data) => {
+      console.log('📍 从地图页面接收到位置:', data)
+      
+      this.formData.location = data.name
+      this.formData.locationDetail = data.address
+      this.formData.latitude = data.latitude
+      this.formData.longitude = data.longitude
+      this.locationFromMap = true
+      
+      uni.showToast({
+        title: '位置已选择',
+        icon: 'success'
+      })
+    })
+  },
+
+  onUnload() {
+    // 页面卸载时移除事件监听
+    uni.$off('selectLocation')
+  },
+
   methods: {
+    // 选择地点（调用地图）
+    chooseLocation() {
+      console.log('=== 开始选择地点 ===')
+      
+      // 检查当前平台
+      // #ifdef H5
+      // H5环境 - 使用浏览器定位
+      this.getBrowserLocation()
+      return
+      // #endif
+      
+      // #ifdef MP-WEIXIN || APP-PLUS
+      // 微信小程序或App环境 - 支持地图API
+      uni.chooseLocation({
+        // 如果之前已选择过位置，可以设置当前位置作为地图中心
+        latitude: this.formData.latitude || undefined,
+        longitude: this.formData.longitude || undefined,
+        success: (res) => {
+          console.log('✅ 地图选点成功:', res)
+          console.log('位置名称:', res.name)
+          console.log('详细地址:', res.address)
+          console.log('纬度:', res.latitude)
+          console.log('经度:', res.longitude)
+          
+          // 填充表单数据
+          this.formData.location = res.name || res.address
+          this.formData.locationDetail = res.address || res.name
+          this.formData.latitude = res.latitude
+          this.formData.longitude = res.longitude
+          this.locationFromMap = true
+          
+          uni.showToast({
+            title: '位置已选择',
+            icon: 'success',
+            duration: 1500
+          })
+        },
+        fail: (err) => {
+          console.error('❌ 地图选点失败:', err)
+          
+          // 处理权限拒绝
+          if (err.errMsg && err.errMsg.includes('auth deny')) {
+            uni.showModal({
+              title: '需要位置权限',
+              content: '请在系统设置中允许访问位置信息',
+              confirmText: '去设置',
+              cancelText: '取消',
+              success: (modalRes) => {
+                if (modalRes.confirm) {
+                  // 打开设置页面
+                  uni.openSetting({
+                    success: (settingRes) => {
+                      console.log('设置结果:', settingRes)
+                    }
+                  })
+                }
+              }
+            })
+          } else if (err.errMsg && err.errMsg.includes('cancel')) {
+            // 用户取消选择，不做处理
+            console.log('用户取消选择位置')
+          } else {
+            uni.showToast({
+              title: '选择位置失败',
+              icon: 'none'
+            })
+          }
+        }
+      })
+      // #endif
+    },
+
+    // 浏览器定位（H5环境）
+    getBrowserLocation() {
+      console.log('=== 使用浏览器定位 ===')
+      
+      // 检查浏览器是否支持定位
+      if (!navigator.geolocation) {
+        uni.showModal({
+          title: '不支持定位',
+          content: '您的浏览器不支持地理定位功能，请手动输入地点信息',
+          showCancel: false
+        })
+        return
+      }
+
+      uni.showLoading({ title: '正在获取位置...' })
+
+      navigator.geolocation.getCurrentPosition(
+        // 定位成功
+        async (position) => {
+          console.log('✅ 浏览器定位成功:', position)
+          
+          const latitude = position.coords.latitude
+          const longitude = position.coords.longitude
+          
+          console.log('纬度:', latitude)
+          console.log('经度:', longitude)
+          
+          uni.hideLoading()
+          
+          // 🎯 直接跳转到地图选点页面，使用当前定位坐标
+          uni.navigateTo({
+            url: `/pages/carpool/map-picker/map-picker?latitude=${latitude}&longitude=${longitude}`
+          })
+        },
+        // 定位失败
+        (error) => {
+          console.error('❌ 浏览器定位失败:', error)
+          uni.hideLoading()
+          
+          let errorMsg = '定位失败'
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMsg = '您拒绝了位置权限请求，请在浏览器设置中允许位置访问'
+              break
+            case error.POSITION_UNAVAILABLE:
+              errorMsg = '位置信息不可用'
+              break
+            case error.TIMEOUT:
+              errorMsg = '定位请求超时'
+              break
+            default:
+              errorMsg = '定位失败：' + error.message
+          }
+          
+          uni.showModal({
+            title: '定位失败',
+            content: errorMsg + '\n\n您可以手动输入地点信息',
+            showCancel: false
+          })
+        },
+        // 定位选项
+        {
+          enableHighAccuracy: true,  // 高精度定位
+          timeout: 10000,            // 超时时间10秒
+          maximumAge: 0              // 不使用缓存
+        }
+      )
+    },
+
+    // 逆地理编码（坐标转地址）- 使用高德地图API
+    async reverseGeocode(latitude, longitude) {
+      console.log('=== 开始逆地理编码（高德地图）===')
+      console.log('坐标:', latitude, longitude)
+      
+      try {
+        // 使用高德地图WebService API（免费，支持全球）
+        // radius: 搜索半径100米
+        // extensions: all 返回详细信息
+        const url = `https://restapi.amap.com/v3/geocode/regeo?location=${longitude},${latitude}&radius=100&extensions=all&output=json&key=4f20f75f6dfe6a571ababb3a409877a6`
+        
+        console.log('📡 调用高德API:', url)
+        
+        // 使用fetch直接调用（高德API支持CORS）
+        const response = await fetch(url)
+        const data = await response.json()
+        
+        console.log('📥 高德API返回:', data)
+        
+        if (data.status === '1' && data.regeocode) {
+          const regeo = data.regeocode
+          
+          // 优先级1: 如果有POI（兴趣点），优先使用POI名称
+          let locationName = ''
+          let detailAddress = regeo.formatted_address
+          
+          if (regeo.pois && regeo.pois.length > 0) {
+            // 使用最近的POI
+            const nearestPoi = regeo.pois[0]
+            console.log('✅ 找到POI:', nearestPoi.name, '-', nearestPoi.type)
+            
+            locationName = nearestPoi.name
+            if (nearestPoi.type) {
+              // 取第一个分类
+              const category = nearestPoi.type.split(';')[0]
+              locationName = `${nearestPoi.name} (${category})`
+            }
+            
+            // 详细地址
+            detailAddress = nearestPoi.address || regeo.formatted_address
+          } 
+          // 优先级2: 使用建筑物名称
+          else if (regeo.addressComponent && regeo.addressComponent.building && regeo.addressComponent.building.name) {
+            locationName = regeo.addressComponent.building.name
+            console.log('✅ 使用建筑物:', locationName)
+          }
+          // 优先级3: 使用道路+门牌号
+          else if (regeo.addressComponent) {
+            const addr = regeo.addressComponent
+            if (addr.streetNumber && addr.streetNumber.street) {
+              locationName = addr.streetNumber.street + (addr.streetNumber.number || '')
+            } else if (addr.township) {
+              locationName = addr.township
+            }
+            console.log('✅ 使用道路:', locationName)
+          }
+          // 优先级4: 使用格式化地址
+          else {
+            locationName = regeo.formatted_address
+            console.log('✅ 使用完整地址:', locationName)
+          }
+          
+          console.log('📍 最终地点:', locationName)
+          console.log('📝 详细地址:', detailAddress)
+          
+          return {
+            name: locationName,
+            address: detailAddress,
+            province: regeo.addressComponent?.province || '',
+            city: regeo.addressComponent?.city || regeo.addressComponent?.province || '',
+            district: regeo.addressComponent?.district || ''
+          }
+        } else {
+          console.error('❌ 高德API返回错误:', data.info)
+          throw new Error('地址解析失败: ' + (data.info || '未知错误'))
+        }
+      } catch (error) {
+        console.error('❌ 逆地理编码失败:', error)
+        return null
+      }
+    },
+
+    // JSONP请求辅助函数
+    jsonp(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'jsonpCallback_' + Date.now()
+        
+        // 创建script标签
+        const script = document.createElement('script')
+        script.src = url + '&callback=' + callbackName
+        
+        // 定义回调函数
+        window[callbackName] = (data) => {
+          resolve(data)
+          document.body.removeChild(script)
+          delete window[callbackName]
+        }
+        
+        // 错误处理
+        script.onerror = () => {
+          reject(new Error('JSONP请求失败'))
+          document.body.removeChild(script)
+          delete window[callbackName]
+        }
+        
+        document.body.appendChild(script)
+      })
+    },
+    
     // 加载选项数据
     async loadOptions() {
       try {
@@ -370,6 +663,8 @@ export default {
             game_time: gameTime.getTime(),
             location: this.formData.location.trim(),
             location_detail: this.formData.locationDetail.trim(),
+            latitude: this.formData.latitude,         // 纬度
+            longitude: this.formData.longitude,       // 经度
             max_players: parseInt(this.formData.maxPlayers),
             description: this.formData.description.trim(),
             requirements: this.formData.requirements.trim(),
@@ -534,6 +829,68 @@ export default {
   font-weight: 400;
   color: #BFBFBF;
   line-height: 1;
+}
+
+/* 地点选择相关 */
+.location-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.map-select-btn {
+  width: 100%;
+  height: 72rpx;
+  background: linear-gradient(135deg, #A0785A 0%, #8B6F47 100%);
+  border-radius: 12rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  box-shadow: 0 4rpx 16rpx rgba(160, 120, 90, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.map-select-btn:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 12rpx rgba(160, 120, 90, 0.15);
+}
+
+.map-select-btn .btn-icon {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.map-select-btn .btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 1rpx;
+  line-height: 1;
+}
+
+.location-tip {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 8rpx;
+  padding: 12rpx 16rpx;
+  background: rgba(160, 120, 90, 0.08);
+  border-radius: 8rpx;
+  border: 1rpx solid rgba(160, 120, 90, 0.1);
+}
+
+.location-tip .tip-icon {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.location-tip .tip-text {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #8B6F47;
+  line-height: 1.4;
 }
 
 /* 标签选择器 */

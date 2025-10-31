@@ -59,6 +59,18 @@
       "description": "地点详细信息（地址、交通等）",
       "maxLength": 500
     },
+    "latitude": {
+      "bsonType": "double",
+      "description": "地点纬度坐标",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "longitude": {
+      "bsonType": "double",
+      "description": "地点经度坐标",
+      "minimum": -180,
+      "maximum": 180
+    },
     "max_players": {
       "bsonType": "int",
       "description": "需要的总人数",
