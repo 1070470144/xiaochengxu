@@ -35,7 +35,7 @@
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
                 <view class="script-meta">
-                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                   <text class="meta-text">👥{{ script.player_count }}</text>
                 </view>
                 <view class="script-type-tag" :class="getTypeClass(script.script_type)">
@@ -68,7 +68,7 @@
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
                 <view class="script-meta">
-                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                   <text class="meta-text">👁️{{ script.view_count || 0 }}</text>
                 </view>
                 <view class="hot-tag">🔥热门</view>
@@ -98,7 +98,7 @@
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
                 <view class="script-meta">
-                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                   <text class="meta-text">⏱️{{ script.duration }}分</text>
                 </view>
                 <view class="difficulty-tag" :class="getDifficultyClass(script.difficulty)">
@@ -130,7 +130,7 @@
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
                 <view class="script-meta">
-                  <text class="meta-text">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                   <text class="meta-text">👥{{ script.player_count }}</text>
                 </view>
                 <view class="fun-tag">🎊娱乐</view>
@@ -161,10 +161,10 @@
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
                 <view class="script-meta">
-                  <text class="meta-text rating-highlight">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text rating-highlight">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                   <text class="meta-text">({{ script.rating_count || 0 }}评)</text>
                 </view>
-                <view class="top-tag">🏆高分</view>
+                <view class="top-tag top-tag-mystery">🏆高分推理</view>
               </view>
             </view>
           </view>
@@ -192,10 +192,10 @@
               <view class="script-info">
                 <text class="script-name">{{ script.title }}</text>
                 <view class="script-meta">
-                  <text class="meta-text rating-highlight">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                  <text class="meta-text rating-highlight">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                   <text class="meta-text">({{ script.rating_count || 0 }}评)</text>
                 </view>
-                <view class="top-tag">🏆高分</view>
+                <view class="top-tag top-tag-fun">🏆高分娱乐</view>
               </view>
             </view>
           </view>
@@ -309,33 +309,135 @@ export default {
     },
 
     async loadTopMysteryScripts() {
+      console.log('=== 加载推理高分榜单 ===')
+      
+      // 先查询所有推理剧本，看看数据情况
+      const allRes = await db.collection('botc-scripts')
+        .where({
+          status: 1,
+          script_type: 1
+        })
+        .field({
+          _id: true,
+          title: true,
+          average_rating: true,
+          rating_count: true
+        })
+        .get()
+      
+      console.log('所有推理剧本:', allRes.result.data.length, '个')
+      console.log('推理剧本评分情况:', allRes.result.data.map(s => ({
+        title: s.title,
+        avg: s.average_rating,
+        count: s.rating_count
+      })))
+      
+      // 查询有评分的推理剧本（降低门槛）
       const res = await db.collection('botc-scripts')
         .where({
           status: 1,
           script_type: 1,
-          rating: dbCmd.gte(4.0),
-          rating_count: dbCmd.gte(5)
+          average_rating: dbCmd.gt(0), // 只要有评分就行
+          rating_count: dbCmd.gt(0) // 只要有人评价就行
         })
-        .orderBy('rating', 'desc')
+        .orderBy('average_rating', 'desc')
         .orderBy('rating_count', 'desc')
-        .limit(10)
+        .limit(20)
         .get()
-      this.topMysteryScripts = res.result.data
+      
+      console.log('有评分的推理剧本查询结果:', res.result.data.length, '个')
+      
+      if (res.result.data.length === 0) {
+        console.warn('⚠️ 没有找到有评分的推理剧本')
+        this.topMysteryScripts = []
+        return
+      }
+      
+      // 按综合分数排序（评分 * 评价人数权重）
+      const scripts = res.result.data.map(script => {
+        const ratingWeight = Math.min(script.rating_count / 10, 1) // 评价人数权重，最多1
+        const comprehensiveScore = script.average_rating * (0.7 + 0.3 * ratingWeight)
+        return {
+          ...script,
+          comprehensiveScore
+        }
+      })
+      
+      scripts.sort((a, b) => b.comprehensiveScore - a.comprehensiveScore)
+      this.topMysteryScripts = scripts.slice(0, 10)
+      
+      console.log('✅ 推理高分榜TOP10:', this.topMysteryScripts.map(s => ({
+        title: s.title,
+        rating: s.average_rating,
+        count: s.rating_count,
+        score: s.comprehensiveScore.toFixed(2)
+      })))
     },
 
     async loadTopFunScripts() {
+      console.log('=== 加载娱乐高分榜单 ===')
+      
+      // 先查询所有娱乐剧本，看看数据情况
+      const allRes = await db.collection('botc-scripts')
+        .where({
+          status: 1,
+          script_type: 2
+        })
+        .field({
+          _id: true,
+          title: true,
+          average_rating: true,
+          rating_count: true
+        })
+        .get()
+      
+      console.log('所有娱乐剧本:', allRes.result.data.length, '个')
+      console.log('娱乐剧本评分情况:', allRes.result.data.map(s => ({
+        title: s.title,
+        avg: s.average_rating,
+        count: s.rating_count
+      })))
+      
+      // 查询有评分的娱乐剧本（降低门槛）
       const res = await db.collection('botc-scripts')
         .where({
           status: 1,
           script_type: 2,
-          rating: dbCmd.gte(4.0),
-          rating_count: dbCmd.gte(5)
+          average_rating: dbCmd.gt(0), // 只要有评分就行
+          rating_count: dbCmd.gt(0) // 只要有人评价就行
         })
-        .orderBy('rating', 'desc')
+        .orderBy('average_rating', 'desc')
         .orderBy('rating_count', 'desc')
-        .limit(10)
+        .limit(20)
         .get()
-      this.topFunScripts = res.result.data
+      
+      console.log('有评分的娱乐剧本查询结果:', res.result.data.length, '个')
+      
+      if (res.result.data.length === 0) {
+        console.warn('⚠️ 没有找到有评分的娱乐剧本')
+        this.topFunScripts = []
+        return
+      }
+      
+      // 按综合分数排序（评分 * 评价人数权重）
+      const scripts = res.result.data.map(script => {
+        const ratingWeight = Math.min(script.rating_count / 10, 1) // 评价人数权重，最多1
+        const comprehensiveScore = script.average_rating * (0.7 + 0.3 * ratingWeight)
+        return {
+          ...script,
+          comprehensiveScore
+        }
+      })
+      
+      scripts.sort((a, b) => b.comprehensiveScore - a.comprehensiveScore)
+      this.topFunScripts = scripts.slice(0, 10)
+      
+      console.log('✅ 娱乐高分榜TOP10:', this.topFunScripts.map(s => ({
+        title: s.title,
+        rating: s.average_rating,
+        count: s.rating_count,
+        score: s.comprehensiveScore.toFixed(2)
+      })))
     },
 
     handleSearch(e) {
@@ -546,6 +648,14 @@ export default {
 .hot-tag { background: #ff4d4f; }
 .fun-tag { background: #52c41a; }
 .top-tag { background: #faad14; }
+.top-tag-mystery { 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-weight: bold;
+}
+.top-tag-fun { 
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  font-weight: bold;
+}
 
 .diff-easy { background: #52c41a; }
 .diff-normal { background: #1890ff; }

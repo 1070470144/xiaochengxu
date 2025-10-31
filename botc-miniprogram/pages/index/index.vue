@@ -73,7 +73,7 @@
             <text class="script-icon">📖</text>
           </view>
           <text class="script-name">{{ script.name }}</text>
-          <text class="script-rating">⭐ {{ script.rating }}</text>
+          <text class="script-rating">⭐ {{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
         </view>
       </scroll-view>
       
@@ -485,7 +485,7 @@ export default {
           this.hotScripts = scriptData.map(script => ({
             id: script._id,
             name: script.title,
-            rating: script.rating || 4.5
+            rating: script.average_rating || 0
           }))
           
           console.log('✅ 加载剧本成功:', this.hotScripts.length, '个')

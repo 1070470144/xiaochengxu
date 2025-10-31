@@ -63,7 +63,7 @@
               <text v-if="script.subtitle" class="script-subtitle">{{ script.subtitle }}</text>
             </view>
             <view class="script-rating">
-              <text class="rating-score">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+              <text class="rating-score">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
               <text class="rating-count">({{ script.rating_count || 0 }})</text>
             </view>
           </view>
@@ -186,7 +186,7 @@ export default {
         if (this.currentType === 'hot') {
           orderByField = 'heat_score'  // 使用热度分数排序
         } else if (this.currentType === 'rating') {
-          orderByField = 'rating'
+          orderByField = 'average_rating'  // 使用平均评分排序
         } else if (this.currentType === 'new') {
           orderByField = 'published_at'
         }

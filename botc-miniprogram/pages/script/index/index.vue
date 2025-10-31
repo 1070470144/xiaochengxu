@@ -54,7 +54,7 @@
             <!-- 评分和类型 -->
             <view class="script-meta">
               <view class="meta-rating">
-                <text class="rating-score">⭐{{ script.rating ? script.rating.toFixed(1) : '0.0' }}</text>
+                <text class="rating-score">⭐{{ script.average_rating ? script.average_rating.toFixed(1) : '0.0' }}</text>
                 <text class="rating-count">({{ script.rating_count || 0 }})</text>
               </view>
               <view class="script-type" :class="getTypeClass(script.script_type)">
