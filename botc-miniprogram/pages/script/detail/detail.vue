@@ -14,7 +14,7 @@
           <text v-if="scriptDetail.subtitle" class="script-subtitle">{{ scriptDetail.subtitle }}</text>
           
           <view class="script-rating flex-center">
-            <text class="rating-score">⭐{{ scriptDetail.rating || '0.0' }}</text>
+            <text class="rating-score">⭐{{ (scriptDetail.average_rating || 0).toFixed(1) }}</text>
             <text class="rating-count">({{ scriptDetail.rating_count || 0 }}人评价)</text>
           </view>
         </view>
@@ -186,6 +186,63 @@
       <text class="error-text">剧本加载失败</text>
       <button class="retry-btn btn-primary" @click="loadScriptDetail">重新加载</button>
     </view>
+
+    <!-- 底部评分按钮 -->
+    <view v-if="scriptDetail && isLoggedIn" class="bottom-action-bar">
+      <button class="btn-rate" @click="showRatingPopup">
+        <text class="btn-icon">⭐</text>
+        <text class="btn-text">{{ userRating ? '修改评分' : '给剧本打分' }}</text>
+      </button>
+    </view>
+
+    <!-- 评分弹出层 -->
+    <view v-if="ratingPopupVisible" class="rating-popup-mask" @click="hideRatingPopup">
+      <view class="rating-popup" :class="{ 'rating-popup-show': ratingPopupShow }" @click.stop>
+        <!-- 拖动条 -->
+        <view class="popup-drag-bar"></view>
+        
+        <!-- 标题 -->
+        <view class="popup-header">
+          <text class="popup-title">{{ userRating ? '修改评分' : '给剧本打分' }}</text>
+          <text class="popup-close" @click="hideRatingPopup">✕</text>
+        </view>
+
+        <!-- 剧本信息 -->
+        <view class="popup-script-info">
+          <text class="script-name">{{ scriptDetail.title }}</text>
+          <text class="script-author" v-if="scriptDetail.author">{{ scriptDetail.author }}</text>
+        </view>
+
+        <!-- 评分区域 -->
+        <view class="popup-rating-section">
+          <text class="rating-label">点击星星评分</text>
+          <view class="star-group-large">
+            <view
+              v-for="star in 5"
+              :key="star"
+              class="star-item-large"
+              :class="{ active: star <= selectedRating }"
+              @click="selectRating(star)"
+            >
+              <text class="star-icon">{{ star <= selectedRating ? '⭐' : '☆' }}</text>
+              <text class="star-number">{{ star }}</text>
+            </view>
+          </view>
+          <text v-if="selectedRating > 0" class="rating-desc">{{ getRatingDesc(selectedRating) }}</text>
+        </view>
+
+        <!-- 提交按钮 -->
+        <view class="popup-actions">
+          <button 
+            class="btn-submit-popup" 
+            :disabled="!selectedRating || submitting"
+            @click="submitRating"
+          >
+            {{ submitting ? '提交中...' : '提交评分' }}
+          </button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -209,8 +266,20 @@ export default {
       currentUserId: '',    // 当前用户ID
       
       // 相关帖子
-      relatedPosts: []
+      relatedPosts: [],
+      
+      // 评分相关
+      isLoggedIn: false,
+      userRating: null,       // 用户当前评分
+      selectedRating: 0,      // 选中的评分
+      submitting: false,      // 提交中
+      ratingPopupVisible: false,  // 弹出层可见
+      ratingPopupShow: false      // 弹出层显示动画
     }
+  },
+
+  computed: {
+    // ... existing computed properties
   },
 
   onLoad(options) {
@@ -224,6 +293,7 @@ export default {
       if (userInfo) {
         // 尝试多种可能的字段
         this.currentUserId = userInfo.uid || userInfo._id || userInfo.id || userInfo.userId
+        this.isLoggedIn = true
         console.log('✅ 当前用户ID：', this.currentUserId)
       } else {
         console.log('❌ userInfo 为空')
@@ -269,6 +339,11 @@ export default {
           uni.setNavigationBarTitle({
             title: this.scriptDetail.title
           })
+          
+          // 加载用户评分
+          if (this.isLoggedIn) {
+            this.loadUserRating()
+          }
         } else {
           throw new Error(result.result.message)
         }
@@ -1195,6 +1270,122 @@ export default {
         return
       }
       UserAction.showUserMenu(userId, userInfo)
+    },
+    
+    // ========== 评分相关方法 ==========
+    
+    // 加载用户评分
+    async loadUserRating() {
+      try {
+        const result = await uniCloud.callFunction({
+          name: 'script-rating',
+          data: {
+            action: 'getUserRating',
+            user_id: this.currentUserId,
+            script_id: this.scriptId
+          }
+        })
+        
+        if (result.result.code === 0 && result.result.data) {
+          this.userRating = result.result.data
+          this.selectedRating = this.userRating.rating
+          console.log('✅ 用户评分加载成功:', this.userRating)
+        }
+      } catch (error) {
+        console.error('加载用户评分失败:', error)
+      }
+    },
+    
+    // 选择评分
+    selectRating(star) {
+      this.selectedRating = star
+    },
+    
+    // 提交评分
+    async submitRating() {
+      if (!this.selectedRating) {
+        uni.showToast({
+          title: '请选择评分',
+          icon: 'none'
+        })
+        return
+      }
+      
+      this.submitting = true
+      
+      try {
+        const result = await uniCloud.callFunction({
+          name: 'script-rating',
+          data: {
+            action: 'submit',
+            user_id: this.currentUserId,
+            script_id: this.scriptId,
+            rating: this.selectedRating
+          }
+        })
+        
+        if (result.result.code === 0) {
+          // 关闭弹出层
+          this.hideRatingPopup()
+          
+          uni.showToast({
+            title: result.result.data.is_new ? '评分成功' : '评分已更新',
+            icon: 'success'
+          })
+          
+          // 重新加载用户评分和剧本详情
+          await this.loadUserRating()
+          await this.loadScriptDetail()
+        } else {
+          throw new Error(result.result.message)
+        }
+      } catch (error) {
+        console.error('提交评分失败:', error)
+        uni.showToast({
+          title: '提交失败',
+          icon: 'none'
+        })
+      } finally {
+        this.submitting = false
+      }
+    },
+    
+    // 跳转到登录
+    goToLogin() {
+      uni.navigateTo({
+        url: '/pages/login/sms-login'
+      })
+    },
+    
+    // 显示评分弹出层
+    showRatingPopup() {
+      this.ratingPopupVisible = true
+      // 使用nextTick确保DOM渲染后再触发动画
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.ratingPopupShow = true
+        }, 50)
+      })
+    },
+    
+    // 隐藏评分弹出层
+    hideRatingPopup() {
+      this.ratingPopupShow = false
+      setTimeout(() => {
+        this.ratingPopupVisible = false
+      }, 300) // 等待动画结束
+    },
+    
+    // 获取评分描述
+    getRatingDesc(rating) {
+      const descMap = {
+        1: '很差',
+        2: '不太好',
+        3: '还可以',
+        4: '很不错',
+        5: '非常棒'
+      }
+      return descMap[rating] || ''
     }
   },
 
@@ -1992,5 +2183,359 @@ export default {
   height: 60rpx;
   line-height: 60rpx;
   font-size: 26rpx;
+}
+
+/* 评分统计卡片样式 */
+.rating-stats-card {
+  margin-bottom: 30rpx;
+}
+
+.rating-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.stats-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.stats-score {
+  font-size: 60rpx;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1;
+}
+
+.stats-label {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 8rpx;
+}
+
+.stats-detail {
+  text-align: right;
+}
+
+.detail-count {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.current-rating {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 12rpx;
+  border: 2rpx solid rgba(102, 126, 234, 0.2);
+}
+
+.current-text {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.current-stars {
+  font-size: 32rpx;
+}
+
+.current-score {
+  font-size: 28rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* 底部评分按钮 */
+.bottom-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16rpx 30rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 20%, #fff 100%);
+  backdrop-filter: blur(20rpx);
+  z-index: 100;
+}
+
+.btn-rate {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 26rpx 0;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: #fff;
+  border: none;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 16rpx rgba(139, 69, 19, 0.3);
+  letter-spacing: 2rpx;
+}
+
+.btn-rate::after {
+  border: none;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.btn-text {
+  font-size: 30rpx;
+}
+
+/* 评分弹出层 */
+.rating-popup-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+}
+
+.rating-popup {
+  width: 100%;
+  max-height: 75vh;
+  background: #fffef8;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 24rpx 30rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+}
+
+.rating-popup-show {
+  transform: translateY(0);
+}
+
+.popup-drag-bar {
+  width: 60rpx;
+  height: 6rpx;
+  background: #d4c5b0;
+  border-radius: 3rpx;
+  margin: 0 auto 16rpx;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid #f0ebe0;
+}
+
+.popup-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #5d3a1a;
+  letter-spacing: 1rpx;
+}
+
+.popup-close {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #8B4513;
+  background: rgba(139, 69, 19, 0.08);
+  border-radius: 50%;
+}
+
+.popup-script-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: 16rpx 20rpx;
+  background: rgba(139, 69, 19, 0.05);
+  border-radius: 12rpx;
+  margin-bottom: 24rpx;
+  border: 2rpx solid rgba(139, 69, 19, 0.1);
+}
+
+.script-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #3d2810;
+  letter-spacing: 1rpx;
+}
+
+.script-author {
+  font-size: 26rpx;
+  color: #8B4513;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.popup-rating-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 24rpx;
+  padding: 16rpx 0 40rpx;
+}
+
+.rating-label {
+  font-size: 26rpx;
+  color: #8B4513;
+  opacity: 0.8;
+}
+
+.star-group-large {
+  display: flex;
+  justify-content: center;
+  gap: 20rpx;
+  padding: 20rpx 0;
+}
+
+.star-item-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 未选中：空心圆 */
+.star-item-large {
+  background: rgba(255, 255, 255, 0.5);
+  border: 4rpx solid #e8dcc8;
+  box-shadow: 0 4rpx 12rpx rgba(139, 69, 19, 0.1);
+}
+
+.star-item-large:active {
+  transform: scale(0.9);
+}
+
+/* 选中：实心圆 + 渐变背景 */
+.star-item-large.active {
+  background: linear-gradient(135deg, #d4af37 0%, #f4d03f 50%, #d4af37 100%);
+  border-color: #d4af37;
+  box-shadow: 0 6rpx 20rpx rgba(212, 175, 55, 0.4), 
+              inset 0 2rpx 4rpx rgba(255, 255, 255, 0.5);
+  transform: scale(1.08);
+}
+
+/* 星星图标 */
+.star-icon {
+  font-size: 60rpx;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+/* 未选中：灰色空心星 */
+.star-item-large .star-icon {
+  color: #d4c5b0;
+  text-shadow: none;
+}
+
+/* 选中：金色实心星 + 光芒效果 */
+.star-item-large.active .star-icon {
+  color: #fff;
+  text-shadow: 0 0 10rpx rgba(255, 255, 255, 0.8),
+               0 0 20rpx rgba(255, 255, 255, 0.5),
+               0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+  animation: starShine 0.6s ease;
+}
+
+@keyframes starShine {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* 数字标签：在圆的底部 */
+.star-number {
+  position: absolute;
+  bottom: -32rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.star-item-large .star-number {
+  color: #8B4513;
+  opacity: 0.6;
+}
+
+.star-item-large.active .star-number {
+  color: #d4af37;
+  opacity: 1;
+  font-size: 26rpx;
+  font-weight: bold;
+}
+
+.rating-desc {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #5d3a1a;
+  letter-spacing: 2rpx;
+  animation: fadeInUp 0.3s;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup-actions {
+  padding-top: 8rpx;
+}
+
+.btn-submit-popup {
+  width: 100%;
+  padding: 24rpx 0;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: #fff;
+  border: none;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  box-shadow: 0 4rpx 16rpx rgba(139, 69, 19, 0.3);
+}
+
+.btn-submit-popup::after {
+  border: none;
+}
+
+.btn-submit-popup:disabled {
+  background: #d4c5b0;
+  box-shadow: none;
+  opacity: 0.6;
 }
 </style>

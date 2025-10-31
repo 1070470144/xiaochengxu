@@ -1,0 +1,57 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "script_id", "rating"],
+  "permission": {
+    "read": true,
+    "create": "auth.uid != null",
+    "update": "auth.uid == doc.user_id",
+    "delete": "auth.uid == doc.user_id"
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "用户ID",
+      "description": "评分用户的ID",
+      "foreignKey": "uni-id-users._id"
+    },
+    "script_id": {
+      "bsonType": "string",
+      "title": "剧本ID",
+      "description": "被评分的剧本ID",
+      "foreignKey": "botc-scripts._id"
+    },
+    "rating": {
+      "bsonType": "int",
+      "title": "评分",
+      "description": "用户给出的评分（1-5分）",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "comment": {
+      "bsonType": "string",
+      "title": "评价内容",
+      "description": "用户的评价文字（可选）",
+      "maxLength": 500
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "首次评分时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "更新时间",
+      "description": "最后修改评分时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}
+

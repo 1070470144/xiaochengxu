@@ -133,7 +133,14 @@
     },
     "rating": {
       "bsonType": "double",
-      "description": "评分（0-5分）",
+      "description": "评分（0-5分，已废弃，使用average_rating）",
+      "defaultValue": 0,
+      "minimum": 0,
+      "maximum": 5
+    },
+    "average_rating": {
+      "bsonType": "double",
+      "description": "平均评分（0-5分）",
       "defaultValue": 0,
       "minimum": 0,
       "maximum": 5

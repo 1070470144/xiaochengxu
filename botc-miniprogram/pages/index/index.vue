@@ -654,14 +654,10 @@ export default {
       // 可以定期刷新统计数据
     },
     
-    // 跳转到剧本榜单（剧本-查看榜单）
+    // 跳转到剧本榜单
     goToScriptRanking() {
-      uni.switchTab({
-        url: '/pages/script/index/index',
-        success: () => {
-          // 切换到查看榜单标签
-          uni.$emit('switchScriptTab', 'ranking')
-        }
+      uni.navigateTo({
+        url: '/pages/script/ranking/ranking'
       })
     },
     

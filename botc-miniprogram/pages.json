@@ -98,6 +98,15 @@
 			}
 		},
 		{
+			"path": "pages/user/my-ratings/my-ratings",
+			"style": {
+				"navigationBarTitleText": "我的评分",
+				"navigationBarBackgroundColor": "#8B4513",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/user/edit-profile/edit-profile",
 			"style": {
 				"navigationBarTitleText": "编辑资料",

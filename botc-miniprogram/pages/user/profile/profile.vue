@@ -161,6 +161,15 @@
               <text class="row-arrow">›</text>
             </view>
           </view>
+          <view class="function-row" @click="goToMyRatings">
+            <view class="row-left">
+              <view class="row-icon">📊</view>
+              <text class="row-title">我的评分</text>
+            </view>
+            <view class="row-right">
+              <text class="row-arrow">›</text>
+            </view>
+          </view>
           <view class="function-row" @click="goToHistory">
             <view class="row-left">
               <view class="row-icon">👁️</view>
@@ -464,6 +473,12 @@ export default {
     goToHistory() {
       uni.navigateTo({
         url: '/pages/user/history/history'
+      })
+    },
+    
+    goToMyRatings() {
+      uni.navigateTo({
+        url: '/pages/user/my-ratings/my-ratings'
       })
     },
 
