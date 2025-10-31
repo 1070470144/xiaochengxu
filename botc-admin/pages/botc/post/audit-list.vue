@@ -141,7 +141,17 @@ export default {
   },
   
   onLoad() {
-    this.getList()
+    // 延迟一点执行，确保页面完全加载
+    this.$nextTick(() => {
+      this.getList()
+    })
+  },
+  
+  onShow() {
+    // 每次显示页面时刷新数据
+    if (this.tableData.length > 0) {
+      this.getList()
+    }
   },
   
   methods: {
@@ -150,10 +160,17 @@ export default {
       this.error = ''
       
       try {
+        console.log('=== 开始查询帖子列表 ===')
+        console.log('当前状态筛选:', this.where.status)
+        console.log('页码:', this.pageCurrent)
+        
         const whereCondition = {}
-        if (this.where.status !== undefined && this.where.status !== '') {
+        // 只有明确指定状态时才添加状态筛选
+        if (this.where.status !== undefined && this.where.status !== null && this.where.status !== '') {
           whereCondition.status = this.where.status
         }
+        
+        console.log('查询条件:', whereCondition)
         
         // 查询帖子列表
         const res = await db.collection('botc-posts')
@@ -162,6 +179,8 @@ export default {
           .skip((this.pageCurrent - 1) * this.pageSize)
           .limit(this.pageSize)
           .get()
+        
+        console.log('查询结果:', res.result.data.length, '条')
         
         // 获取所有发布者ID
         const userIds = [...new Set(res.result.data.map(item => item.user_id).filter(Boolean))]
@@ -187,14 +206,23 @@ export default {
           user_nickname: userMap[item.user_id]?.nickname || '-'
         }))
         
+        console.log('数据组合完成，共', this.tableData.length, '条')
+        console.log('状态分布:', this.tableData.reduce((acc, item) => {
+          acc[item.status] = (acc[item.status] || 0) + 1
+          return acc
+        }, {}))
+        
+        // 查询总数
         const countRes = await db.collection('botc-posts')
           .where(whereCondition)
           .count()
         this.total = countRes.result.total
         
+        console.log('总数:', this.total)
+        
       } catch (e) {
         this.error = e.message
-        console.error(e)
+        console.error('查询失败:', e)
       } finally {
         this.loading = false
       }
@@ -206,11 +234,16 @@ export default {
     },
     
     changeStatus(index) {
+      console.log('=== 切换状态 ===')
+      console.log('index:', index)
+      
       if (typeof index === 'number' && this.statusTabs[index]) {
         this.where.status = this.statusTabs[index].value
       } else {
         this.where.status = index
       }
+      
+      console.log('新状态:', this.where.status)
       this.search()
     },
     

@@ -21,9 +21,13 @@ exports.main = async (event, context) => {
     // 获取所有启用的敏感词
     const wordsRes = await db.collection('botc-sensitive-words')
       .where({
-        enabled: true
+        status: 'enabled'  // 修复：使用正确的字段名
       })
       .get()
+    
+    console.log('=== 敏感词过滤 ===')
+    console.log('启用的敏感词数量:', wordsRes.data.length)
+    console.log('检查内容长度:', content.length)
     
     const sensitiveWords = wordsRes.data
     
@@ -42,6 +46,8 @@ exports.main = async (event, context) => {
     let filteredContent = content
     let foundWords = []
     
+    console.log('开始检查敏感词，词库数量:', sensitiveWords.length)
+    
     for (let wordItem of sensitiveWords) {
       const word = wordItem.word
       
@@ -49,6 +55,8 @@ exports.main = async (event, context) => {
       const regex = new RegExp(word, 'gi')
       
       if (regex.test(filteredContent)) {
+        console.log('✋ 发现敏感词:', word, '类型:', wordItem.type)
+        
         foundWords.push({
           word: word,
           type: wordItem.type
@@ -66,6 +74,7 @@ exports.main = async (event, context) => {
     
     // 如果发现敏感词
     if (foundWords.length > 0) {
+      console.log('❌ 内容被拦截，发现敏感词:', foundWords.length, '个')
       return {
         code: 40001,
         message: '内容包含敏感词，请修改后重试',
@@ -76,6 +85,8 @@ exports.main = async (event, context) => {
         }
       }
     }
+    
+    console.log('✅ 敏感词检查通过')
     
     // 额外的规则检查
     // 1. 检查手机号
