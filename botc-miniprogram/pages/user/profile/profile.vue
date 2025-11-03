@@ -261,6 +261,7 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import { getUserCloudObject } from '@/common/userCloudObject.js'
 
 export default {
   name: 'UserProfile',
@@ -271,7 +272,8 @@ export default {
       userStats: {},
       levelInfo: {},
       loading: false,
-      unreadCount: 0  // 未读消息数量
+      unreadCount: 0,  // 未读消息数量
+      userObj: null  // 用户云对象
     }
   },
   
@@ -292,6 +294,8 @@ export default {
 
   onLoad() {
     console.log('用户中心页面加载')
+    // 初始化用户云对象
+    this.userObj = getUserCloudObject()
     this.checkLogin()
   },
 
@@ -336,23 +340,17 @@ export default {
     // 刷新用户信息
     async refreshUserInfo() {
       try {
-        const token = Auth.getToken()
-        
-        const result = await uniCloud.callFunction({
-          name: 'user-info',
-          data: {
-            token: token
-          }
-        })
+        // 使用云对象获取用户信息
+        const result = await this.userObj.getInfo()
 
-        if (result.result.code === 0) {
-          console.log('🔄 从服务器刷新用户信息：', result.result.data)
+        if (result.code === 0) {
+          console.log('🔄 从服务器刷新用户信息：', result.data)
           
           // 保留uid和role等重要字段
           const updatedUserInfo = {
-            ...result.result.data,
-            uid: result.result.data.uid || result.result.data._id,
-            role: result.result.data.role || this.userInfo.role || 0
+            ...result.data,
+            uid: result.data.uid || result.data._id,
+            role: result.data.role || this.userInfo.role || 0
           }
           
           this.userInfo = updatedUserInfo
@@ -372,17 +370,11 @@ export default {
     // 加载用户统计数据
     async loadUserStats() {
       try {
-        const token = Auth.getToken()
-        
-        const result = await uniCloud.callFunction({
-          name: 'user-stats',
-          data: {
-            token: token
-          }
-        })
+        // 使用云对象获取统计数据
+        const result = await this.userObj.getStats()
 
-        if (result.result.code === 0) {
-          this.userStats = result.result.data
+        if (result.code === 0) {
+          this.userStats = result.data
         } else {
           // 失败时使用默认值
           this.userStats = {
@@ -607,15 +599,12 @@ export default {
             })
             
             try {
-              // 调用同步云函数
-              const result = await uniCloud.callFunction({
-                name: 'user-follow-sync',
-                data: {}
-              })
+              // 使用云对象同步关注数据
+              const result = await this.userObj.syncFollowData()
               
               uni.hideLoading()
               
-              if (result.result.code === 0) {
+              if (result.code === 0) {
                 uni.showToast({
                   title: '同步成功',
                   icon: 'success'
@@ -732,15 +721,12 @@ export default {
     // 更新背景图片
     async updateBackgroundImage(imageUrl) {
       try {
-        const result = await uniCloud.callFunction({
-          name: 'user-update',
-          data: {
-            background_image: imageUrl,
-            token: Auth.getToken()
-          }
+        // 使用云对象更新背景图片
+        const result = await this.userObj.update({
+          background_image: imageUrl
         })
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           // 更新本地数据
           this.userInfo.background_image = imageUrl
           
@@ -772,15 +758,8 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             try {
-              const token = Auth.getToken()
-              
-              // 调用云函数退出登录
-              await uniCloud.callFunction({
-                name: 'user-logout',
-                data: {
-                  token: token
-                }
-              })
+              // 调用云对象退出登录
+              await this.userObj.logout()
               
               // 使用Auth工具类清除登录信息
               Auth.logout()

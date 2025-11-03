@@ -109,12 +109,14 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import { getUserCloudObject } from '@/common/userCloudObject.js'
 
 export default {
   name: 'Settings',
   
   data() {
     return {
+      userObj: null,  // 用户云对象
       userInfo: {},
       settings: {
         carpoolNotify: true,
@@ -129,6 +131,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化用户云对象
+    this.userObj = getUserCloudObject()
     this.loadUserInfo()
     this.loadSettings()
     this.calculateCacheSize()
@@ -245,12 +249,8 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             try {
-              const token = Auth.getToken()
-              
-              await uniCloud.callFunction({
-                name: 'user-logout',
-                data: { token }
-              })
+              // 使用云对象退出登录
+              await this.userObj.logout()
               
               Auth.logout()
               

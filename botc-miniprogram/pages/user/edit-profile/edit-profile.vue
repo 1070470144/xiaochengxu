@@ -77,6 +77,7 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import { getUserCloudObject } from '@/common/userCloudObject.js'
 
 export default {
   name: 'EditProfile',
@@ -84,6 +85,7 @@ export default {
   data() {
     return {
       userInfo: {},
+      userObj: null,  // 用户云对象
       formData: {
         avatar: '',
         nickname: '',
@@ -107,6 +109,8 @@ export default {
   },
 
   onLoad() {
+    // 初始化用户云对象
+    this.userObj = getUserCloudObject()
     this.loadUserInfo()
   },
 
@@ -229,21 +233,16 @@ export default {
       this.submitting = true
 
       try {
-        const token = Auth.getToken()
-        
-        const result = await uniCloud.callFunction({
-          name: 'user-update',
-          data: {
-            token: token,
-            nickname: this.formData.nickname.trim(),
-            avatar: this.formData.avatar,
-            gender: this.formData.gender
-          }
+        // 使用云对象更新用户信息
+        const result = await this.userObj.update({
+          nickname: this.formData.nickname.trim(),
+          avatar: this.formData.avatar,
+          gender: this.formData.gender
         })
 
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           // 更新本地用户信息
-          const updatedUserInfo = result.result.data
+          const updatedUserInfo = result.data
           console.log('✅ 保存成功，更新本地用户信息：', updatedUserInfo)
           uni.setStorageSync('userInfo', updatedUserInfo)
 

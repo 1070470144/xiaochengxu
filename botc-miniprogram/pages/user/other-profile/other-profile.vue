@@ -193,6 +193,7 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import { getUserCloudObject } from '@/common/userCloudObject.js'
 
 export default {
   name: 'OtherProfile',
@@ -200,6 +201,7 @@ export default {
   data() {
     return {
       userId: '',
+      userObj: null,  // 用户云对象
       loading: true,
       followLoading: false,
       chatLoading: false,
@@ -260,6 +262,9 @@ export default {
   },
   
   onLoad(options) {
+    // 初始化用户云对象
+    this.userObj = getUserCloudObject()
+    
     if (options.user_id) {
       this.userId = options.user_id
       this.loadUserProfile()
@@ -287,16 +292,11 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'user-profile',
-          data: {
-            user_id: this.userId,
-            token: Auth.getToken()
-          }
-        })
+        // 使用云对象获取用户资料
+        const result = await this.userObj.getProfile(this.userId)
         
-        if (result.result.code === 0) {
-          this.profileData = result.result.data
+        if (result.code === 0) {
+          this.profileData = result.data
           
           // 设置页面标题
           uni.setNavigationBarTitle({
@@ -396,25 +396,24 @@ export default {
       this.followLoading = true
       
       try {
-        const action = this.profileData.follow_status.is_following ? 'unfollow' : 'follow'
+        const isFollowing = this.profileData.follow_status.is_following
         
-        const result = await uniCloud.callFunction({
-          name: 'user-follow',
-          data: {
-            action: action,
-            target_user_id: this.userId,
-            token: Auth.getToken()
-          }
-        })
+        // 使用云对象关注/取消关注
+        const result = isFollowing 
+          ? await this.userObj.unfollow(this.userId)
+          : await this.userObj.follow(this.userId)
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           // 更新关注状态
-          this.profileData.follow_status.is_following = !this.profileData.follow_status.is_following
+          const wasFollowing = this.profileData.follow_status.is_following
+          this.profileData.follow_status.is_following = !wasFollowing
           
           // 更新粉丝数
-          if (action === 'follow') {
+          if (!wasFollowing) {
+            // 刚刚关注了
             this.profileData.user.followers_count = (this.profileData.user.followers_count || 0) + 1
           } else {
+            // 刚刚取消关注
             this.profileData.user.followers_count = Math.max((this.profileData.user.followers_count || 0) - 1, 0)
           }
           

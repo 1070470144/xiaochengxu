@@ -48,10 +48,12 @@
 
 <script>
 import Auth from '@/utils/auth.js'
+import { getUserCloudObject } from '@/common/userCloudObject.js'
 
 export default {
   data() {
     return {
+      userObj: null,  // 用户云对象
       followingList: [],
       page: 1,
       pageSize: 20,
@@ -62,6 +64,8 @@ export default {
   },
 
   onLoad() {
+    // 初始化用户云对象
+    this.userObj = getUserCloudObject()
     this.loadFollowingList()
   },
 
@@ -87,17 +91,11 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'user-following-list',
-          data: {
-            token: Auth.getToken(),
-            page: this.page,
-            page_size: this.pageSize
-          }
-        })
+        // 使用云对象获取关注列表
+        const result = await this.userObj.getFollowingList(this.page, this.pageSize)
 
-        if (result.result.code === 0) {
-          const { list, total } = result.result.data
+        if (result.code === 0) {
+          const { list, total } = result.data
           
           if (this.page === 1) {
             this.followingList = list
@@ -108,7 +106,7 @@ export default {
           this.total = total
           this.hasMore = this.followingList.length < total
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
       } catch (error) {
         console.error('加载关注列表失败：', error)
@@ -130,16 +128,10 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             try {
-              const result = await uniCloud.callFunction({
-                name: 'user-follow',
-                data: {
-                  token: Auth.getToken(),
-                  target_user_id: userId,
-                  action: 'unfollow'
-                }
-              })
+              // 使用云对象取消关注
+              const result = await this.userObj.unfollow(userId)
 
-              if (result.result.code === 0) {
+              if (result.code === 0) {
                 uni.showToast({
                   title: '已取消关注',
                   icon: 'success'
@@ -149,7 +141,7 @@ export default {
                 this.followingList = this.followingList.filter(item => item.user_id !== userId)
                 this.total--
               } else {
-                throw new Error(result.result.message)
+                throw new Error(result.message)
               }
             } catch (error) {
               console.error('取消关注失败：', error)

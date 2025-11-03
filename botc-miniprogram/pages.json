@@ -22,6 +22,12 @@
 			}
 		},
 		{
+			"path": "pages/test/user-test-complete",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/script/index/index",
 			"style": {
 				"navigationBarTitleText": "剧本",

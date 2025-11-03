@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User 云对象测试入口</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .container {
+      text-align: center;
+      background: white;
+      padding: 60px 80px;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 40px;
+      font-size: 32px;
+    }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 300px;
+    }
+    .btn {
+      padding: 16px 32px;
+      font-size: 18px;
+      color: white;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    }
+    .btn-info {
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    }
+    .btn-warning {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    }
+    .icon {
+      margin-right: 8px;
+      font-size: 20px;
+    }
+    .hint {
+      margin-top: 30px;
+      color: #999;
+      font-size: 14px;
+    }
+    .url {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #666;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 User 云对象测试入口</h1>
+    
+    <div class="btn-group">
+      <a href="http://localhost:5173/#/pages/test/user-test-complete" class="btn" target="_blank">
+        <span class="icon">🚀</span>
+        完整测试页面（推荐）
+      </a>
+      
+      <a href="http://localhost:5173/#/pages/test/user-cloud-object-test" class="btn btn-secondary" target="_blank">
+        <span class="icon">📋</span>
+        简化测试页面
+      </a>
+      
+      <a href="http://localhost:5173/#/pages/login/sms-login" class="btn btn-info" target="_blank">
+        <span class="icon">🔐</span>
+        登录页面
+      </a>
+      
+      <a href="http://localhost:5173/#/pages/user/profile/profile" class="btn btn-warning" target="_blank">
+        <span class="icon">👤</span>
+        个人中心
+      </a>
+    </div>
+    
+    <div class="hint">
+      ⚠️ 请确保已在 HBuilderX 中运行项目到浏览器
+    </div>
+    
+    <div class="url">
+      完整测试页面 URL：<br>
+      http://localhost:5173/#/pages/test/user-test-complete
+    </div>
+  </div>
+  
+  <script>
+    // 自动检测服务是否运行
+    fetch('http://localhost:5173/')
+      .catch(() => {
+        const hint = document.querySelector('.hint');
+        hint.innerHTML = '❌ 检测到开发服务未运行！<br>请先在 HBuilderX 中运行项目到浏览器';
+        hint.style.color = '#f44336';
+        hint.style.fontWeight = 'bold';
+      });
+  </script>
+</body>
+</html>
+
