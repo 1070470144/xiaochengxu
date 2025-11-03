@@ -454,8 +454,44 @@ export default {
     },
 
     viewMore(type) {
+      console.log('点击更多，类型:', type)
+      
+      // 根据不同榜单类型，跳转到对应的筛选页面
+      let targetType = 'all'
+      
+      switch (type) {
+        case 'new':
+          // 最新剧本 -> 最新
+          targetType = 'new'
+          break
+        case 'hot':
+          // 萌萌想玩热榜 -> 最热
+          targetType = 'hot'
+          break
+        case 'recent-mystery':
+          // 近期推理剧本 -> 推理
+          targetType = 'mystery'
+          break
+        case 'recent-fun':
+          // 近期娱乐剧本 -> 娱乐
+          targetType = 'fun'
+          break
+        case 'top-mystery':
+          // 萌萌推理高分榜 -> 高分（单选）
+          targetType = 'rating'
+          break
+        case 'top-fun':
+          // 萌萌娱乐高分榜 -> 高分（单选）
+          targetType = 'rating'
+          break
+        default:
+          targetType = 'all'
+      }
+      
+      console.log('跳转类型:', targetType)
+      
       uni.navigateTo({
-        url: `/pages/script/list/list?type=${type}`
+        url: `/pages/script/list/list?type=${targetType}`
       })
     },
 

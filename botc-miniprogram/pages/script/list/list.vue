@@ -21,20 +21,20 @@
             :class="['filter-item', currentType === 'all' ? 'active' : '']"
             @click="changeType('all')">全部</text>
           <text 
-            :class="['filter-item', currentType === 'hot' ? 'active' : '']"
-            @click="changeType('hot')">热门</text>
-          <text 
             :class="['filter-item', currentType === 'new' ? 'active' : '']"
             @click="changeType('new')">最新</text>
           <text 
-            :class="['filter-item', currentType === 'rating' ? 'active' : '']"
-            @click="changeType('rating')">高分</text>
+            :class="['filter-item', currentType === 'hot' ? 'active' : '']"
+            @click="changeType('hot')">最热</text>
           <text 
-            :class="['filter-item', currentType === 'mystery' ? 'active' : '']"
+            :class="['filter-item', currentType === 'mystery' || currentType === 'mystery-rating' ? 'active' : '']"
             @click="changeType('mystery')">推理</text>
           <text 
-            :class="['filter-item', currentType === 'fun' ? 'active' : '']"
+            :class="['filter-item', currentType === 'fun' || currentType === 'fun-rating' ? 'active' : '']"
             @click="changeType('fun')">娱乐</text>
+          <text 
+            :class="['filter-item', currentType === 'rating' || currentType === 'mystery-rating' || currentType === 'fun-rating' ? 'active' : '']"
+            @click="changeType('rating')">高分</text>
         </view>
       </scroll-view>
     </view>
@@ -135,6 +135,8 @@ export default {
   },
 
   onLoad(options) {
+    console.log('剧本列表页面加载，参数:', options)
+    
     if (options.keyword) {
       this.searchKeyword = options.keyword
     }
@@ -173,10 +175,11 @@ export default {
           whereCondition.title = new RegExp(this.searchKeyword, 'i')
         }
 
-        if (this.currentType === 'mystery') {
-          whereCondition.script_type = 1
-        } else if (this.currentType === 'fun') {
-          whereCondition.script_type = 2
+        // 处理类型筛选（支持组合类型）
+        if (this.currentType === 'mystery' || this.currentType === 'mystery-rating') {
+          whereCondition.script_type = 1 // 推理
+        } else if (this.currentType === 'fun' || this.currentType === 'fun-rating') {
+          whereCondition.script_type = 2 // 娱乐
         }
 
         // 构建排序
@@ -185,11 +188,14 @@ export default {
         
         if (this.currentType === 'hot') {
           orderByField = 'heat_score'  // 使用热度分数排序
-        } else if (this.currentType === 'rating') {
+        } else if (this.currentType === 'rating' || this.currentType === 'mystery-rating' || this.currentType === 'fun-rating') {
           orderByField = 'average_rating'  // 使用平均评分排序
         } else if (this.currentType === 'new') {
           orderByField = 'published_at'
         }
+        
+        console.log('查询条件:', whereCondition)
+        console.log('排序字段:', orderByField)
 
         const res = await db.collection('botc-scripts')
           .where(whereCondition)
@@ -243,7 +249,17 @@ export default {
     },
 
     changeType(type) {
-      if (this.currentType === type) return
+      console.log('切换类型:', type)
+      
+      // 如果是组合类型，需要映射到基础类型显示
+      let displayType = type
+      if (type === 'mystery-rating') {
+        displayType = 'mystery' // 推理高分榜 -> 显示推理tab
+      } else if (type === 'fun-rating') {
+        displayType = 'fun' // 娱乐高分榜 -> 显示娱乐tab
+      }
+      
+      if (this.currentType === displayType) return
       
       this.currentType = type
       this.refreshList()
