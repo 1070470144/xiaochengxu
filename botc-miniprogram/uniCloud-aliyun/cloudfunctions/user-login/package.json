@@ -1,8 +1,0 @@
-{
-  "name": "user-login",
-  "version": "1.0.0",
-  "description": "手机号验证码登录",
-  "main": "index.js",
-  "dependencies": {}
-}
-

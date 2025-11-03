@@ -1,7 +1,0 @@
-{
-  "name": "user-profile",
-  "version": "1.0.0",
-  "description": "获取用户主页信息",
-  "main": "index.js"
-}
-

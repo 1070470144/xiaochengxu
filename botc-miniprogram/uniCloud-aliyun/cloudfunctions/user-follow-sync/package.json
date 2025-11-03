@@ -1,6 +1,0 @@
-{
-  "name": "user-follow-sync",
-  "version": "1.0.0",
-  "description": "同步修复用户关注和粉丝数量",
-  "main": "index.js"
-}

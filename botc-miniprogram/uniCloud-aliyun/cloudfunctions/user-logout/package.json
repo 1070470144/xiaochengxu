@@ -1,8 +1,0 @@
-{
-  "name": "user-logout",
-  "version": "1.0.0",
-  "description": "用户登出",
-  "main": "index.js",
-  "dependencies": {}
-}
-

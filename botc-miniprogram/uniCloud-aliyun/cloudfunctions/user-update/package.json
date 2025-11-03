@@ -1,8 +1,0 @@
-{
-  "name": "user-update",
-  "version": "1.0.0",
-  "description": "更新用户信息",
-  "main": "index.js",
-  "dependencies": {}
-}
-

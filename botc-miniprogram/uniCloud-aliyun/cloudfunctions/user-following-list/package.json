@@ -1,7 +1,0 @@
-{
-  "name": "user-following-list",
-  "version": "1.0.0",
-  "description": "获取我关注的列表",
-  "main": "index.js"
-}
-

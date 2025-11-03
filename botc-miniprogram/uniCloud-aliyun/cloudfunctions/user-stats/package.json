@@ -1,8 +1,0 @@
-{
-  "name": "user-stats",
-  "version": "1.0.0",
-  "description": "获取用户统计数据云函数",
-  "main": "index.js",
-  "dependencies": {}
-}
-

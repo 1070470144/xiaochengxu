@@ -1,8 +1,0 @@
-{
-  "name": "user-add-exp",
-  "version": "1.0.0",
-  "description": "增加用户经验值",
-  "main": "index.js",
-  "dependencies": {}
-}
-
