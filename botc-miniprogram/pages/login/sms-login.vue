@@ -82,8 +82,19 @@ export default {
       countdown: 0,
       loading: false,
       devMode: true,  // 开发模式
-      devCode: ''     // 开发模式下显示的验证码
+      devCode: '',    // 开发模式下显示的验证码
+      userObj: null   // 用户云对象
     }
+  },
+  
+  onLoad() {
+    // 导入用户云对象（强制使用云端，不使用本地调试）
+    this.userObj = uniCloud.importObject('user', {
+      customUI: true,
+      // 禁用本地调试，强制使用云端
+      debugFunction: false
+    })
+    console.log('✅ 用户云对象已导入（云端模式）')
   },
 
   computed: {
@@ -117,24 +128,22 @@ export default {
       try {
         uni.showLoading({ title: '发送中...' })
 
-        const result = await uniCloud.callFunction({
-          name: 'user-send-sms',
-          data: {
-            phone: this.phone,
-            type: 'login'
-          }
-        })
+        // 使用云对象调用
+        const result = await this.userObj.sendSms(this.phone, 'login')
 
         uni.hideLoading()
 
-        if (result.result.code === 0) {
+        console.log('📱 发送验证码结果:', result)
+
+        if (result.code === 0) {
           // 开发模式：显示验证码
-          if (result.result.data.devCode) {
-            this.devCode = result.result.data.devCode
+          if (result.data.devCode) {
+            this.devCode = result.data.devCode
+            console.log('🔧 开发模式验证码:', this.devCode)
           }
 
           uni.showToast({
-            title: '验证码已发送',
+            title: result.message || '验证码已发送',
             icon: 'success'
           })
 
@@ -148,15 +157,23 @@ export default {
           }, 1000)
 
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
 
       } catch (error) {
         uni.hideLoading()
-        console.error('发送验证码失败：', error)
+        console.error('❌ 发送验证码失败：', error)
+        console.error('错误详情：', JSON.stringify(error))
+        console.error('错误信息：', error.message)
+        console.error('错误代码：', error.code)
+        console.error('错误堆栈：', error.stack)
+        
+        // 显示更详细的错误信息
+        const errorMsg = error.errMsg || error.message || '发送失败'
         uni.showToast({
-          title: error.message || '发送失败',
-          icon: 'none'
+          title: errorMsg,
+          icon: 'none',
+          duration: 3000
         })
       }
     },
@@ -170,21 +187,20 @@ export default {
       this.loading = true
 
       try {
-        const result = await uniCloud.callFunction({
-          name: 'user-login',
-          data: {
-            phone: this.phone,
-            code: this.code
-          }
-        })
+        // 使用云对象调用
+        const result = await this.userObj.login(this.phone, this.code)
 
-        if (result.result.code === 0) {
-          const { token, tokenExpired, userInfo, isNewUser } = result.result.data
+        console.log('🔐 登录结果:', result)
+
+        if (result.code === 0) {
+          const { token, tokenExpired, userInfo, isNewUser } = result.data
 
           // 保存登录信息
           uni.setStorageSync('uni_id_token', token)
           uni.setStorageSync('uni_id_token_expired', tokenExpired)
           uni.setStorageSync('userInfo', userInfo)
+
+          console.log('✅ 登录成功，用户:', userInfo.nickname)
 
           uni.showToast({
             title: isNewUser ? '注册成功' : '登录成功',
@@ -199,11 +215,11 @@ export default {
           }, 1500)
 
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
 
       } catch (error) {
-        console.error('登录失败：', error)
+        console.error('❌ 登录失败：', error)
         uni.showToast({
           title: error.message || '登录失败',
           icon: 'none'

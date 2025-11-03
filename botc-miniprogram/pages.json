@@ -14,6 +14,14 @@
 			}
 		},
 		{
+			"path": "pages/test/user-cloud-object-test",
+			"style": {
+				"navigationBarTitleText": "User云对象测试",
+				"navigationBarBackgroundColor": "#007aff",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/script/index/index",
 			"style": {
 				"navigationBarTitleText": "剧本",

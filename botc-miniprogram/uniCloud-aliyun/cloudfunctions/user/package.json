@@ -1,0 +1,12 @@
+{
+  "name": "user",
+  "version": "1.0.0",
+  "description": "用户云对象 - 统一管理所有用户相关功能",
+  "main": "index.obj.js",
+  "cloudfunction-config": {
+    "memorySize": 256,
+    "timeout": 60,
+    "triggers": []
+  }
+}
+
