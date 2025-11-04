@@ -1,8 +1,0 @@
-{
-  "name": "home-data",
-  "version": "1.0.0",
-  "description": "获取首页数据",
-  "main": "index.js",
-  "dependencies": {}
-}
-

@@ -185,6 +185,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化 system 云对象
+    this.systemObj = uniCloud.importObject('system', { customUI: true })
     this.checkLogin()
   },
   
@@ -211,16 +213,10 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'certification-manage',
-          data: {
-            action: 'get',
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.systemObj.manageCertification('get')
         
-        if (result.result.code === 0) {
-          this.certificationInfo = result.result.data
+        if (result.code === 0) {
+          this.certificationInfo = result.data
         }
       } catch (error) {
         console.error('加载认证信息失败：', error)
@@ -297,18 +293,13 @@ export default {
       this.submitting = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'certification-manage',
-          data: {
-            action: 'apply',
-            level: this.selectedLevel,
-            images: this.uploadedImages,
-            description: this.description,
-            token: Auth.getToken()
-          }
+        const result = await this.systemObj.manageCertification('apply', {
+          level: this.selectedLevel,
+          images: this.uploadedImages,
+          description: this.description
         })
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({ title: '申请提交成功', icon: 'success' })
           
           // 重置表单
@@ -350,20 +341,14 @@ export default {
     // 撤销认证
     async revokeCertification() {
       try {
-        const result = await uniCloud.callFunction({
-          name: 'certification-manage',
-          data: {
-            action: 'revoke',
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.systemObj.manageCertification('revoke')
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({ title: '已撤销认证', icon: 'success' })
           this.loadCertificationInfo()
         } else {
           uni.showToast({ 
-            title: result.result.message || '撤销失败', 
+            title: result.message || '撤销失败', 
             icon: 'none' 
           })
         }

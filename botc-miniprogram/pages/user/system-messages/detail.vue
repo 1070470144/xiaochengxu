@@ -52,6 +52,8 @@ export default {
   },
   
   onLoad(options) {
+    // 初始化 system 云对象
+    this.systemObj = uniCloud.importObject('system', { customUI: true })
     if (options.id) {
       this.messageId = options.id
       this.loadMessage()
@@ -78,27 +80,19 @@ export default {
         
         console.log('=== 查询消息详情 ===')
         console.log('消息ID:', this.messageId)
-        console.log('用户ID:', userId)
         
-        // 使用云函数查询消息详情
-        const res = await uniCloud.callFunction({
-          name: 'get-system-messages',
-          data: {
-            userId: userId,
-            messageId: this.messageId
-          }
-        })
+        // 使用云对象查询消息详情
+        const res = await this.systemObj.getSystemMessages(1, 20, this.messageId)
         
         console.log('消息详情查询结果:', res)
-        console.log('云函数返回:', res.result)
         
-        if (res.result && res.result.code === 0) {
-          this.message = res.result.data
+        if (res && res.code === 0) {
+          this.message = res.data
           console.log('✅ 消息详情加载成功')
         } else {
-          console.error('❌ 查询失败:', res.result?.message)
+          console.error('❌ 查询失败:', res?.message)
           uni.showToast({ 
-            title: res.result?.message || '加载失败', 
+            title: res?.message || '加载失败', 
             icon: 'none' 
           })
         }

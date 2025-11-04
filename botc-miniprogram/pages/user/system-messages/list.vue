@@ -86,6 +86,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化 system 云对象
+    this.systemObj = uniCloud.importObject('system', { customUI: true })
     this.loadMessages()
     this.loadUnreadCount()
   },
@@ -131,27 +133,19 @@ export default {
         console.log('页码:', this.page)
         console.log('每页条数:', this.pageSize)
         
-        // 使用云函数查询系统消息
-        console.log('>>> 通过云函数查询系统消息')
-        console.log('调用参数:', { userId: userId, page: this.page, pageSize: this.pageSize })
+        // 使用云对象查询系统消息
+        console.log('>>> 通过云对象查询系统消息')
+        console.log('调用参数:', { page: this.page, pageSize: this.pageSize })
         
         let res
         try {
-          res = await uniCloud.callFunction({
-            name: 'get-system-messages',
-            data: {
-              userId: userId,  // 传递用户ID
-              page: this.page,
-              pageSize: this.pageSize
-            }
-          })
+          res = await this.systemObj.getSystemMessages(this.page, this.pageSize)
           
-          console.log('=== 云函数调用成功 ===')
+          console.log('=== 云对象调用成功 ===')
           console.log('完整响应:', res)
-          console.log('result 属性:', res.result)
           
         } catch (error) {
-          console.error('❌ 云函数调用失败:', error)
+          console.error('❌ 云对象调用失败:', error)
           console.error('错误信息:', error.message)
           console.error('错误代码:', error.code)
           uni.showToast({ title: '查询失败: ' + error.message, icon: 'none' })
@@ -160,10 +154,10 @@ export default {
         
         console.log('=== 查询结果 ===')
         
-        // 处理云函数返回的数据
+        // 处理云对象返回的数据
         let data = []
-        if (res.result && res.result.code === 0) {
-          data = res.result.data?.list || []
+        if (res && res.code === 0) {
+          data = res.data?.list || []
           console.log('数据条数:', data.length)
           
           if (data.length > 0) {
@@ -181,7 +175,7 @@ export default {
             console.log('❌ 未查询到任何消息')
           }
         } else {
-          console.error('❌ 云函数调用失败:', res.result?.message)
+          console.error('❌ 云对象调用失败:', res?.message)
         }
         
         if (loadMore) {
@@ -370,30 +364,21 @@ export default {
     // 删除单条消息
     async deleteMessage(messageId) {
       try {
-        const userInfo = Auth.getUserInfo()
-        const userId = userInfo.uid || userInfo._id || userInfo.id
-        
         uni.showLoading({ title: '删除中...' })
         
-        // 调用云函数删除消息
-        const res = await uniCloud.callFunction({
-          name: 'delete-system-message',
-          data: {
-            userId: userId,
-            messageId: messageId
-          }
-        })
+        // 调用云对象删除消息
+        const res = await this.systemObj.deleteSystemMessage(messageId, false)
         
         uni.hideLoading()
         
-        if (res.result && res.result.code === 0) {
+        if (res && res.code === 0) {
           uni.showToast({ title: '删除成功', icon: 'success' })
           // 从列表中移除
           this.messages = this.messages.filter(m => m._id !== messageId)
           // 更新未读数量
           this.loadUnreadCount()
         } else {
-          uni.showToast({ title: res.result?.message || '删除失败', icon: 'none' })
+          uni.showToast({ title: res?.message || '删除失败', icon: 'none' })
         }
       } catch (error) {
         uni.hideLoading()
@@ -419,28 +404,19 @@ export default {
     // 全部删除
     async deleteAllMessages() {
       try {
-        const userInfo = Auth.getUserInfo()
-        const userId = userInfo.uid || userInfo._id || userInfo.id
-        
         uni.showLoading({ title: '删除中...' })
         
-        // 调用云函数删除所有消息
-        const res = await uniCloud.callFunction({
-          name: 'delete-system-message',
-          data: {
-            userId: userId,
-            deleteAll: true
-          }
-        })
+        // 调用云对象删除所有消息
+        const res = await this.systemObj.deleteSystemMessage(null, true)
         
         uni.hideLoading()
         
-        if (res.result && res.result.code === 0) {
+        if (res && res.code === 0) {
           uni.showToast({ title: '已删除全部消息', icon: 'success' })
           this.messages = []
           this.unreadCount = 0
         } else {
-          uni.showToast({ title: res.result?.message || '删除失败', icon: 'none' })
+          uni.showToast({ title: res?.message || '删除失败', icon: 'none' })
         }
       } catch (error) {
         uni.hideLoading()

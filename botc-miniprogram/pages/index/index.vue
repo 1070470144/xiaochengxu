@@ -262,6 +262,10 @@ export default {
     this.postObj = uniCloud.importObject('post', {
       customUI: true
     })
+    // 初始化 system 云对象
+    this.systemObj = uniCloud.importObject('system', {
+      customUI: true
+    })
     this.loadHomeData()
     this.loadPosts()
     this.initScripts()
@@ -277,13 +281,10 @@ export default {
     // 加载首页数据
     async loadHomeData() {
       try {
-        const res = await uniCloud.callFunction({
-          name: 'home-data',
-          data: {}
-        })
+        const res = await this.systemObj.getHomeData()
         
-        if (res.result.code === 0) {
-          this.stats = res.result.data.stats
+        if (res.code === 0) {
+          this.stats = res.data.stats
         }
       } catch (error) {
         console.error('加载首页数据失败:', error)

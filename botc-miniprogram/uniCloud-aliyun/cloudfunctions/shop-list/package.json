@@ -1,8 +1,0 @@
-{
-  "name": "shop-list",
-  "version": "1.0.0",
-  "description": "获取店铺列表云函数",
-  "main": "index.js",
-  "dependencies": {}
-}
-

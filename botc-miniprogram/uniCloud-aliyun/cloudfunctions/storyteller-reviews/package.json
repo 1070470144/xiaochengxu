@@ -1,8 +1,0 @@
-{
-  "name": "storyteller-reviews",
-  "version": "1.0.0",
-  "description": "获取说书人评价列表",
-  "main": "index.js",
-  "dependencies": {}
-}
-

@@ -1,8 +1,0 @@
-{
-  "name": "shop-detail",
-  "version": "1.0.0",
-  "description": "获取店铺详情云函数",
-  "main": "index.js",
-  "dependencies": {}
-}
-

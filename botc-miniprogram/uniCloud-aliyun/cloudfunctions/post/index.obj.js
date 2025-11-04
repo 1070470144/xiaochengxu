@@ -292,19 +292,15 @@ module.exports = {
       }
       
       // 🛡️ 内容过滤检查
-      const filterResult = await uniCloud.callFunction({
-        name: 'content-filter',
-        data: {
-          content: content
-        }
-      })
+      const systemObj = uniCloud.importObject('system')
+      const filterResult = await systemObj.filterContent(content)
       
-      if (filterResult.result.code !== 0) {
+      if (filterResult.code !== 0) {
         // 内容包含敏感词或违规内容
         return {
-          code: filterResult.result.code,
-          message: filterResult.result.message,
-          data: filterResult.result.data
+          code: filterResult.code,
+          message: filterResult.message,
+          data: filterResult.data
         }
       }
       

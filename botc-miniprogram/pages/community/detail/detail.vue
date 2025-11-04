@@ -217,6 +217,10 @@ export default {
     this.postObj = uniCloud.importObject('post', {
       customUI: true
     })
+    // 初始化 system 云对象
+    this.systemObj = uniCloud.importObject('system', {
+      customUI: true
+    })
     
     if (options.id) {
       this.postId = options.id
@@ -387,30 +391,24 @@ export default {
       this.commenting = true
       
       try {
-        const token = Auth.getToken()
-        
-        const result = await uniCloud.callFunction({
-          name: 'comment-create',
-          data: {
-            postId: this.postId,
-            content: this.commentContent.trim(),
-            token: token
-          }
+        const result = await this.systemObj.createComment({
+          postId: this.postId,
+          content: this.commentContent.trim()
         })
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '评论成功',
             icon: 'success'
           })
           
           // 添加新评论到列表
-          this.post.comments.push(result.result.data.comment)
+          this.post.comments.push(result.data.comment)
           this.post.comment_count = (this.post.comment_count || 0) + 1
           
           this.closeCommentInput()
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {
