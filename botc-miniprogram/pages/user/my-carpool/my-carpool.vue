@@ -98,6 +98,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 carpool 云对象
+    this.carpoolObj = uniCloud.importObject('carpool', {
+      customUI: true
+    })
     this.loadCarpool()
   },
   
@@ -116,21 +120,17 @@ export default {
       this.loading = true
       
       try {
-        const token = Auth.getToken()
         const userInfo = Auth.getUserInfo()
         
-        const result = await uniCloud.callFunction({
-          name: 'carpool-list',
-          data: {
-            page: this.page,
-            pageSize: this.pageSize,
-            hostId: userInfo._id,
-            status: this.currentTab === 'all' ? undefined : this.currentTab
-          }
+        const result = await this.carpoolObj.getList({
+          page: this.page,
+          pageSize: this.pageSize,
+          hostId: userInfo._id,
+          status: this.currentTab === 'all' ? undefined : this.currentTab
         })
         
-        if (result.result.code === 0) {
-          const newRooms = result.result.data.list
+        if (result.code === 0) {
+          const newRooms = result.data.list
           
           if (loadMore) {
             this.carpoolList = [...this.carpoolList, ...newRooms]
@@ -138,7 +138,7 @@ export default {
             this.carpoolList = newRooms
           }
           
-          this.hasMore = result.result.data.hasMore
+          this.hasMore = result.data.hasNext
         }
         
       } catch (error) {
@@ -220,18 +220,12 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             try {
-              const token = Auth.getToken()
+              const result = await this.carpoolObj.updateStatus(
+                roomId,
+                4 // 已结束状态
+              )
               
-              const result = await uniCloud.callFunction({
-                name: 'carpool-update-status',
-                data: {
-                  token: token,
-                  roomId: roomId,
-                  status: 4 // 已结束
-                }
-              })
-              
-              if (result.result.code === 0) {
+              if (result.code === 0) {
                 uni.showToast({
                   title: '已结束',
                   icon: 'success'

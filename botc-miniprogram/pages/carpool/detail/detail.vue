@@ -275,6 +275,11 @@ export default {
   },
 
   onLoad(options) {
+    // 初始化 carpool 云对象
+    this.carpoolObj = uniCloud.importObject('carpool', {
+      customUI: true
+    })
+    
     if (options.id) {
       this.carpoolId = options.id
       this.getCurrentUser()
@@ -301,13 +306,10 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'carpool-detail',
-          data: { id: this.carpoolId }
-        })
+        const result = await this.carpoolObj.getDetail(this.carpoolId)
 
-        if (result.result.code === 0) {
-          this.carpoolDetail = result.result.data
+        if (result.code === 0) {
+          this.carpoolDetail = result.data
           this.analyzeUserStatus()
           
           // 设置页面标题
@@ -315,7 +317,7 @@ export default {
             title: this.carpoolDetail.title
           })
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {
@@ -400,15 +402,12 @@ export default {
       this.applying = true
 
       try {
-        const result = await uniCloud.callFunction({
-          name: 'carpool-apply',
-          data: {
-            roomId: this.carpoolId,
-            message: this.applyMessage.trim()
-          }
-        })
+        const result = await this.carpoolObj.apply(
+          this.carpoolId,
+          this.applyMessage.trim()
+        )
 
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '报名成功',
             icon: 'success'
@@ -421,7 +420,7 @@ export default {
           // 重新加载详情
           this.loadCarpoolDetail()
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {
@@ -445,12 +444,9 @@ export default {
             try {
               uni.showLoading({ title: '处理中...' })
               
-              const result = await uniCloud.callFunction({
-                name: 'carpool-quit',
-                data: { roomId: this.carpoolId }
-              })
+              const result = await this.carpoolObj.cancelApply(this.carpoolId)
 
-              if (result.result.code === 0) {
+              if (result.code === 0) {
                 uni.showToast({
                   title: '已退出拼车',
                   icon: 'success'

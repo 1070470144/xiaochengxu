@@ -1,8 +1,0 @@
-{
-  "name": "carpool-update-status",
-  "version": "1.0.0",
-  "description": "更新拼车状态",
-  "main": "index.js",
-  "dependencies": {}
-}
-

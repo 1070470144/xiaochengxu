@@ -1,8 +1,0 @@
-{
-  "name": "script-ranking-rating",
-  "version": "1.0.0",
-  "description": "获取评分排行榜",
-  "main": "index.js",
-  "dependencies": {}
-}
-

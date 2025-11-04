@@ -1,7 +1,0 @@
-{
-  "name": "script-json-get",
-  "version": "1.0.0",
-  "description": "获取剧本JSON内容（浏览器直接查看）",
-  "main": "index.js"
-}
-

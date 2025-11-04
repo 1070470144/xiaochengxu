@@ -1,8 +1,0 @@
-{
-  "name": "script-ranking-download",
-  "version": "1.0.0",
-  "description": "获取下载量排行榜",
-  "main": "index.js",
-  "dependencies": {}
-}
-

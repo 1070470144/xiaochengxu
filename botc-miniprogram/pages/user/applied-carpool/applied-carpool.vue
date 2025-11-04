@@ -104,6 +104,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 carpool 云对象
+    this.carpoolObj = uniCloud.importObject('carpool', {
+      customUI: true
+    })
     this.checkLoginAndLoad()
   },
   
@@ -128,17 +132,13 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'carpool-applied-list',
-          data: {
-            page: this.page,
-            page_size: this.pageSize,
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.carpoolObj.getMyApplications(
+          this.page,
+          this.pageSize
+        )
         
-        if (result.result.code === 0) {
-          const newList = result.result.data.list || []
+        if (result.code === 0) {
+          const newList = result.data.list || []
           
           if (isLoadMore) {
             this.appliedList = [...this.appliedList, ...newList]
@@ -148,7 +148,7 @@ export default {
           
           this.hasMore = newList.length >= this.pageSize
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
       } catch (error) {
         console.error('加载报名列表失败：', error)
@@ -187,18 +187,11 @@ export default {
             try {
               uni.showLoading({ title: '取消中...' })
               
-              const result = await uniCloud.callFunction({
-                name: 'carpool-cancel-apply',
-                data: {
-                  application_id: item.application_id,
-                  carpool_id: item.carpool_id,
-                  token: Auth.getToken()
-                }
-              })
+              const result = await this.carpoolObj.cancelApply(item.carpool_id)
               
               uni.hideLoading()
               
-              if (result.result.code === 0) {
+              if (result.code === 0) {
                 uni.showToast({
                   title: '已取消报名',
                   icon: 'success'

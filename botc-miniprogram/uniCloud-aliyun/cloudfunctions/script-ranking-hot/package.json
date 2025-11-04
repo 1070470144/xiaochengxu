@@ -1,8 +1,0 @@
-{
-  "name": "script-ranking-hot",
-  "version": "1.0.0",
-  "description": "获取热门剧本排行榜",
-  "main": "index.js",
-  "dependencies": {}
-}
-

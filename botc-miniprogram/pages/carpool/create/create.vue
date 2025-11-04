@@ -266,6 +266,10 @@ export default {
     this.scriptObj = uniCloud.importObject('script', {
       customUI: true
     })
+    // 初始化 carpool 云对象
+    this.carpoolObj = uniCloud.importObject('carpool', {
+      customUI: true
+    })
     this.loadOptions()
   },
 
@@ -652,30 +656,26 @@ export default {
       this.submitting = true
 
       try {
-        const token = Auth.getToken()
+        const carpoolData = {
+          title: this.formData.title.trim(),
+          script_id: this.formData.scriptId || null,
+          storyteller_id: this.formData.storytellerId || null,
+          game_time: gameTime.getTime(),
+          location: this.formData.location.trim(),
+          location_detail: this.formData.locationDetail.trim(),
+          latitude: this.formData.latitude,
+          longitude: this.formData.longitude,
+          max_players: parseInt(this.formData.maxPlayers),
+          description: this.formData.description.trim(),
+          requirements: this.formData.requirements.trim(),
+          contact_wechat: this.formData.contactWechat.trim(),
+          contact_phone: this.formData.contactPhone.trim(),
+          tags: this.formData.tags
+        }
         
-        const result = await uniCloud.callFunction({
-          name: 'carpool-create',
-          data: {
-            token: token,
-            title: this.formData.title.trim(),
-            script_id: this.formData.scriptId || null,
-            storyteller_id: this.formData.storytellerId || null,
-            game_time: gameTime.getTime(),
-            location: this.formData.location.trim(),
-            location_detail: this.formData.locationDetail.trim(),
-            latitude: this.formData.latitude,         // 纬度
-            longitude: this.formData.longitude,       // 经度
-            max_players: parseInt(this.formData.maxPlayers),
-            description: this.formData.description.trim(),
-            requirements: this.formData.requirements.trim(),
-            contact_wechat: this.formData.contactWechat.trim(),
-            contact_phone: this.formData.contactPhone.trim(),
-            tags: this.formData.tags
-          }
-        })
+        const result = await this.carpoolObj.create(carpoolData)
 
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '拼车创建成功',
             icon: 'success'
@@ -684,12 +684,12 @@ export default {
           // 跳转到拼车详情页
           setTimeout(() => {
             uni.redirectTo({
-              url: `/pages/carpool/detail/detail?id=${result.result.data.room_id}`
+              url: `/pages/carpool/detail/detail?id=${result.data.room_id}`
             })
           }, 1500)
           
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {

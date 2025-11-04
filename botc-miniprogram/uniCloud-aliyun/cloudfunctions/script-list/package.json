@@ -1,7 +1,0 @@
-{
-  "name": "script-list",
-  "version": "1.0.0",
-  "description": "获取血染钟楼剧本列表云函数",
-  "main": "index.js",
-  "dependencies": {}
-}

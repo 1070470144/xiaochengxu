@@ -281,11 +281,18 @@ module.exports = {
       is_public: true // 只查询公开的拼车
     }
     
+    // 房主筛选（用于"我的拼车"页面）
+    if (options.hostId) {
+      whereCondition.host_id = options.hostId
+      // 如果是查询自己创建的，显示所有状态
+      delete whereCondition.status
+    }
+    
     // 状态筛选
     if (status) {
       whereCondition.status = parseInt(status)
-    } else {
-      // 默认只显示招募中和已满员的
+    } else if (!options.hostId) {
+      // 默认只显示招募中和已满员的（但查询自己创建的时显示全部）
       whereCondition.status = this.dbCmd.in([1, 2])
     }
     

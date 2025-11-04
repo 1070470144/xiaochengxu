@@ -189,6 +189,10 @@ export default {
 
   onLoad() {
     console.log('拼车列表页面加载')
+    // 初始化 Carpool 云对象
+    this.carpoolObj = uniCloud.importObject('carpool', {
+      customUI: true
+    })
     this.loadCarpoolList()
   },
 
@@ -231,13 +235,10 @@ export default {
           queryParams.dateFilter = 'today'
         }
 
-        const result = await uniCloud.callFunction({
-          name: 'carpool-list',
-          data: queryParams
-        })
+        const result = await this.carpoolObj.getList(queryParams)
 
-        if (result.result.code === 0) {
-          const { list, hasNext } = result.result.data
+        if (result.code === 0) {
+          const { list, hasNext } = result.data
           
           if (isLoadMore) {
             this.carpoolList = [...this.carpoolList, ...list]
@@ -248,7 +249,7 @@ export default {
           this.hasNext = hasNext
           this.loadMoreStatus = hasNext ? 'more' : 'noMore'
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {

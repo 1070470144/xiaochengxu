@@ -1,8 +1,0 @@
-{
-  "name": "carpool-remove-member",
-  "version": "1.0.0",
-  "description": "拼车发起人移除成员",
-  "main": "index.js",
-  "dependencies": {}
-}
-
