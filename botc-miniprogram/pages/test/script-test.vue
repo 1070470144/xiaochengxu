@@ -1010,6 +1010,270 @@
       <!-- 底部间距 -->
       <view class="bottom-space"></view>
     </scroll-view>
+
+    <!-- Shop 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'shop'">
+      <!-- 1. 店铺列表 -->
+      <view class="section">
+        <view class="section-title">1️⃣ 店铺列表 (getList)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查询店铺列表</text>
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="shopData.listPage"
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="shopData.listPageSize"
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <input 
+            class="input" 
+            v-model="shopData.listCity"
+            placeholder="城市筛选（可选）"
+          />
+          <picker
+            mode="selector"
+            :range="shopSortOptions"
+            range-key="label"
+            :value="shopSortOptions.findIndex(s => s.value === shopData.listSortBy)"
+            @change="onShopSortChange"
+          >
+            <view class="picker">
+              <text>排序：{{ shopSortOptions.find(s => s.value === shopData.listSortBy)?.label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <button class="btn btn-primary" @click="testGetShopList">获取店铺列表</button>
+        </view>
+      </view>
+
+      <!-- 2. 店铺详情 -->
+      <view class="section">
+        <view class="section-title">2️⃣ 店铺详情 (getDetail)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看店铺详情</text>
+          <input 
+            class="input" 
+            v-model="shopData.detailShopId"
+            placeholder="请输入店铺ID"
+          />
+          <button class="btn btn-success" @click="testGetShopDetail">查看详情</button>
+        </view>
+      </view>
+
+      <!-- 3. 店铺申请 -->
+      <view class="section">
+        <view class="section-title">3️⃣ 店铺申请 (apply)</view>
+        
+        <view class="test-group">
+          <text class="group-title">提交店铺认证申请</text>
+          <text class="hint">⚠️ 需要登录</text>
+          
+          <input 
+            class="input" 
+            v-model="shopData.applyData.shopName"
+            placeholder="店铺名称"
+          />
+          <input 
+            class="input" 
+            v-model="shopData.applyData.contactPhone"
+            placeholder="联系电话"
+          />
+          <input 
+            class="input" 
+            v-model="shopData.applyData.contactPerson"
+            placeholder="联系人"
+          />
+          <input 
+            class="input" 
+            v-model="shopData.applyData.contactWechat"
+            placeholder="微信号"
+          />
+          
+          <view class="input-row">
+            <input 
+              class="input input-third" 
+              v-model="shopData.applyData.province"
+              placeholder="省份"
+            />
+            <input 
+              class="input input-third" 
+              v-model="shopData.applyData.city"
+              placeholder="城市"
+            />
+            <input 
+              class="input input-third" 
+              v-model="shopData.applyData.district"
+              placeholder="区县"
+            />
+          </view>
+          
+          <input 
+            class="input" 
+            v-model="shopData.applyData.address"
+            placeholder="详细地址"
+          />
+          <input 
+            class="input" 
+            v-model="shopData.applyData.businessHours"
+            placeholder="营业时间"
+          />
+          
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="shopData.applyData.tableCount"
+              placeholder="桌数"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="shopData.applyData.avgPrice"
+              placeholder="人均消费"
+              type="number"
+            />
+          </view>
+          
+          <textarea 
+            class="textarea" 
+            v-model="shopData.applyData.description"
+            placeholder="店铺描述"
+            maxlength="500"
+          />
+          
+          <input 
+            class="input" 
+            v-model="shopData.applyData.licenseImage"
+            placeholder="营业执照图片URL"
+          />
+          <input 
+            class="input" 
+            v-model="shopData.applyData.licenseNumber"
+            placeholder="营业执照编号"
+          />
+          
+          <button class="btn btn-warning" @click="testShopApply">提交申请</button>
+        </view>
+      </view>
+
+      <!-- 底部间距 -->
+      <view class="bottom-space"></view>
+    </scroll-view>
+
+    <!-- Storyteller 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'storyteller'">
+      <!-- 1. 说书人列表 -->
+      <view class="section">
+        <view class="section-title">1️⃣ 说书人列表 (getList)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查询说书人列表</text>
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="storytellerData.listPage"
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="storytellerData.listPageSize"
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <input 
+            class="input" 
+            v-model="storytellerData.listKeyword"
+            placeholder="搜索关键词（可选）"
+          />
+          <picker
+            mode="selector"
+            :range="storytellerFilterOptions"
+            range-key="label"
+            :value="storytellerFilterOptions.findIndex(f => f.value === storytellerData.listFilter)"
+            @change="onStorytellerFilterChange"
+          >
+            <view class="picker">
+              <text>筛选：{{ storytellerFilterOptions.find(f => f.value === storytellerData.listFilter)?.label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <button class="btn btn-primary" @click="testGetStorytellerList">获取说书人列表</button>
+        </view>
+      </view>
+
+      <!-- 2. 说书人详情 -->
+      <view class="section">
+        <view class="section-title">2️⃣ 说书人详情 (getDetail)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看说书人详情</text>
+          <input 
+            class="input" 
+            v-model="storytellerData.detailStoryId"
+            placeholder="请输入说书人ID"
+          />
+          <button class="btn btn-success" @click="testGetStorytellerDetail">查看详情</button>
+        </view>
+      </view>
+
+      <!-- 3. 评价列表 -->
+      <view class="section">
+        <view class="section-title">3️⃣ 评价列表 (getReviews)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看说书人评价</text>
+          <input 
+            class="input" 
+            v-model="storytellerData.reviewsStoryId"
+            placeholder="说书人ID"
+          />
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="storytellerData.reviewsPage"
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="storytellerData.reviewsPageSize"
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <button class="btn btn-info" @click="testGetStorytellerReviews">获取评价列表</button>
+        </view>
+      </view>
+
+      <!-- 4. 计算热度 -->
+      <view class="section">
+        <view class="section-title">4️⃣ 计算热度 (calculateHeat)</view>
+        
+        <view class="test-group">
+          <text class="group-title">计算说书人热度分数</text>
+          <text class="hint">⚠️ 留空则计算所有认证说书人</text>
+          <input 
+            class="input" 
+            v-model="storytellerData.heatUserId"
+            placeholder="用户ID（可选）"
+          />
+          <button class="btn btn-warning" @click="testCalculateHeat">开始计算</button>
+        </view>
+      </view>
+
+      <!-- 底部间距 -->
+      <view class="bottom-space"></view>
+    </scroll-view>
   </view>
 </template>
 
@@ -1028,7 +1292,9 @@ export default {
         { value: 'carpool', label: 'Carpool', icon: '🚗' },
         { value: 'chat', label: 'Chat', icon: '💬' },
         { value: 'post', label: 'Post', icon: '📝' },
-        { value: 'collection', label: 'Collection', icon: '⭐' }
+        { value: 'collection', label: 'Collection', icon: '⭐' },
+        { value: 'shop', label: 'Shop', icon: '🏪' },
+        { value: 'storyteller', label: 'Storyteller', icon: '🎭' }
       ],
       
       // 云对象
@@ -1037,6 +1303,8 @@ export default {
       chatObj: null,
       postObj: null,
       collectionObj: null,
+      shopObj: null,
+      storytellerObj: null,
       isLogin: false,
       lastResult: null,
       
@@ -1245,6 +1513,72 @@ export default {
         { value: 'script', label: '剧本' },
         { value: 'post', label: '帖子' },
         { value: 'carpool', label: '拼车' }
+      ],
+      
+      // ========== Shop 数据 ==========
+      shopData: {
+        // 店铺列表
+        listPage: 1,
+        listPageSize: 10,
+        listCity: '',
+        listSortBy: 'recommend',
+        
+        // 店铺详情
+        detailShopId: '',
+        
+        // 店铺申请
+        applyData: {
+          shopName: '测试店铺',
+          shopLogo: '',
+          shopImages: [],
+          contactPhone: '13800138000',
+          contactPerson: '测试联系人',
+          contactWechat: 'test_wechat',
+          province: '广东省',
+          city: '深圳市',
+          district: '南山区',
+          address: '科技园路1号',
+          businessHours: '9:00-22:00',
+          tableCount: 10,
+          avgPrice: 100,
+          facilities: ['wifi', 'parking'],
+          description: '这是一家测试店铺',
+          licenseImage: 'test_license.jpg',
+          licenseNumber: '123456789'
+        }
+      },
+      
+      shopSortOptions: [
+        { value: 'recommend', label: '推荐' },
+        { value: 'rating', label: '评分' },
+        { value: 'newest', label: '最新' }
+      ],
+      
+      // ========== Storyteller 数据 ==========
+      storytellerData: {
+        // 列表
+        listPage: 1,
+        listPageSize: 10,
+        listFilter: 'all',
+        listKeyword: '',
+        
+        // 详情
+        detailStoryId: '',
+        
+        // 评价列表
+        reviewsStoryId: '',
+        reviewsPage: 1,
+        reviewsPageSize: 10,
+        
+        // 计算热度
+        heatUserId: ''
+      },
+      
+      storytellerFilterOptions: [
+        { value: 'all', label: '全部' },
+        { value: 'certified', label: '认证' },
+        { value: 'high_rating', label: '高评分' },
+        { value: 'nearby', label: '附近' }
       ]
     }
   },
@@ -1275,6 +1609,18 @@ export default {
     
     // 初始化 Collection 云对象
     this.collectionObj = uniCloud.importObject('collection', {
+      customUI: true,
+      debugFunction: false
+    })
+    
+    // 初始化 Shop 云对象
+    this.shopObj = uniCloud.importObject('shop', {
+      customUI: true,
+      debugFunction: false
+    })
+    
+    // 初始化 Storyteller 云对象
+    this.storytellerObj = uniCloud.importObject('storyteller', {
       customUI: true,
       debugFunction: false
     })
@@ -2798,6 +3144,366 @@ export default {
         }
         uni.showToast({ title: error.message, icon: 'none' })
       }
+    },
+    
+    // ==================== Shop 测试方法 ====================
+    
+    /**
+     * 测试获取店铺列表
+     */
+    async testGetShopList() {
+      try {
+        console.log('测试获取店铺列表:', {
+          page: this.shopData.listPage,
+          pageSize: this.shopData.listPageSize,
+          city: this.shopData.listCity,
+          sortBy: this.shopData.listSortBy
+        })
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const options = {
+          page: this.shopData.listPage,
+          pageSize: this.shopData.listPageSize,
+          sortBy: this.shopData.listSortBy
+        }
+        
+        if (this.shopData.listCity) {
+          options.city = this.shopData.listCity
+        }
+        
+        const result = await this.shopObj.getList(options)
+        
+        uni.hideLoading()
+        
+        console.log('店铺列表结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `查询成功！共${result.data?.total || 0}条，当前${result.data?.list?.length || 0}条`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: `查询成功: ${result.data.list.length}条`, icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取店铺列表失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * 测试获取店铺详情
+     */
+    async testGetShopDetail() {
+      if (!this.shopData.detailShopId) {
+        uni.showToast({ title: '请输入店铺ID', icon: 'none' })
+        return
+      }
+      
+      try {
+        console.log('测试获取店铺详情:', this.shopData.detailShopId)
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.shopObj.getDetail(this.shopData.detailShopId)
+        
+        uni.hideLoading()
+        
+        console.log('店铺详情结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: result.message,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ 
+            title: `获取成功: ${result.data.shop_name}`, 
+            icon: 'success' 
+          })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取店铺详情失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * 测试店铺申请
+     */
+    async testShopApply() {
+      if (!this.isLogin) {
+        uni.showToast({ title: '请先登录', icon: 'none' })
+        return
+      }
+      
+      try {
+        console.log('测试店铺申请:', this.shopData.applyData)
+        
+        uni.showLoading({ title: '提交中...' })
+        
+        const result = await this.shopObj.apply(this.shopData.applyData)
+        
+        uni.hideLoading()
+        
+        console.log('店铺申请结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: result.message,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ 
+            title: result.message, 
+            icon: 'success' 
+          })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('店铺申请失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * Shop 排序选择器
+     */
+    onShopSortChange(e) {
+      const index = e.detail.value
+      this.shopData.listSortBy = this.shopSortOptions[index].value
+      console.log('选择排序方式:', this.shopData.listSortBy)
+    },
+    
+    // ==================== Storyteller 测试方法 ====================
+    
+    /**
+     * 测试获取说书人列表
+     */
+    async testGetStorytellerList() {
+      try {
+        console.log('测试获取说书人列表:', {
+          page: this.storytellerData.listPage,
+          pageSize: this.storytellerData.listPageSize,
+          filter: this.storytellerData.listFilter,
+          keyword: this.storytellerData.listKeyword
+        })
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const options = {
+          page: this.storytellerData.listPage,
+          pageSize: this.storytellerData.listPageSize,
+          filter: this.storytellerData.listFilter
+        }
+        
+        if (this.storytellerData.listKeyword) {
+          options.keyword = this.storytellerData.listKeyword
+        }
+        
+        const result = await this.storytellerObj.getList(options)
+        
+        uni.hideLoading()
+        
+        console.log('说书人列表结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `查询成功！共${result.data?.total || 0}条`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: `查询成功: ${result.data.list.length}条`, icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取说书人列表失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * 测试获取说书人详情
+     */
+    async testGetStorytellerDetail() {
+      if (!this.storytellerData.detailStoryId) {
+        uni.showToast({ title: '请输入说书人ID', icon: 'none' })
+        return
+      }
+      
+      try {
+        console.log('测试获取说书人详情:', this.storytellerData.detailStoryId)
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.storytellerObj.getDetail(this.storytellerData.detailStoryId)
+        
+        uni.hideLoading()
+        
+        console.log('说书人详情结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: result.message,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ 
+            title: `获取成功: ${result.data.user?.nickname || '说书人'}`, 
+            icon: 'success' 
+          })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取说书人详情失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * 测试获取评价列表
+     */
+    async testGetStorytellerReviews() {
+      if (!this.storytellerData.reviewsStoryId) {
+        uni.showToast({ title: '请输入说书人ID', icon: 'none' })
+        return
+      }
+      
+      try {
+        console.log('测试获取评价列表:', {
+          storytellerId: this.storytellerData.reviewsStoryId,
+          page: this.storytellerData.reviewsPage,
+          pageSize: this.storytellerData.reviewsPageSize
+        })
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.storytellerObj.getReviews(
+          this.storytellerData.reviewsStoryId,
+          this.storytellerData.reviewsPage,
+          this.storytellerData.reviewsPageSize
+        )
+        
+        uni.hideLoading()
+        
+        console.log('评价列表结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `查询成功！共${result.data?.total || 0}条`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: `查询成功: ${result.data.list.length}条`, icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取评价列表失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * 测试计算热度
+     */
+    async testCalculateHeat() {
+      try {
+        console.log('测试计算热度:', this.storytellerData.heatUserId || '全部认证说书人')
+        
+        uni.showLoading({ title: '计算中...' })
+        
+        const userId = this.storytellerData.heatUserId || null
+        const result = await this.storytellerObj.calculateHeat(userId)
+        
+        uni.hideLoading()
+        
+        console.log('计算热度结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: result.message,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ 
+            title: `计算成功: ${result.data.count}个说书人`, 
+            icon: 'success',
+            duration: 2000
+          })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('计算热度失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    /**
+     * Storyteller 筛选选择器
+     */
+    onStorytellerFilterChange(e) {
+      const index = e.detail.value
+      this.storytellerData.listFilter = this.storytellerFilterOptions[index].value
+      console.log('选择筛选方式:', this.storytellerData.listFilter)
     }
   }
 }

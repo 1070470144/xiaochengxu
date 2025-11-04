@@ -110,6 +110,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化 Shop 云对象
+    this.shopObj = uniCloud.importObject('shop', { customUI: true })
     this.loadShops()
   },
   
@@ -120,18 +122,15 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'shop-list',
-          data: {
-            page: this.page,
-            pageSize: this.pageSize,
-            city: this.selectedCity || undefined,
-            sortBy: this.sortBy
-          }
+        const result = await this.shopObj.getList({
+          page: this.page,
+          pageSize: this.pageSize,
+          city: this.selectedCity || undefined,
+          sortBy: this.sortBy
         })
         
-        if (result.result.code === 0) {
-          const newShops = result.result.data.list
+        if (result.code === 0) {
+          const newShops = result.data.list
           
           if (loadMore) {
             this.shopsList = [...this.shopsList, ...newShops]
@@ -139,7 +138,7 @@ export default {
             this.shopsList = newShops
           }
           
-          this.hasMore = result.result.data.hasMore
+          this.hasMore = result.data.hasMore
         }
         
       } catch (error) {

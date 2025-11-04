@@ -163,6 +163,9 @@ export default {
   },
 
   onLoad(options) {
+    // 初始化 Storyteller 云对象
+    this.storytellerObj = uniCloud.importObject('storyteller', { customUI: true })
+    
     if (options.id) {
       this.storytellerId = options.id
       this.loadStorytellerDetail()
@@ -174,18 +177,13 @@ export default {
     // 加载说书人详情
     async loadStorytellerDetail() {
       try {
-        const res = await uniCloud.callFunction({
-          name: 'storyteller-detail',
-          data: {
-            storytellerId: this.storytellerId
-          }
-        })
+        const res = await this.storytellerObj.getDetail(this.storytellerId)
 
-        if (res.result.code === 0) {
-          this.storytellerDetail = res.result.data
+        if (res.code === 0) {
+          this.storytellerDetail = res.data
         } else {
           uni.showToast({
-            title: res.result.message || '加载失败',
+            title: res.message || '加载失败',
             icon: 'none'
           })
         }
@@ -203,17 +201,10 @@ export default {
     // 加载评价列表
     async loadReviews() {
       try {
-        const res = await uniCloud.callFunction({
-          name: 'storyteller-reviews',
-          data: {
-            storytellerId: this.storytellerId,
-            page: 1,
-            pageSize: 5
-          }
-        })
+        const res = await this.storytellerObj.getReviews(this.storytellerId, 1, 5)
 
-        if (res.result.code === 0) {
-          this.reviewList = res.result.data.list || []
+        if (res.code === 0) {
+          this.reviewList = res.data.list || []
         }
       } catch (error) {
         console.error('加载评价失败:', error)

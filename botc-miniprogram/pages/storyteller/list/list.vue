@@ -122,6 +122,8 @@ export default {
   },
 
   onLoad() {
+    // 初始化 Storyteller 云对象
+    this.storytellerObj = uniCloud.importObject('storyteller', { customUI: true })
     this.loadStorytellerList()
   },
 
@@ -140,18 +142,15 @@ export default {
       
       this.loading = true
       try {
-        const res = await uniCloud.callFunction({
-          name: 'storyteller-list',
-          data: {
-            page: this.page,
-            pageSize: this.pageSize,
-            filter: this.filters[this.currentFilter].value,
-            keyword: this.searchKeyword
-          }
+        const res = await this.storytellerObj.getList({
+          page: this.page,
+          pageSize: this.pageSize,
+          filter: this.filters[this.currentFilter].value,
+          keyword: this.searchKeyword
         })
 
-        if (res.result.code === 0) {
-          const newList = res.result.data.list || []
+        if (res.code === 0) {
+          const newList = res.data.list || []
           if (this.page === 1) {
             this.storytellerList = newList
           } else {

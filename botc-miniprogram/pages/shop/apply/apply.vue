@@ -266,6 +266,11 @@ export default {
     }
   },
   
+  onLoad() {
+    // 初始化 Shop 云对象
+    this.shopObj = uniCloud.importObject('shop', { customUI: true })
+  },
+  
   methods: {
     // 上传Logo
     uploadLogo() {
@@ -410,17 +415,9 @@ export default {
       this.submitting = true
       
       try {
-        const token = Auth.getToken()
+        const result = await this.shopObj.apply(this.formData)
         
-        const result = await uniCloud.callFunction({
-          name: 'shop-apply',
-          data: {
-            token: token,
-            ...this.formData
-          }
-        })
-        
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '提交成功',
             icon: 'success'
@@ -430,7 +427,7 @@ export default {
             uni.navigateBack()
           }, 1500)
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {

@@ -1,0 +1,11 @@
+{
+  "name": "storyteller",
+  "version": "1.0.0",
+  "description": "说书人云对象",
+  "main": "index.obj.js",
+  "cloudfunction-config": {
+    "memorySize": 256,
+    "timeout": 30
+  }
+}
+

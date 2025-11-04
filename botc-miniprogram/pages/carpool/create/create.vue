@@ -270,6 +270,10 @@ export default {
     this.carpoolObj = uniCloud.importObject('carpool', {
       customUI: true
     })
+    // 初始化 storyteller 云对象
+    this.storytellerObj = uniCloud.importObject('storyteller', {
+      customUI: true
+    })
     this.loadOptions()
   },
 
@@ -585,17 +589,14 @@ export default {
     // 加载说书人选项
     async loadStorytellerOptions() {
       try {
-        const result = await uniCloud.callFunction({
-          name: 'storyteller-list',
-          data: {
-            page: 1,
-            pageSize: 50,
-            status: 1 // 只显示认证通过的说书人
-          }
+        const result = await this.storytellerObj.getList({
+          page: 1,
+          pageSize: 50,
+          filter: 'certified' // 只显示认证通过的说书人
         })
 
-        if (result.result.code === 0) {
-          this.storytellerOptions = result.result.data.list.map(storyteller => ({
+        if (result.code === 0) {
+          this.storytellerOptions = result.data.list.map(storyteller => ({
             value: storyteller.user_id,
             text: `${storyteller.user.nickname} (${storyteller.rating.toFixed(1)}分)`
           }))

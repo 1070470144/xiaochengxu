@@ -103,6 +103,9 @@ export default {
   },
   
   onLoad(options) {
+    // 初始化 Shop 云对象
+    this.shopObj = uniCloud.importObject('shop', { customUI: true })
+    
     if (options.id) {
       this.shopId = options.id
       this.loadShopDetail()
@@ -114,17 +117,12 @@ export default {
       uni.showLoading({ title: '加载中...' })
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'shop-detail',
-          data: {
-            shopId: this.shopId
-          }
-        })
+        const result = await this.shopObj.getDetail(this.shopId)
         
-        if (result.result.code === 0) {
-          this.shop = result.result.data
+        if (result.code === 0) {
+          this.shop = result.data
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {
