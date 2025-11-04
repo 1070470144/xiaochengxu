@@ -1,0 +1,11 @@
+{
+  "name": "carpool",
+  "version": "1.0.0",
+  "description": "Carpool 拼车云对象 - 统一管理拼车相关功能",
+  "main": "index.obj.js",
+  "cloudfunction-config": {
+    "memorySize": 256,
+    "timeout": 60
+  }
+}
+

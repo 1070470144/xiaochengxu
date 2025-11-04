@@ -1,10 +1,23 @@
 <template>
   <view class="test-page">
     <view class="header">
-      <text class="title">Script 云对象测试</text>
+      <text class="title">云对象测试中心</text>
       <text class="status" :class="isLogin ? 'logged' : 'not-logged'">
         {{ isLogin ? '✅ 已登录' : '❌ 未登录' }}
       </text>
+    </view>
+
+    <!-- 页签切换 -->
+    <view class="tabs">
+      <view 
+        v-for="tab in tabs" 
+        :key="tab.value"
+        :class="['tab-item', currentTab === tab.value ? 'active' : '']"
+        @click="switchTab(tab.value)"
+      >
+        <text class="tab-icon">{{ tab.icon }}</text>
+        <text class="tab-label">{{ tab.label }}</text>
+      </view>
     </view>
 
     <!-- 测试结果展示区 -->
@@ -24,7 +37,8 @@
       </view>
     </view>
 
-    <scroll-view class="test-sections" scroll-y>
+    <!-- Script 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'script'">
       <!-- 1. 剧本列表 -->
       <view class="section">
         <view class="section-title">1️⃣ 剧本列表 (getList)</view>
@@ -266,6 +280,229 @@
       <!-- 底部间距 -->
       <view class="bottom-space"></view>
     </scroll-view>
+
+    <!-- Carpool 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'carpool'">
+      <!-- 1. 创建拼车 -->
+      <view class="section">
+        <view class="section-title">1️⃣ 创建拼车 (create)</view>
+        
+        <view class="test-group">
+          <text class="group-title">创建拼车房间</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input class="input" v-model="carpoolData.title" placeholder="拼车标题" maxlength="50" />
+          <input class="input" v-model="carpoolData.script_id" placeholder="剧本ID（可选）" />
+          <input class="input" v-model="carpoolData.game_time" placeholder="游戏时间 (2025-11-10 14:00)" />
+          <input class="input" v-model="carpoolData.location" placeholder="地点" />
+          <input class="input" v-model="carpoolData.location_detail" placeholder="详细地址（可选）" />
+          <input class="input" v-model.number="carpoolData.max_players" placeholder="最大人数" type="number" />
+          <textarea 
+            class="textarea" 
+            v-model="carpoolData.description" 
+            placeholder="描述（可选）"
+            maxlength="200"
+          />
+          <input class="input" v-model="carpoolData.contact_wechat" placeholder="联系微信（可选）" />
+          <button class="btn btn-primary" @click="testCreateCarpool" :disabled="!isLogin">
+            创建拼车
+          </button>
+        </view>
+      </view>
+
+      <!-- 2. 拼车列表 -->
+      <view class="section">
+        <view class="section-title">2️⃣ 拼车列表 (getList)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查询拼车列表</text>
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="carpoolListOptions.page" 
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="carpoolListOptions.pageSize" 
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <input class="input" v-model="carpoolListOptions.location" placeholder="地点筛选（可选）" />
+          <picker mode="selector" :range="carpoolTypeOptions" range-key="label" @change="onCarpoolTypeChange">
+            <view class="picker">
+              <text>排序：{{ carpoolTypeOptions.find(t => t.value === carpoolListOptions.type).label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <picker mode="selector" :range="dateFilterOptions" range-key="label" @change="onDateFilterChange">
+            <view class="picker">
+              <text>时间：{{ dateFilterOptions.find(t => t.value === carpoolListOptions.dateFilter).label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <button class="btn btn-success" @click="testGetCarpoolList">获取拼车列表</button>
+        </view>
+      </view>
+
+      <!-- 3. 拼车详情 -->
+      <view class="section">
+        <view class="section-title">3️⃣ 拼车详情 (getDetail)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看拼车详情</text>
+          <input 
+            class="input" 
+            v-model="testData.roomId" 
+            placeholder="请输入拼车ID"
+          />
+          <button class="btn btn-info" @click="testGetCarpoolDetail">查看详情</button>
+        </view>
+      </view>
+
+      <!-- 4. 申请加入 -->
+      <view class="section">
+        <view class="section-title">4️⃣ 申请加入 (apply)</view>
+        
+        <view class="test-group">
+          <text class="group-title">申请加入拼车</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="testData.applyRoomId" 
+            placeholder="拼车ID"
+          />
+          <textarea 
+            class="textarea" 
+            v-model="testData.applyMessage" 
+            placeholder="申请留言（可选）"
+            maxlength="100"
+          />
+          <button class="btn btn-warning" @click="testApplyCarpool" :disabled="!isLogin">
+            申请加入
+          </button>
+        </view>
+      </view>
+
+      <!-- 5. 我的申请 -->
+      <view class="section">
+        <view class="section-title">5️⃣ 我的申请 (getMyApplications)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看我的申请列表</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="testData.applyPage" 
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="testData.applyPageSize" 
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <button class="btn btn-primary" @click="testGetMyApplications" :disabled="!isLogin">
+            查看我的申请
+          </button>
+        </view>
+      </view>
+
+      <!-- 6. 取消申请 -->
+      <view class="section">
+        <view class="section-title">6️⃣ 取消申请 (cancelApply)</view>
+        
+        <view class="test-group">
+          <text class="group-title">取消拼车申请</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="testData.cancelRoomId" 
+            placeholder="拼车ID"
+          />
+          <button class="btn btn-danger" @click="testCancelApply" :disabled="!isLogin">
+            取消申请
+          </button>
+        </view>
+      </view>
+
+      <!-- 7. 确认成员 -->
+      <view class="section">
+        <view class="section-title">7️⃣ 确认成员 (confirmMember)</view>
+        
+        <view class="test-group">
+          <text class="group-title">确认成员（车主操作）</text>
+          <text class="hint">⚠️ 需要是车主</text>
+          <input 
+            class="input" 
+            v-model="testData.confirmRoomId" 
+            placeholder="拼车ID"
+          />
+          <input 
+            class="input" 
+            v-model="testData.confirmUserId" 
+            placeholder="用户ID"
+          />
+          <button class="btn btn-success" @click="testConfirmMember" :disabled="!isLogin">
+            确认成员
+          </button>
+        </view>
+      </view>
+
+      <!-- 8. 移除成员 -->
+      <view class="section">
+        <view class="section-title">8️⃣ 移除成员 (removeMember)</view>
+        
+        <view class="test-group">
+          <text class="group-title">移除成员（车主操作）</text>
+          <text class="hint">⚠️ 需要是车主</text>
+          <input 
+            class="input" 
+            v-model="testData.removeRoomId" 
+            placeholder="拼车ID"
+          />
+          <input 
+            class="input" 
+            v-model="testData.removeUserId" 
+            placeholder="用户ID"
+          />
+          <button class="btn btn-danger" @click="testRemoveMember" :disabled="!isLogin">
+            移除成员
+          </button>
+        </view>
+      </view>
+
+      <!-- 9. 更新状态 -->
+      <view class="section">
+        <view class="section-title">9️⃣ 更新状态 (updateStatus)</view>
+        
+        <view class="test-group">
+          <text class="group-title">更新拼车状态（车主操作）</text>
+          <text class="hint">⚠️ 需要是车主</text>
+          <input 
+            class="input" 
+            v-model="testData.statusRoomId" 
+            placeholder="拼车ID"
+          />
+          <picker mode="selector" :range="statusOptions" range-key="label" @change="onStatusChange">
+            <view class="picker">
+              <text>状态：{{ statusOptions.find(t => t.value === testData.newStatus)?.label || '选择状态' }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <button class="btn btn-warning" @click="testUpdateStatus" :disabled="!isLogin">
+            更新状态
+          </button>
+        </view>
+      </view>
+
+      <!-- 底部间距 -->
+      <view class="bottom-space"></view>
+    </scroll-view>
   </view>
 </template>
 
@@ -277,7 +514,16 @@ export default {
   
   data() {
     return {
+      // 页签
+      currentTab: 'script',
+      tabs: [
+        { value: 'script', label: 'Script', icon: '🎬' },
+        { value: 'carpool', label: 'Carpool', icon: '🚗' }
+      ],
+      
+      // 云对象
       scriptObj: null,
+      carpoolObj: null,
       isLogin: false,
       lastResult: null,
       
@@ -344,13 +590,58 @@ export default {
         { value: 'all', label: '总榜' },
         { value: 'weekly', label: '周榜' },
         { value: 'monthly', label: '月榜' }
+      ],
+      
+      // Carpool 相关数据
+      carpoolData: {
+        title: '周末拼车',
+        script_id: '',
+        game_time: '2025-11-10 14:00',
+        location: '上海市',
+        location_detail: '',
+        max_players: 7,
+        description: '',
+        contact_wechat: ''
+      },
+      
+      carpoolListOptions: {
+        page: 1,
+        pageSize: 20,
+        type: 'latest',
+        location: '',
+        dateFilter: ''
+      },
+      
+      carpoolTypeOptions: [
+        { value: 'latest', label: '最新' },
+        { value: 'urgent', label: '即将开始' },
+        { value: 'hot', label: '最热门' }
+      ],
+      
+      dateFilterOptions: [
+        { value: '', label: '全部' },
+        { value: 'today', label: '今天' },
+        { value: 'week', label: '本周' }
+      ],
+      
+      statusOptions: [
+        { value: 1, label: '招募中' },
+        { value: 2, label: '已满员' },
+        { value: 3, label: '已完成' },
+        { value: 4, label: '已取消' }
       ]
     }
   },
   
   onLoad() {
-    console.log('📱 Script 测试页面加载')
+    console.log('📱 云对象测试中心加载')
+    // 初始化 Script 云对象
     this.scriptObj = uniCloud.importObject('script', {
+      customUI: true,
+      debugFunction: false
+    })
+    // 初始化 Carpool 云对象
+    this.carpoolObj = uniCloud.importObject('carpool', {
       customUI: true,
       debugFunction: false
     })
@@ -863,6 +1154,298 @@ export default {
     
     onPeriodChange(e) {
       this.rankingPeriod = this.periodOptions[e.detail.value].value
+    },
+    
+    // ========== 页签切换 ==========
+    switchTab(tab) {
+      this.currentTab = tab
+      console.log('📑 切换到:', tab)
+    },
+    
+    // ========== Carpool 测试方法 ==========
+    
+    // 1. 创建拼车
+    async testCreateCarpool() {
+      if (!this.carpoolData.title || !this.carpoolData.game_time || !this.carpoolData.location) {
+        uni.showToast({
+          title: '请填写必填项',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '创建中...' })
+        
+        const result = await this.carpoolObj.create(this.carpoolData)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '创建成功', result.data)
+          // 清空部分表单
+          this.carpoolData.title = '周末拼车'
+          this.carpoolData.description = ''
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '创建失败')
+      }
+    },
+    
+    // 2. 获取拼车列表
+    async testGetCarpoolList() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.carpoolObj.getList(this.carpoolListOptions)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功，共 ${result.data.total} 条`, {
+            total: result.data.total,
+            count: result.data.list.length,
+            hasNext: result.data.hasNext,
+            sample: result.data.list[0]
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 3. 获取拼车详情
+    async testGetCarpoolDetail() {
+      if (!this.testData.roomId) {
+        uni.showToast({
+          title: '请输入拼车ID',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.carpoolObj.getDetail(this.testData.roomId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '获取成功', {
+            title: result.data.title,
+            location: result.data.location,
+            game_time: result.data.game_time,
+            current_players: result.data.current_players,
+            max_players: result.data.max_players,
+            status: result.data.status,
+            members_count: result.data.members?.length || 0
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 4. 申请加入拼车
+    async testApplyCarpool() {
+      if (!this.testData.applyRoomId) {
+        uni.showToast({
+          title: '请输入拼车ID',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '申请中...' })
+        
+        const result = await this.carpoolObj.apply(
+          this.testData.applyRoomId,
+          this.testData.applyMessage
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '申请失败')
+      }
+    },
+    
+    // 5. 获取我的申请列表
+    async testGetMyApplications() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.carpoolObj.getMyApplications(
+          this.testData.applyPage || 1,
+          this.testData.applyPageSize || 10
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功，共 ${result.data.total} 条`, {
+            total: result.data.total,
+            count: result.data.list.length,
+            sample: result.data.list[0]
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 6. 取消申请
+    async testCancelApply() {
+      if (!this.testData.cancelRoomId) {
+        uni.showToast({
+          title: '请输入拼车ID',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '取消中...' })
+        
+        const result = await this.carpoolObj.cancelApply(this.testData.cancelRoomId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '取消失败')
+      }
+    },
+    
+    // 7. 确认成员
+    async testConfirmMember() {
+      if (!this.testData.confirmRoomId || !this.testData.confirmUserId) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '确认中...' })
+        
+        const result = await this.carpoolObj.confirmMember(
+          this.testData.confirmRoomId,
+          this.testData.confirmUserId
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '确认失败')
+      }
+    },
+    
+    // 8. 移除成员
+    async testRemoveMember() {
+      if (!this.testData.removeRoomId || !this.testData.removeUserId) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '移除中...' })
+        
+        const result = await this.carpoolObj.removeMember(
+          this.testData.removeRoomId,
+          this.testData.removeUserId
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '移除失败')
+      }
+    },
+    
+    // 9. 更新状态
+    async testUpdateStatus() {
+      if (!this.testData.statusRoomId || this.testData.newStatus === undefined) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '更新中...' })
+        
+        const result = await this.carpoolObj.updateStatus(
+          this.testData.statusRoomId,
+          this.testData.newStatus
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '更新失败')
+      }
+    },
+    
+    // Carpool Picker 事件
+    onCarpoolTypeChange(e) {
+      this.carpoolListOptions.type = this.carpoolTypeOptions[e.detail.value].value
+    },
+    
+    onDateFilterChange(e) {
+      this.carpoolListOptions.dateFilter = this.dateFilterOptions[e.detail.value].value
+    },
+    
+    onStatusChange(e) {
+      this.testData.newStatus = this.statusOptions[e.detail.value].value
     }
   }
 }
@@ -903,6 +1486,51 @@ export default {
 
 .status.not-logged {
   background-color: rgba(244, 67, 54, 0.3);
+}
+
+/* 页签 */
+.tabs {
+  display: flex;
+  background-color: white;
+  border-bottom: 2rpx solid #eee;
+  padding: 0 20rpx;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 25rpx 0;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.tab-item.active {
+  color: #ff6b6b;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60rpx;
+  height: 6rpx;
+  background-color: #ff6b6b;
+  border-radius: 3rpx;
+}
+
+.tab-icon {
+  font-size: 44rpx;
+  margin-bottom: 8rpx;
+}
+
+.tab-label {
+  font-size: 26rpx;
+  font-weight: 500;
 }
 
 /* 结果面板 */
