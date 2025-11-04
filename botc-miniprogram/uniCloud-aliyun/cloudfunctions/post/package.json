@@ -1,0 +1,11 @@
+{
+  "name": "post",
+  "version": "1.0.0",
+  "description": "Post 云对象 - 帖子管理（列表、发布、详情、点赞、举报、删除）",
+  "main": "index.obj.js",
+  "scripts": {},
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
+

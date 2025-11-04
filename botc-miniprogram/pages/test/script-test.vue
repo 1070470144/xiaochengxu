@@ -643,6 +643,179 @@
       <!-- 底部间距 -->
       <view class="bottom-space"></view>
     </scroll-view>
+
+    <!-- Post 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'post'">
+      <!-- 1. 获取帖子列表 -->
+      <view class="section">
+        <view class="section-title">1️⃣ 获取帖子列表 (getList)</view>
+        
+        <view class="test-group">
+          <text class="group-title">列表查询选项</text>
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="postListOptions.page" 
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="postListOptions.pageSize" 
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          
+          <input 
+            class="input" 
+            v-model="postListOptions.userId" 
+            placeholder="用户ID（可选，查看某用户的帖子）"
+          />
+          
+          <picker mode="selector" :range="postTypeOptions" range-key="label" @change="onPostTypeChange">
+            <view class="picker">
+              <text>帖子类型：{{ postTypeOptions.find(t => t.value === postListOptions.type)?.label || '全部' }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          
+          <picker mode="selector" :range="postSortOptions" range-key="label" @change="onPostSortChange">
+            <view class="picker">
+              <text>排序方式：{{ postSortOptions.find(s => s.value === postListOptions.sortBy).label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          
+          <button class="btn btn-primary" @click="testGetPostList">获取帖子列表</button>
+        </view>
+      </view>
+
+      <!-- 2. 发布帖子 -->
+      <view class="section">
+        <view class="section-title">2️⃣ 发布帖子 (create)</view>
+        
+        <view class="test-group">
+          <text class="group-title">发布测试帖子</text>
+          <text class="hint">⚠️ 需要登录</text>
+          
+          <input 
+            class="input" 
+            v-model="postData.scriptId" 
+            placeholder="剧本ID（必填）"
+          />
+          
+          <textarea 
+            class="textarea" 
+            v-model="postData.content" 
+            placeholder="帖子内容（必填，1-5000字）"
+            maxlength="5000"
+          />
+          
+          <input 
+            class="input" 
+            v-model="postData.tags" 
+            placeholder="标签（用逗号分隔，最多5个）"
+          />
+          
+          <input 
+            class="input" 
+            v-model="postData.location" 
+            placeholder="位置（可选）"
+          />
+          
+          <picker mode="selector" :range="postCreateTypeOptions" range-key="label" @change="onPostCreateTypeChange">
+            <view class="picker">
+              <text>帖子类型：{{ postCreateTypeOptions.find(t => t.value === postData.type).label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          
+          <button class="btn btn-success" @click="testCreatePost">发布帖子</button>
+        </view>
+      </view>
+
+      <!-- 3. 获取帖子详情 -->
+      <view class="section">
+        <view class="section-title">3️⃣ 获取帖子详情 (getDetail)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看帖子详情（包含评论）</text>
+          <input 
+            class="input" 
+            v-model="postDetailId" 
+            placeholder="帖子ID"
+          />
+          <button class="btn btn-info" @click="testGetPostDetail">获取详情</button>
+        </view>
+      </view>
+
+      <!-- 4. 点赞/取消点赞 -->
+      <view class="section">
+        <view class="section-title">4️⃣ 点赞/取消点赞 (toggleLike)</view>
+        
+        <view class="test-group">
+          <text class="group-title">切换点赞状态</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="postLikeId" 
+            placeholder="帖子ID"
+          />
+          <button class="btn btn-warning" @click="testToggleLike">点赞/取消</button>
+        </view>
+      </view>
+
+      <!-- 5. 举报帖子 -->
+      <view class="section">
+        <view class="section-title">5️⃣ 举报帖子 (report)</view>
+        
+        <view class="test-group">
+          <text class="group-title">举报违规内容</text>
+          <text class="hint">⚠️ 需要登录</text>
+          
+          <input 
+            class="input" 
+            v-model="postReportData.contentId" 
+            placeholder="帖子ID"
+          />
+          
+          <picker mode="selector" :range="reportReasonOptions" range-key="label" @change="onReportReasonChange">
+            <view class="picker">
+              <text>举报原因：{{ reportReasonOptions.find(r => r.value === postReportData.reason)?.label || '请选择' }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          
+          <textarea 
+            class="textarea" 
+            v-model="postReportData.description" 
+            placeholder="详细描述（可选）"
+          />
+          
+          <button class="btn btn-danger" @click="testReportPost">提交举报</button>
+        </view>
+      </view>
+
+      <!-- 6. 删除帖子 -->
+      <view class="section">
+        <view class="section-title">6️⃣ 删除帖子 (delete)</view>
+        
+        <view class="test-group">
+          <text class="group-title">删除自己的帖子</text>
+          <text class="hint">⚠️ 需要登录，只能删除自己的帖子</text>
+          <input 
+            class="input" 
+            v-model="postDeleteId" 
+            placeholder="帖子ID"
+          />
+          <button class="btn btn-danger" @click="testDeletePost">删除帖子</button>
+        </view>
+      </view>
+
+      <!-- 底部间距 -->
+      <view class="bottom-space"></view>
+    </scroll-view>
   </view>
 </template>
 
@@ -659,13 +832,15 @@ export default {
       tabs: [
         { value: 'script', label: 'Script', icon: '🎬' },
         { value: 'carpool', label: 'Carpool', icon: '🚗' },
-        { value: 'chat', label: 'Chat', icon: '💬' }
+        { value: 'chat', label: 'Chat', icon: '💬' },
+        { value: 'post', label: 'Post', icon: '📝' }
       ],
       
       // 云对象
       scriptObj: null,
       carpoolObj: null,
       chatObj: null,
+      postObj: null,
       isLogin: false,
       lastResult: null,
       
@@ -787,7 +962,62 @@ export default {
       conversationsPageSize: 20,
       
       messagesPage: 1,
-      messagesPageSize: 50
+      messagesPageSize: 50,
+      
+      // Post 相关数据
+      postListOptions: {
+        page: 1,
+        pageSize: 10,
+        type: null,
+        userId: '',
+        sortBy: 'time'
+      },
+      
+      postTypeOptions: [
+        { value: null, label: '全部' },
+        { value: 1, label: '普通帖子' },
+        { value: 2, label: '活动帖子' },
+        { value: 3, label: '求助帖子' }
+      ],
+      
+      postSortOptions: [
+        { value: 'time', label: '最新发布' },
+        { value: 'hot', label: '热门排序' },
+        { value: 'following', label: '关注动态' }
+      ],
+      
+      postData: {
+        scriptId: '',
+        content: '这是一条测试帖子，用于测试 Post 云对象的 create 方法。',
+        tags: '测试,云对象',
+        location: '',
+        type: 1
+      },
+      
+      postCreateTypeOptions: [
+        { value: 1, label: '普通帖子' },
+        { value: 2, label: '活动帖子' },
+        { value: 3, label: '求助帖子' }
+      ],
+      
+      postDetailId: '',
+      postLikeId: '',
+      postDeleteId: '',
+      
+      postReportData: {
+        contentId: '',
+        contentType: 'post',
+        reason: '',
+        description: ''
+      },
+      
+      reportReasonOptions: [
+        { value: 'spam', label: '垃圾广告' },
+        { value: 'illegal', label: '违法违规' },
+        { value: 'abuse', label: '辱骂攻击' },
+        { value: 'porn', label: '色情低俗' },
+        { value: 'other', label: '其他' }
+      ]
     }
   },
   
@@ -808,6 +1038,13 @@ export default {
       customUI: true,
       debugFunction: false
     })
+    
+    // 初始化 Post 云对象
+    this.postObj = uniCloud.importObject('post', {
+      customUI: true,
+      debugFunction: false
+    })
+    
     this.checkLoginStatus()
   },
   
@@ -1783,6 +2020,246 @@ export default {
         uni.hideLoading()
         this.showResult(false, error.message || '获取失败')
       }
+    },
+    
+    // ==================== Post 测试方法 ====================
+    
+    /**
+     * 1. 测试获取帖子列表
+     */
+    async testGetPostList() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const options = {
+          page: this.postListOptions.page,
+          pageSize: this.postListOptions.pageSize
+        }
+        
+        if (this.postListOptions.type !== null) {
+          options.type = this.postListOptions.type
+        }
+        
+        if (this.postListOptions.userId) {
+          options.userId = this.postListOptions.userId
+        }
+        
+        if (this.postListOptions.sortBy) {
+          options.sortBy = this.postListOptions.sortBy
+        }
+        
+        const result = await this.postObj.getList(options)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功！共 ${result.data.total} 条帖子`, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    /**
+     * 2. 测试发布帖子
+     */
+    async testCreatePost() {
+      try {
+        if (!this.postData.scriptId) {
+          this.showResult(false, '请输入剧本ID')
+          return
+        }
+        
+        if (!this.postData.content.trim()) {
+          this.showResult(false, '请输入帖子内容')
+          return
+        }
+        
+        uni.showLoading({ title: '发布中...' })
+        
+        const postData = {
+          scriptId: this.postData.scriptId,
+          content: this.postData.content,
+          type: this.postData.type
+        }
+        
+        // 处理标签
+        if (this.postData.tags) {
+          postData.tags = this.postData.tags.split(',').map(t => t.trim()).filter(t => t)
+        }
+        
+        if (this.postData.location) {
+          postData.location = this.postData.location
+        }
+        
+        const result = await this.postObj.create(postData)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '发布成功！', result.data)
+          // 可以记录帖子ID以便测试其他功能
+          this.postDetailId = result.data.post_id
+          this.postLikeId = result.data.post_id
+        } else {
+          this.showResult(false, result.message, result.data)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '发布失败')
+      }
+    },
+    
+    /**
+     * 3. 测试获取帖子详情
+     */
+    async testGetPostDetail() {
+      try {
+        if (!this.postDetailId) {
+          this.showResult(false, '请输入帖子ID')
+          return
+        }
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.postObj.getDetail(this.postDetailId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          const post = result.data
+          this.showResult(
+            true, 
+            `详情加载成功！\n浏览：${post.view_count} 点赞：${post.like_count} 评论：${post.comment_count}\n已点赞：${post.isLiked ? '是' : '否'}`, 
+            post
+          )
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    /**
+     * 4. 测试点赞/取消点赞
+     */
+    async testToggleLike() {
+      try {
+        if (!this.postLikeId) {
+          this.showResult(false, '请输入帖子ID')
+          return
+        }
+        
+        uni.showLoading({ title: '处理中...' })
+        
+        const result = await this.postObj.toggleLike(this.postLikeId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(
+            true, 
+            `${result.message}\n当前点赞数：${result.data.likeCount}`, 
+            result.data
+          )
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '操作失败')
+      }
+    },
+    
+    /**
+     * 5. 测试举报帖子
+     */
+    async testReportPost() {
+      try {
+        if (!this.postReportData.contentId) {
+          this.showResult(false, '请输入帖子ID')
+          return
+        }
+        
+        if (!this.postReportData.reason) {
+          this.showResult(false, '请选择举报原因')
+          return
+        }
+        
+        uni.showLoading({ title: '提交中...' })
+        
+        const result = await this.postObj.report({
+          contentId: this.postReportData.contentId,
+          contentType: this.postReportData.contentType,
+          reason: this.postReportData.reason,
+          description: this.postReportData.description
+        })
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(
+            true, 
+            `${result.message}\n当前举报次数：${result.data.report_count}`, 
+            result.data
+          )
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '举报失败')
+      }
+    },
+    
+    /**
+     * 6. 测试删除帖子
+     */
+    async testDeletePost() {
+      try {
+        if (!this.postDeleteId) {
+          this.showResult(false, '请输入帖子ID')
+          return
+        }
+        
+        uni.showLoading({ title: '删除中...' })
+        
+        const result = await this.postObj.delete(this.postDeleteId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '删除成功！', result.data)
+          this.postDeleteId = ''
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '删除失败')
+      }
+    },
+    
+    // Post Picker 事件处理
+    onPostTypeChange(e) {
+      this.postListOptions.type = this.postTypeOptions[e.detail.value].value
+    },
+    
+    onPostSortChange(e) {
+      this.postListOptions.sortBy = this.postSortOptions[e.detail.value].value
+    },
+    
+    onPostCreateTypeChange(e) {
+      this.postData.type = this.postCreateTypeOptions[e.detail.value].value
+    },
+    
+    onReportReasonChange(e) {
+      this.postReportData.reason = this.reportReasonOptions[e.detail.value].value
     }
   }
 }
