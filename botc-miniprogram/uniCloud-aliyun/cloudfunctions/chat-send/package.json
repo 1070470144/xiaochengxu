@@ -1,7 +1,0 @@
-{
-  "name": "chat-send",
-  "version": "1.0.0",
-  "description": "发送私聊消息云函数",
-  "main": "index.js",
-  "dependencies": {}
-}
