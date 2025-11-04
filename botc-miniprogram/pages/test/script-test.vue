@@ -144,6 +144,125 @@
         </view>
       </view>
 
+      <!-- 6. 创建评价 -->
+      <view class="section">
+        <view class="section-title">6️⃣ 创建评价 (createReview)</view>
+        
+        <view class="test-group">
+          <text class="group-title">提交剧本评价</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input class="input" v-model="reviewData.scriptId" placeholder="剧本ID" />
+          <picker mode="selector" :range="ratingOptions" @change="onReviewRatingChange">
+            <view class="picker">
+              <text>评分：{{ reviewData.rating }}星</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <textarea 
+            class="textarea" 
+            v-model="reviewData.content" 
+            placeholder="评价内容（必填）"
+            maxlength="500"
+          />
+          <button class="btn btn-warning" @click="testCreateReview" :disabled="!isLogin">
+            提交评价
+          </button>
+        </view>
+      </view>
+
+      <!-- 7. 评分 -->
+      <view class="section">
+        <view class="section-title">7️⃣ 评分 (rate)</view>
+        
+        <view class="test-group">
+          <text class="group-title">快速评分（无评价）</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input class="input" v-model="rateData.scriptId" placeholder="剧本ID" />
+          <picker mode="selector" :range="ratingOptions" @change="onRateChange">
+            <view class="picker">
+              <text>评分：{{ rateData.rating }}星</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <input class="input" v-model="rateData.comment" placeholder="备注（可选）" maxlength="100" />
+          <button class="btn btn-success" @click="testRate" :disabled="!isLogin">
+            提交评分
+          </button>
+        </view>
+      </view>
+
+      <!-- 8. 获取JSON -->
+      <view class="section">
+        <view class="section-title">8️⃣ 获取JSON (getJson)</view>
+        
+        <view class="test-group">
+          <text class="group-title">获取剧本JSON数据</text>
+          <input class="input" v-model="testData.jsonScriptId" placeholder="剧本ID" />
+          <button class="btn btn-info" @click="testGetJson">获取JSON</button>
+        </view>
+      </view>
+
+      <!-- 9-12. 排行榜 -->
+      <view class="section">
+        <view class="section-title">9️⃣-1️⃣2️⃣ 排行榜</view>
+        
+        <view class="test-group">
+          <text class="group-title">热门排行 (getRankingHot)</text>
+          <view class="input-row">
+            <input class="input input-half" v-model.number="rankingPage" placeholder="页码" type="number" />
+            <input class="input input-half" v-model.number="rankingPageSize" placeholder="每页" type="number" />
+          </view>
+          <picker mode="selector" :range="periodOptions" range-key="label" @change="onPeriodChange">
+            <view class="picker">
+              <text>时间范围：{{ periodOptions.find(p => p.value === rankingPeriod).label }}</text>
+              <text class="arrow">></text>
+            </view>
+          </picker>
+          <button class="btn btn-primary" @click="testGetRankingHot">热门排行</button>
+        </view>
+
+        <view class="test-group">
+          <text class="group-title">最新排行 (getRankingNew)</text>
+          <button class="btn btn-success" @click="testGetRankingNew">最新排行</button>
+        </view>
+
+        <view class="test-group">
+          <text class="group-title">评分排行 (getRankingRating)</text>
+          <input class="input" v-model.number="minRatingCount" placeholder="最少评分数" type="number" />
+          <button class="btn btn-warning" @click="testGetRankingRating">评分排行</button>
+        </view>
+
+        <view class="test-group">
+          <text class="group-title">下载排行 (getRankingDownload)</text>
+          <button class="btn btn-info" @click="testGetRankingDownload">下载排行</button>
+        </view>
+      </view>
+
+      <!-- 13. 计算热度 -->
+      <view class="section">
+        <view class="section-title">1️⃣3️⃣ 计算热度 (calculateHeat)</view>
+        
+        <view class="test-group">
+          <text class="group-title">计算剧本热度</text>
+          <input class="input" v-model="testData.heatScriptId" placeholder="剧本ID（空=全部）" />
+          <button class="btn btn-danger" @click="testCalculateHeat" :disabled="!testData.heatScriptId && !isLogin">
+            计算热度
+          </button>
+        </view>
+      </view>
+
+      <!-- 14. 生成JSON链接 -->
+      <view class="section">
+        <view class="section-title">1️⃣4️⃣ 生成JSON链接 (generateJsonUrl)</view>
+        
+        <view class="test-group">
+          <text class="group-title">生成JSON访问链接</text>
+          <input class="input" v-model="testData.urlScriptId" placeholder="剧本ID" />
+          <button class="btn btn-primary" @click="testGenerateJsonUrl">生成链接</button>
+          <text class="hint">💡 生成可在浏览器直接访问的JSON链接（支持CORS）</text>
+        </view>
+      </view>
+
       <!-- 底部间距 -->
       <view class="bottom-space"></view>
     </scroll-view>
@@ -181,7 +300,10 @@ export default {
       // 测试数据
       testData: {
         scriptId: '',
-        deleteScriptId: ''
+        deleteScriptId: '',
+        jsonScriptId: '',
+        heatScriptId: '',
+        urlScriptId: ''
       },
       
       // 上传数据
@@ -194,7 +316,35 @@ export default {
       
       // 我的剧本分页
       myUploadsPage: 1,
-      myUploadsPageSize: 10
+      myUploadsPageSize: 10,
+      
+      // 评价数据
+      reviewData: {
+        scriptId: '',
+        content: '',
+        rating: 5
+      },
+      
+      ratingOptions: [1, 2, 3, 4, 5],
+      
+      // 评分数据
+      rateData: {
+        scriptId: '',
+        rating: 5,
+        comment: ''
+      },
+      
+      // 排行榜数据
+      rankingPage: 1,
+      rankingPageSize: 10,
+      rankingPeriod: 'all',
+      minRatingCount: 5,
+      
+      periodOptions: [
+        { value: 'all', label: '总榜' },
+        { value: 'weekly', label: '周榜' },
+        { value: 'monthly', label: '月榜' }
+      ]
     }
   },
   
@@ -423,6 +573,296 @@ export default {
     // 切换测试JSON
     toggleTestJson() {
       this.useTestJson = !this.useTestJson
+    },
+    
+    // 6. 测试创建评价
+    async testCreateReview() {
+      if (!this.reviewData.scriptId) {
+        return this.showResult(false, '请输入剧本ID')
+      }
+      
+      if (!this.reviewData.content) {
+        return this.showResult(false, '请输入评价内容')
+      }
+      
+      try {
+        uni.showLoading({ title: '提交中...' })
+        
+        const result = await this.scriptObj.createReview(
+          this.reviewData.scriptId,
+          this.reviewData.content,
+          this.reviewData.rating
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '评价成功', {
+            review_id: result.data.review_id,
+            new_rating: result.data.script_rating
+          })
+          
+          // 清空表单
+          this.reviewData.content = ''
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '评价失败')
+      }
+    },
+    
+    // 7. 测试评分
+    async testRate() {
+      if (!this.rateData.scriptId) {
+        return this.showResult(false, '请输入剧本ID')
+      }
+      
+      try {
+        uni.showLoading({ title: '评分中...' })
+        
+        const result = await this.scriptObj.rate(
+          this.rateData.scriptId,
+          this.rateData.rating,
+          this.rateData.comment
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '评分失败')
+      }
+    },
+    
+    // 8. 测试获取JSON
+    async testGetJson() {
+      if (!this.testData.jsonScriptId) {
+        return this.showResult(false, '请输入剧本ID')
+      }
+      
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.scriptObj.getJson(this.testData.jsonScriptId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '获取成功', {
+            title: result.data.title,
+            json_length: JSON.stringify(result.data.json_data).length
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 9. 测试热门排行
+    async testGetRankingHot() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.scriptObj.getRankingHot(
+          this.rankingPage,
+          this.rankingPageSize,
+          this.rankingPeriod
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功，共${result.data.total}个`, {
+            total: result.data.total,
+            listCount: result.data.list.length,
+            topScript: result.data.list[0]
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 10. 测试最新排行
+    async testGetRankingNew() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.scriptObj.getRankingNew(
+          this.rankingPage,
+          this.rankingPageSize
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功，共${result.data.total}个`, {
+            total: result.data.total,
+            listCount: result.data.list.length,
+            newestScript: result.data.list[0]
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 11. 测试评分排行
+    async testGetRankingRating() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.scriptObj.getRankingRating(
+          this.rankingPage,
+          this.rankingPageSize,
+          this.minRatingCount
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功，共${result.data.total}个`, {
+            total: result.data.total,
+            listCount: result.data.list.length,
+            topScript: result.data.list[0]
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 12. 测试下载排行
+    async testGetRankingDownload() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.scriptObj.getRankingDownload(
+          this.rankingPage,
+          this.rankingPageSize,
+          this.rankingPeriod
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `获取成功，共${result.data.total}个`, {
+            total: result.data.total,
+            listCount: result.data.list.length,
+            topScript: result.data.list[0]
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 13. 测试计算热度
+    async testCalculateHeat() {
+      try {
+        uni.showLoading({ title: '计算中...' })
+        
+        const result = await this.scriptObj.calculateHeat(
+          this.testData.heatScriptId || null
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, result.message, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '计算失败')
+      }
+    },
+    
+    // 14. 测试生成JSON链接
+    async testGenerateJsonUrl() {
+      if (!this.testData.urlScriptId) {
+        return this.showResult(false, '请输入剧本ID')
+      }
+      
+      try {
+        uni.showLoading({ title: '生成中...' })
+        
+        const result = await this.scriptObj.generateJsonUrl(this.testData.urlScriptId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          const displayData = {
+            url: result.data.url,
+            type: result.data.type,
+            cors: result.data.cors ? '✅ 支持' : '❌ 不支持'
+          }
+          
+          // 如果有提示信息，添加到显示数据中
+          if (result.data.note) {
+            displayData.note = result.data.note
+          }
+          if (result.data.alternative) {
+            displayData.alternative = result.data.alternative
+          }
+          
+          this.showResult(true, '生成成功', displayData)
+          
+          // 复制链接到剪贴板
+          uni.setClipboardData({
+            data: result.data.url,
+            success: () => {
+              console.log('✅ 链接已复制到剪贴板')
+              uni.showToast({
+                title: '链接已复制',
+                icon: 'success',
+                duration: 2000
+              })
+            }
+          })
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '生成失败')
+      }
+    },
+    
+    // Picker 事件
+    onReviewRatingChange(e) {
+      this.reviewData.rating = this.ratingOptions[e.detail.value]
+    },
+    
+    onRateChange(e) {
+      this.rateData.rating = this.ratingOptions[e.detail.value]
+    },
+    
+    onPeriodChange(e) {
+      this.rankingPeriod = this.periodOptions[e.detail.value].value
     }
   }
 }
