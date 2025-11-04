@@ -1,0 +1,14 @@
+{
+  "name": "script",
+  "version": "1.0.0",
+  "description": "剧本云对象 - 阶段1：核心功能（5个方法）",
+  "main": "index.obj.js",
+  "cloudfunction-config": {
+    "concurrency": 10,
+    "memorySize": 512,
+    "timeout": 60,
+    "triggers": []
+  },
+  "dependencies": {}
+}
+
