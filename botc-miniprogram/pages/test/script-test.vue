@@ -503,6 +503,146 @@
       <!-- 底部间距 -->
       <view class="bottom-space"></view>
     </scroll-view>
+
+    <!-- Chat 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'chat'">
+      <!-- 1. 发送消息 -->
+      <view class="section">
+        <view class="section-title">1️⃣ 发送消息 (sendMessage)</view>
+        
+        <view class="test-group">
+          <text class="group-title">发送私聊消息</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="chatData.receiverId" 
+            placeholder="接收者用户ID"
+          />
+          <textarea 
+            class="textarea" 
+            v-model="chatData.content" 
+            placeholder="消息内容"
+            maxlength="1000"
+          />
+          <view class="input-row">
+            <text class="label">消息类型：</text>
+            <input 
+              class="input input-half" 
+              v-model.number="chatData.messageType" 
+              placeholder="1-文本"
+              type="number"
+            />
+          </view>
+          <button class="btn btn-primary" @click="testSendMessage">发送消息</button>
+        </view>
+      </view>
+
+      <!-- 2. 获取会话列表 -->
+      <view class="section">
+        <view class="section-title">2️⃣ 获取会话列表 (getConversations)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看我的会话</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="conversationsPage" 
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="conversationsPageSize" 
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <button class="btn btn-success" @click="testGetConversations">获取会话列表</button>
+        </view>
+      </view>
+
+      <!-- 3. 获取聊天消息 -->
+      <view class="section">
+        <view class="section-title">3️⃣ 获取聊天消息 (getMessages)</view>
+        
+        <view class="test-group">
+          <text class="group-title">查看聊天记录</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="chatUserId" 
+            placeholder="对方用户ID"
+          />
+          <view class="input-row">
+            <input 
+              class="input input-half" 
+              v-model.number="messagesPage" 
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-half" 
+              v-model.number="messagesPageSize" 
+              placeholder="每页数量"
+              type="number"
+            />
+          </view>
+          <button class="btn btn-info" @click="testGetMessages">获取聊天消息</button>
+        </view>
+      </view>
+
+      <!-- 4. 标记已读 -->
+      <view class="section">
+        <view class="section-title">4️⃣ 标记已读 (markRead)</view>
+        
+        <view class="test-group">
+          <text class="group-title">标记消息为已读</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="chatUserId" 
+            placeholder="对方用户ID"
+          />
+          <input 
+            class="input" 
+            v-model="chatConversationId" 
+            placeholder="会话ID（可选）"
+          />
+          <button class="btn btn-warning" @click="testMarkRead">标记已读</button>
+        </view>
+      </view>
+
+      <!-- 5. 删除会话 -->
+      <view class="section">
+        <view class="section-title">5️⃣ 删除会话 (deleteConversation)</view>
+        
+        <view class="test-group">
+          <text class="group-title">删除会话（软删除）</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <input 
+            class="input" 
+            v-model="chatConversationId" 
+            placeholder="会话ID"
+          />
+          <button class="btn btn-danger" @click="testDeleteConversation">删除会话</button>
+        </view>
+      </view>
+
+      <!-- 6. 获取未读总数 -->
+      <view class="section">
+        <view class="section-title">6️⃣ 获取未读总数 (getUnreadCount)</view>
+        
+        <view class="test-group">
+          <text class="group-title">获取所有会话的未读消息总数</text>
+          <text class="hint">⚠️ 需要登录</text>
+          <button class="btn btn-primary" @click="testGetUnreadCount">获取未读总数</button>
+        </view>
+      </view>
+
+      <!-- 底部间距 -->
+      <view class="bottom-space"></view>
+    </scroll-view>
   </view>
 </template>
 
@@ -518,12 +658,14 @@ export default {
       currentTab: 'script',
       tabs: [
         { value: 'script', label: 'Script', icon: '🎬' },
-        { value: 'carpool', label: 'Carpool', icon: '🚗' }
+        { value: 'carpool', label: 'Carpool', icon: '🚗' },
+        { value: 'chat', label: 'Chat', icon: '💬' }
       ],
       
       // 云对象
       scriptObj: null,
       carpoolObj: null,
+      chatObj: null,
       isLogin: false,
       lastResult: null,
       
@@ -629,7 +771,23 @@ export default {
         { value: 2, label: '已满员' },
         { value: 3, label: '已完成' },
         { value: 4, label: '已取消' }
-      ]
+      ],
+      
+      // Chat 相关数据
+      chatData: {
+        receiverId: '',
+        content: '你好，在吗？',
+        messageType: 1
+      },
+      
+      chatUserId: '',  // 用于获取聊天记录
+      chatConversationId: '',  // 用于标记已读和删除
+      
+      conversationsPage: 1,
+      conversationsPageSize: 20,
+      
+      messagesPage: 1,
+      messagesPageSize: 50
     }
   },
   
@@ -642,6 +800,11 @@ export default {
     })
     // 初始化 Carpool 云对象
     this.carpoolObj = uniCloud.importObject('carpool', {
+      customUI: true,
+      debugFunction: false
+    })
+    // 初始化 Chat 云对象
+    this.chatObj = uniCloud.importObject('chat', {
       customUI: true,
       debugFunction: false
     })
@@ -1446,6 +1609,180 @@ export default {
     
     onStatusChange(e) {
       this.testData.newStatus = this.statusOptions[e.detail.value].value
+    },
+    
+    // ========== Chat 测试方法 ==========
+    
+    // 1. 发送消息
+    async testSendMessage() {
+      if (!this.chatData.receiverId || !this.chatData.content) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '发送中...' })
+        
+        const result = await this.chatObj.sendMessage(
+          this.chatData.receiverId,
+          this.chatData.content,
+          this.chatData.messageType
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `消息发送成功！会话ID: ${result.data.conversation_id}`, result.data)
+          // 清空输入
+          this.chatData.content = '你好，在吗？'
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '发送失败')
+      }
+    },
+    
+    // 2. 获取会话列表
+    async testGetConversations() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.chatObj.getConversations(
+          this.conversationsPage,
+          this.conversationsPageSize
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          const count = result.data.list.length
+          this.showResult(true, `获取成功！共 ${count} 个会话，总计 ${result.data.total} 个`, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 3. 获取聊天消息
+    async testGetMessages() {
+      if (!this.chatUserId) {
+        uni.showToast({
+          title: '请输入用户ID',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.chatObj.getMessages(
+          this.chatUserId,
+          this.messagesPage,
+          this.messagesPageSize
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          const count = result.data.list.length
+          this.showResult(true, `获取成功！共 ${count} 条消息，总计 ${result.data.total} 条`, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
+    },
+    
+    // 4. 标记已读
+    async testMarkRead() {
+      if (!this.chatUserId && !this.chatConversationId) {
+        uni.showToast({
+          title: '请输入用户ID或会话ID',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '标记中...' })
+        
+        const result = await this.chatObj.markRead(
+          this.chatUserId,
+          this.chatConversationId || null
+        )
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `标记成功！共标记 ${result.data.marked_count} 条消息`, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '标记失败')
+      }
+    },
+    
+    // 5. 删除会话
+    async testDeleteConversation() {
+      if (!this.chatConversationId) {
+        uni.showToast({
+          title: '请输入会话ID',
+          icon: 'none'
+        })
+        return
+      }
+      
+      try {
+        uni.showLoading({ title: '删除中...' })
+        
+        const result = await this.chatObj.deleteConversation(this.chatConversationId)
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, '会话删除成功！', result.data)
+          // 清空输入
+          this.chatConversationId = ''
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '删除失败')
+      }
+    },
+    
+    // 6. 获取未读总数
+    async testGetUnreadCount() {
+      try {
+        uni.showLoading({ title: '加载中...' })
+        
+        const result = await this.chatObj.getUnreadCount()
+        
+        uni.hideLoading()
+        
+        if (result.code === 0) {
+          this.showResult(true, `未读消息总数: ${result.data.total_unread} 条`, result.data)
+        } else {
+          this.showResult(false, result.message)
+        }
+      } catch (error) {
+        uni.hideLoading()
+        this.showResult(false, error.message || '获取失败')
+      }
     }
   }
 }

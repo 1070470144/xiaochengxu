@@ -60,6 +60,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 chat 云对象
+    this.chatObj = uniCloud.importObject('chat', {
+      customUI: true
+    })
     this.loadConversations()
   },
   
@@ -90,17 +94,13 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'chat-conversation-list',
-          data: {
-            page: this.page,
-            page_size: this.pageSize,
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.chatObj.getConversations(
+          this.page,
+          this.pageSize
+        )
         
-        if (result.result.code === 0) {
-          const newList = result.result.data.list || []
+        if (result.code === 0) {
+          const newList = result.data.list || []
           
           if (isLoadMore) {
             this.conversationList = [...this.conversationList, ...newList]
@@ -108,9 +108,9 @@ export default {
             this.conversationList = newList
           }
           
-          this.hasMore = newList.length >= this.pageSize
+          this.hasMore = result.data.hasNext
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
       } catch (error) {
         console.error('加载会话列表失败：', error)

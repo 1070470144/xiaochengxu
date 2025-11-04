@@ -119,6 +119,10 @@ export default {
 
   onLoad() {
     console.log('聊天列表页面加载')
+    // 初始化 chat 云对象
+    this.chatObj = uniCloud.importObject('chat', {
+      customUI: true
+    })
     this.loadConversations()
   },
 
@@ -139,14 +143,12 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'chat-conversations'
-        })
+        const result = await this.chatObj.getConversations(1, 50)
 
-        if (result.result.code === 0) {
-          this.conversations = result.result.data.list
+        if (result.code === 0) {
+          this.conversations = result.data.list
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {

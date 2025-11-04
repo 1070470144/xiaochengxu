@@ -142,6 +142,11 @@ export default {
   },
   
   onLoad(options) {
+    // 初始化 chat 云对象
+    this.chatObj = uniCloud.importObject('chat', {
+      customUI: true
+    })
+    
     if (options.user_id) {
       this.userId = options.user_id
     }
@@ -270,32 +275,28 @@ export default {
       this.sending = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'chat-send-message',
-          data: {
-            receiver_id: this.userId,
-            content: content,
-            message_type: 1,
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.chatObj.sendMessage(
+          this.userId,
+          content,
+          1  // message_type
+        )
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           // 保存会话ID
           if (!this.conversationId) {
-            this.conversationId = result.result.data.conversation_id
+            this.conversationId = result.data.conversation_id
           }
           
           // 添加消息到列表
           this.messageList.push({
-            _id: result.result.data.message_id,
+            _id: result.data.message_id,
             conversation_id: this.conversationId,
             sender_id: this.currentUserId,
             receiver_id: this.userId,
             content: content,
             message_type: 1,
             is_read: false,
-            created_at: result.result.data.created_at
+            created_at: result.data.created_at
           })
           
           // 滚动到底部
@@ -303,7 +304,7 @@ export default {
             this.scrollToView = 'msg-' + (this.messageList.length - 1)
           })
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
       } catch (error) {
         console.error('发送消息失败：', error)
@@ -417,24 +418,20 @@ export default {
       }
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'chat-mark-read',
-          data: {
-            user_id: this.userId,
-            conversation_id: this.conversationId,
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.chatObj.markRead(
+          this.userId,
+          this.conversationId || null
+        )
         
-        if (result.result.code === 0) {
-          console.log('消息标记为已读成功:', result.result.data)
+        if (result.code === 0) {
+          console.log('消息标记为已读成功:', result.data)
           
           // 保存会话ID（如果之前没有的话）
           if (!this.conversationId) {
-            this.conversationId = result.result.data.conversation_id
+            this.conversationId = result.data.conversation_id
           }
         } else {
-          console.warn('标记消息为已读失败:', result.result.message)
+          console.warn('标记消息为已读失败:', result.message)
         }
       } catch (error) {
         console.error('标记消息为已读出错:', error)
