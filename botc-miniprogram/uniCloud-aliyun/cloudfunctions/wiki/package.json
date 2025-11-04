@@ -1,0 +1,16 @@
+{
+  "name": "wiki",
+  "version": "1.0.0",
+  "description": "Wiki百科云对象",
+  "main": "index.obj.js",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "cloudfunction-config": {
+    "memorySize": 512,
+    "timeout": 60
+  },
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

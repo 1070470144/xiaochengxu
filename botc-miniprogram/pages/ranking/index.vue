@@ -212,16 +212,14 @@ export default {
       this.loadingStorytellers = true;
       
       try {
-        const res = await uniCloud.callFunction({
-          name: 'wiki-ranking-storytellers',
-          data: {
-            type: this.storytellerTabs[this.storytellerTab].field,
-            limit: 50
-          }
-        });
+        const wikiObj = uniCloud.importObject('wiki', { customUI: true });
+        const res = await wikiObj.getRankingStorytellers(
+          this.storytellerTabs[this.storytellerTab].field,
+          50
+        );
         
-        if (res.result.code === 0) {
-          this.storytellerList = res.result.data.list || [];
+        if (res.code === 0) {
+          this.storytellerList = res.data.list || [];
         }
       } catch (error) {
         console.error('[loadStorytellerRanking] 加载失败:', error);

@@ -535,15 +535,11 @@ export default {
       }
       
       try {
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-toggle-like',
-          data: {
-            role_id: this.entryId
-          }
-        });
+        const wikiObj = uniCloud.importObject('wiki', { customUI: true });
+        const res = await wikiObj.toggleLike(this.entryId);
         
-        if (res.result.code === 0) {
-          this.isLiked = res.result.data.is_liked;
+        if (res.code === 0) {
+          this.isLiked = res.data.is_liked;
           
           // 更新本地统计
           if (this.entry.stats) {
@@ -551,13 +547,13 @@ export default {
           }
           
           uni.showToast({
-            title: res.result.message,
+            title: res.message,
             icon: 'success',
             duration: 1000
           });
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: res.message,
             icon: 'none'
           });
         }
@@ -575,17 +571,11 @@ export default {
       this.loadingComments = true;
       
       try {
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-comment-list',
-          data: {
-            role_id: this.entryId,
-            page: 1,
-            page_size: 50
-          }
-        });
+        const wikiObj = uniCloud.importObject('wiki', { customUI: true });
+        const res = await wikiObj.getComments(this.entryId, 1, 50);
         
-        if (res.result.code === 0) {
-          this.commentList = res.result.data.list || [];
+        if (res.code === 0) {
+          this.commentList = res.data.list || [];
           console.log('[loadComments] 加载评论成功，共', this.commentList.length, '条');
         }
       } catch (error) {
@@ -618,17 +608,12 @@ export default {
       try {
         uni.showLoading({ title: '发送中...' });
         
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-comment-add',
-          data: {
-            role_id: this.entryId,
-            content: content
-          }
-        });
+        const wikiObj = uniCloud.importObject('wiki', { customUI: true });
+        const res = await wikiObj.addComment(this.entryId, content);
         
         uni.hideLoading();
         
-        if (res.result.code === 0) {
+        if (res.code === 0) {
           uni.showToast({
             title: '评论成功',
             icon: 'success'
@@ -646,7 +631,7 @@ export default {
           await this.loadComments();
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: res.message,
             icon: 'none'
           });
         }
