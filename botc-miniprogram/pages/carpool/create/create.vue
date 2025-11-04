@@ -262,6 +262,10 @@ export default {
 
   onLoad() {
     console.log('创建拼车页面加载')
+    // 初始化 script 云对象
+    this.scriptObj = uniCloud.importObject('script', {
+      customUI: true
+    })
     this.loadOptions()
   },
 
@@ -557,17 +561,14 @@ export default {
     // 加载剧本选项
     async loadScriptOptions() {
       try {
-        const result = await uniCloud.callFunction({
-          name: 'script-list',
-          data: {
-            page: 1,
-            pageSize: 50,
-            type: 'hot'
-          }
+        const result = await this.scriptObj.getList({
+          page: 1,
+          pageSize: 50,
+          type: 'hot'
         })
 
-        if (result.result.code === 0) {
-          this.scriptOptions = result.result.data.list.map(script => ({
+        if (result.code === 0) {
+          this.scriptOptions = result.data.list.map(script => ({
             value: script._id,
             text: `${script.title} (${script.player_count})`
           }))

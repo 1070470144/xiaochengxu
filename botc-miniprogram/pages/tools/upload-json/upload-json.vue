@@ -284,6 +284,13 @@ export default {
     }
   },
   
+  onLoad() {
+    // 初始化 script 云对象
+    this.scriptObj = uniCloud.importObject('script', {
+      customUI: true
+    })
+  },
+  
   methods: {
     // 切换上传模式
     switchMode(mode) {
@@ -707,17 +714,13 @@ export default {
         const finalTitle = this.formData.customTitle.trim() || this.parsedInfo.title
         const finalAuthor = this.formData.customAuthor.trim() || this.parsedInfo.author
         
-        // 获取用户token
-        const token = uni.getStorageSync('uni_id_token') || uni.getStorageSync('userInfo')?._id || 'test_user'
-        
         // ✅ 构建上传数据，包含用户上传的图片
         const uploadData = {
           title: finalTitle,
           author: finalAuthor,
           description: this.formData.description || this.parsedInfo.description,
           json: this.jsonContent,
-          user_images: this.uploadedImageUrls,  // ✅ 添加图片URL数组
-          token: token  // 传递token
+          user_images: this.uploadedImageUrls  // ✅ 添加图片URL数组
         }
         
         console.log('[剧本提交] 提交数据:', {
@@ -727,17 +730,14 @@ export default {
           user_images: this.uploadedImageUrls
         })
         
-        const res = await uniCloud.callFunction({
-          name: 'script-upload',
-          data: uploadData
-        })
+        const res = await this.scriptObj.upload(uploadData)
         
-        if (res.result.code === 0) {
+        if (res.code === 0) {
           // 保存生成的预览图
-          this.uploadedPreviewImage = res.result.data.previewImage || ''
+          this.uploadedPreviewImage = res.data.previewImage || ''
           this.currentStep = 3
           
-          console.log('[剧本提交] 上传成功，返回数据:', res.result.data)
+          console.log('[剧本提交] 上传成功，返回数据:', res.data)
           
           // 延迟显示成功提示，让用户先看到预览图
           setTimeout(() => {

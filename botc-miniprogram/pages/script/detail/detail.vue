@@ -283,6 +283,11 @@ export default {
   },
 
   onLoad(options) {
+    // 初始化 script 云对象
+    this.scriptObj = uniCloud.importObject('script', {
+      customUI: true
+    })
+    
     if (options.id) {
       this.scriptId = options.id
       
@@ -321,19 +326,10 @@ export default {
       this.loading = true
       
       try {
-        // 获取用户token（用于验证是否可以查看待审核剧本）
-        const token = uni.getStorageSync('uni_id_token') || uni.getStorageSync('userInfo')?._id || ''
-        
-        const result = await uniCloud.callFunction({
-          name: 'script-detail',
-          data: { 
-            id: this.scriptId,
-            token: token  // 传递token，用于权限验证
-          }
-        })
+        const result = await this.scriptObj.getDetail(this.scriptId)
 
-        if (result.result.code === 0) {
-          this.scriptDetail = result.result.data
+        if (result.code === 0) {
+          this.scriptDetail = result.data
           
           // 设置页面标题
           uni.setNavigationBarTitle({
@@ -959,17 +955,12 @@ export default {
           return
         }
         
-        // 调用云函数生成临时URL
-        console.log('[copyJsonToClipboard] 调用云函数生成临时URL')
-        const result = await uniCloud.callFunction({
-          name: 'script-generate-json-url',
-          data: {
-            scriptId: this.scriptId
-          }
-        })
+        // 调用云对象生成临时URL
+        console.log('[copyJsonToClipboard] 调用云对象生成临时URL')
+        const result = await this.scriptObj.generateJsonUrl(this.scriptId)
         
-        if (result.result.code === 0) {
-          const jsonUrl = result.result.data.url
+        if (result.code === 0) {
+          const jsonUrl = result.data.url
           console.log('[copyJsonToClipboard] 临时URL生成成功:', jsonUrl)
           
           // 复制URL到剪贴板

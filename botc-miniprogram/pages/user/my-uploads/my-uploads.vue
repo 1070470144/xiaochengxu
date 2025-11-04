@@ -146,6 +146,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 script 云对象
+    this.scriptObj = uniCloud.importObject('script', {
+      customUI: true
+    })
     this.loadMyUploads()
   },
   
@@ -165,20 +169,10 @@ export default {
       this.loading = true
       
       try {
-        // 获取用户token
-        const token = uni.getStorageSync('uni_id_token') || uni.getStorageSync('userInfo')?._id || 'test_user'
+        const res = await this.scriptObj.getMyUploads(this.page, this.pageSize)
         
-        const res = await uniCloud.callFunction({
-          name: 'script-my-uploads',
-          data: {
-            page: this.page,
-            pageSize: this.pageSize,
-            token: token
-          }
-        })
-        
-        if (res.result.code === 0) {
-          const data = res.result.data
+        if (res.code === 0) {
+          const data = res.data
           
           if (this.page === 1) {
             this.uploadList = data.list
@@ -249,18 +243,9 @@ export default {
     // 执行删除
     async performDelete(script) {
       try {
-        // 获取用户token
-        const token = uni.getStorageSync('uni_id_token') || uni.getStorageSync('userInfo')?._id || 'test_user'
+        const res = await this.scriptObj.delete(script._id)
         
-        const res = await uniCloud.callFunction({
-          name: 'script-delete',
-          data: {
-            scriptId: script._id,
-            token: token
-          }
-        })
-        
-        if (res.result.code === 0) {
+        if (res.code === 0) {
           uni.showToast({
             title: '删除成功',
             icon: 'success'
