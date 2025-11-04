@@ -1,8 +1,0 @@
-{
-  "name": "history-list",
-  "version": "1.0.0",
-  "description": "获取用户浏览历史列表",
-  "main": "index.js",
-  "dependencies": {}
-}
-

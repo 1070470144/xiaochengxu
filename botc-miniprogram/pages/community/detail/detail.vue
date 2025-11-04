@@ -213,6 +213,11 @@ export default {
   },
   
   onLoad(options) {
+    // 初始化 post 云对象
+    this.postObj = uniCloud.importObject('post', {
+      customUI: true
+    })
+    
     if (options.id) {
       this.postId = options.id
       
@@ -238,20 +243,16 @@ export default {
       uni.showLoading({ title: '加载中...' })
       
       try {
-        const token = Auth.isLogin() ? Auth.getToken() : null
+        const result = await this.postObj.getDetail(this.postId)
         
-        const result = await uniCloud.callFunction({
-          name: 'post-detail',
-          data: {
-            postId: this.postId,
-            token: token
+        if (result.code === 0) {
+          this.post = result.data
+          // 更新点赞状态
+          if (result.data.isLiked !== undefined) {
+            this.isLiked = result.data.isLiked
           }
-        })
-        
-        if (result.result.code === 0) {
-          this.post = result.result.data
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {
@@ -349,19 +350,11 @@ export default {
       }
       
       try {
-        const token = Auth.getToken()
+        const result = await this.postObj.toggleLike(this.postId)
         
-        const result = await uniCloud.callFunction({
-          name: 'post-like',
-          data: {
-            postId: this.postId,
-            token: token
-          }
-        })
-        
-        if (result.result.code === 0) {
-          this.post.isLiked = result.result.data.isLiked
-          this.post.like_count = result.result.data.likeCount
+        if (result.code === 0) {
+          this.isLiked = result.data.isLiked
+          this.post.like_count = result.data.likeCount
         }
         
       } catch (error) {
@@ -513,25 +506,21 @@ export default {
       try {
         uni.showLoading({ title: '提交中...' })
         
-        const res = await uniCloud.callFunction({
-          name: 'post-report',
-          data: {
-            target_id: this.postId,
-            target_type: 'post',
-            report_type: this.reportType,
-            report_reason: this.reportReason,
-            token: Auth.getToken()
-          }
+        const res = await this.postObj.report({
+          contentId: this.postId,
+          contentType: 'post',
+          reason: this.reportType,
+          description: this.reportReason
         })
         
         uni.hideLoading()
         
-        if (res.result.code === 0) {
+        if (res.code === 0) {
           uni.showToast({ title: '举报成功', icon: 'success' })
           this.closeReportDialog()
         } else {
           uni.showToast({ 
-            title: res.result.message || '举报失败', 
+            title: res.message || '举报失败', 
             icon: 'none' 
           })
         }

@@ -1,8 +1,0 @@
-{
-  "name": "favorite-remove",
-  "version": "1.0.0",
-  "description": "取消收藏",
-  "main": "index.js",
-  "dependencies": {}
-}
-

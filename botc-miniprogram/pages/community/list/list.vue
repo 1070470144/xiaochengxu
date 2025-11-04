@@ -114,6 +114,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 post 云对象
+    this.postObj = uniCloud.importObject('post', {
+      customUI: true
+    })
     this.loadPosts()
   },
   
@@ -133,18 +137,14 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'post-list',
-          data: {
-            page: this.page,
-            pageSize: this.pageSize,
-            sortBy: this.currentTab,
-            token: Auth.getToken() // 用于获取关注列表
-          }
+        const result = await this.postObj.getList({
+          page: this.page,
+          pageSize: this.pageSize,
+          sortBy: this.currentTab
         })
         
-        if (result.result.code === 0) {
-          const newPosts = result.result.data.list
+        if (result.code === 0) {
+          const newPosts = result.data.list
           
           if (loadMore) {
             this.postsList = [...this.postsList, ...newPosts]
@@ -152,7 +152,7 @@ export default {
             this.postsList = newPosts
           }
           
-          this.hasMore = result.result.data.hasMore
+          this.hasMore = result.data.hasMore
         }
         
       } catch (error) {

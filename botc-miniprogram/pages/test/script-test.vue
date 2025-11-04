@@ -816,6 +816,200 @@
       <!-- 底部间距 -->
       <view class="bottom-space"></view>
     </scroll-view>
+
+    <!-- Collection 测试内容 -->
+    <scroll-view class="test-sections" scroll-y v-if="currentTab === 'collection'">
+      <!-- 1. 添加收藏 -->
+      <view class="section">
+        <view class="section-title">1️⃣ 添加收藏 (addFavorite)</view>
+        
+        <view class="test-group">
+          <text class="group-title">添加收藏</text>
+          <view class="input-row">
+            <picker
+              class="input input-half"
+              mode="selector"
+              :range="targetTypeOptions"
+              range-key="label"
+              :value="targetTypeOptions.findIndex(t => t.value === collectionData.favoriteTargetType)"
+              @change="onFavoriteTypeChange"
+            >
+              <view class="picker-view">
+                目标类型: {{ targetTypeOptions.find(t => t.value === collectionData.favoriteTargetType)?.label }}
+              </view>
+            </picker>
+            <input 
+              class="input input-half" 
+              v-model="collectionData.favoriteTargetId"
+              placeholder="目标ID"
+            />
+          </view>
+          <button class="btn btn-primary" @click="testAddFavorite">添加收藏</button>
+        </view>
+      </view>
+
+      <!-- 2. 取消收藏 -->
+      <view class="section">
+        <view class="section-title">2️⃣ 取消收藏 (removeFavorite)</view>
+        
+        <view class="test-group">
+          <text class="group-title">取消收藏</text>
+          <view class="input-row">
+            <picker
+              class="input input-half"
+              mode="selector"
+              :range="targetTypeOptions"
+              range-key="label"
+              :value="targetTypeOptions.findIndex(t => t.value === collectionData.favoriteTargetType)"
+              @change="onFavoriteTypeChange"
+            >
+              <view class="picker-view">
+                目标类型: {{ targetTypeOptions.find(t => t.value === collectionData.favoriteTargetType)?.label }}
+              </view>
+            </picker>
+            <input 
+              class="input input-half" 
+              v-model="collectionData.favoriteTargetId"
+              placeholder="目标ID"
+            />
+          </view>
+          <button class="btn btn-danger" @click="testRemoveFavorite">取消收藏</button>
+        </view>
+      </view>
+
+      <!-- 3. 获取收藏列表 -->
+      <view class="section">
+        <view class="section-title">3️⃣ 获取收藏列表 (getFavorites)</view>
+        
+        <view class="test-group">
+          <text class="group-title">收藏列表查询</text>
+          <view class="input-row">
+            <input 
+              class="input input-third" 
+              v-model.number="collectionData.favoriteListPage"
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-third" 
+              v-model.number="collectionData.favoriteListPageSize"
+              placeholder="每页数量"
+              type="number"
+            />
+            <picker
+              class="input input-third"
+              mode="selector"
+              :range="[{value:'',label:'全部'}, ...targetTypeOptions]"
+              range-key="label"
+              :value="[{value:'',label:'全部'}, ...targetTypeOptions].findIndex(t => t.value === collectionData.favoriteListType)"
+              @change="onFavoriteListTypeChange"
+            >
+              <view class="picker-view">
+                类型: {{ [{value:'',label:'全部'}, ...targetTypeOptions].find(t => t.value === collectionData.favoriteListType)?.label }}
+              </view>
+            </picker>
+          </view>
+          <button class="btn btn-primary" @click="testGetFavorites">获取收藏列表</button>
+        </view>
+      </view>
+
+      <!-- 4. 检查收藏状态 -->
+      <view class="section">
+        <view class="section-title">4️⃣ 检查收藏状态 (checkFavoriteStatus)</view>
+        
+        <view class="test-group">
+          <text class="group-title">检查是否已收藏</text>
+          <view class="input-row">
+            <picker
+              class="input input-half"
+              mode="selector"
+              :range="targetTypeOptions"
+              range-key="label"
+              :value="targetTypeOptions.findIndex(t => t.value === collectionData.checkTargetType)"
+              @change="onCheckTypeChange"
+            >
+              <view class="picker-view">
+                目标类型: {{ targetTypeOptions.find(t => t.value === collectionData.checkTargetType)?.label }}
+              </view>
+            </picker>
+            <input 
+              class="input input-half" 
+              v-model="collectionData.checkTargetId"
+              placeholder="目标ID"
+            />
+          </view>
+          <button class="btn btn-info" @click="testCheckFavoriteStatus">检查收藏状态</button>
+        </view>
+      </view>
+
+      <!-- 5. 添加浏览历史 -->
+      <view class="section">
+        <view class="section-title">5️⃣ 添加浏览历史 (addHistory)</view>
+        
+        <view class="test-group">
+          <text class="group-title">记录浏览历史</text>
+          <view class="input-row">
+            <picker
+              class="input input-half"
+              mode="selector"
+              :range="historyTypeOptions"
+              range-key="label"
+              :value="historyTypeOptions.findIndex(t => t.value === collectionData.historyTargetType)"
+              @change="onHistoryTypeChange"
+            >
+              <view class="picker-view">
+                目标类型: {{ historyTypeOptions.find(t => t.value === collectionData.historyTargetType)?.label }}
+              </view>
+            </picker>
+            <input 
+              class="input input-half" 
+              v-model="collectionData.historyTargetId"
+              placeholder="目标ID"
+            />
+          </view>
+          <button class="btn btn-primary" @click="testAddHistory">添加浏览历史</button>
+        </view>
+      </view>
+
+      <!-- 6. 获取浏览历史 -->
+      <view class="section">
+        <view class="section-title">6️⃣ 获取浏览历史 (getHistory)</view>
+        
+        <view class="test-group">
+          <text class="group-title">历史记录查询</text>
+          <view class="input-row">
+            <input 
+              class="input input-third" 
+              v-model.number="collectionData.historyListPage"
+              placeholder="页码"
+              type="number"
+            />
+            <input 
+              class="input input-third" 
+              v-model.number="collectionData.historyListPageSize"
+              placeholder="每页数量"
+              type="number"
+            />
+            <picker
+              class="input input-third"
+              mode="selector"
+              :range="[{value:'',label:'全部'}, ...historyTypeOptions]"
+              range-key="label"
+              :value="[{value:'',label:'全部'}, ...historyTypeOptions].findIndex(t => t.value === collectionData.historyListType)"
+              @change="onHistoryListTypeChange"
+            >
+              <view class="picker-view">
+                类型: {{ [{value:'',label:'全部'}, ...historyTypeOptions].find(t => t.value === collectionData.historyListType)?.label }}
+              </view>
+            </picker>
+          </view>
+          <button class="btn btn-primary" @click="testGetHistory">获取浏览历史</button>
+        </view>
+      </view>
+
+      <!-- 底部间距 -->
+      <view class="bottom-space"></view>
+    </scroll-view>
   </view>
 </template>
 
@@ -833,7 +1027,8 @@ export default {
         { value: 'script', label: 'Script', icon: '🎬' },
         { value: 'carpool', label: 'Carpool', icon: '🚗' },
         { value: 'chat', label: 'Chat', icon: '💬' },
-        { value: 'post', label: 'Post', icon: '📝' }
+        { value: 'post', label: 'Post', icon: '📝' },
+        { value: 'collection', label: 'Collection', icon: '⭐' }
       ],
       
       // 云对象
@@ -841,6 +1036,7 @@ export default {
       carpoolObj: null,
       chatObj: null,
       postObj: null,
+      collectionObj: null,
       isLogin: false,
       lastResult: null,
       
@@ -1017,6 +1213,38 @@ export default {
         { value: 'abuse', label: '辱骂攻击' },
         { value: 'porn', label: '色情低俗' },
         { value: 'other', label: '其他' }
+      ],
+      
+      // ========== Collection 相关数据 ==========
+      collectionData: {
+        // 收藏功能
+        favoriteTargetType: 'script',
+        favoriteTargetId: '',
+        favoriteListPage: 1,
+        favoriteListPageSize: 10,
+        favoriteListType: '',
+        
+        // 历史记录功能
+        historyTargetType: 'script',
+        historyTargetId: '',
+        historyListPage: 1,
+        historyListPageSize: 10,
+        historyListType: '',
+        
+        // 检查收藏状态
+        checkTargetType: 'script',
+        checkTargetId: ''
+      },
+      
+      targetTypeOptions: [
+        { value: 'script', label: '剧本' },
+        { value: 'post', label: '帖子' }
+      ],
+      
+      historyTypeOptions: [
+        { value: 'script', label: '剧本' },
+        { value: 'post', label: '帖子' },
+        { value: 'carpool', label: '拼车' }
       ]
     }
   },
@@ -1041,6 +1269,12 @@ export default {
     
     // 初始化 Post 云对象
     this.postObj = uniCloud.importObject('post', {
+      customUI: true,
+      debugFunction: false
+    })
+    
+    // 初始化 Collection 云对象
+    this.collectionObj = uniCloud.importObject('collection', {
       customUI: true,
       debugFunction: false
     })
@@ -2260,6 +2494,310 @@ export default {
     
     onReportReasonChange(e) {
       this.postReportData.reason = this.reportReasonOptions[e.detail.value].value
+    },
+    
+    // ========== Collection 测试方法 ==========
+    
+    // Picker事件处理
+    onFavoriteTypeChange(e) {
+      this.collectionData.favoriteTargetType = this.targetTypeOptions[e.detail.value].value
+    },
+    
+    onFavoriteListTypeChange(e) {
+      const options = [{value:'',label:'全部'}, ...this.targetTypeOptions]
+      this.collectionData.favoriteListType = options[e.detail.value].value
+    },
+    
+    onCheckTypeChange(e) {
+      this.collectionData.checkTargetType = this.targetTypeOptions[e.detail.value].value
+    },
+    
+    onHistoryTypeChange(e) {
+      this.collectionData.historyTargetType = this.historyTypeOptions[e.detail.value].value
+    },
+    
+    onHistoryListTypeChange(e) {
+      const options = [{value:'',label:'全部'}, ...this.historyTypeOptions]
+      this.collectionData.historyListType = options[e.detail.value].value
+    },
+    
+    // 1. 添加收藏
+    async testAddFavorite() {
+      try {
+        console.log('测试添加收藏:', this.collectionData.favoriteTargetType, this.collectionData.favoriteTargetId)
+        
+        if (!this.collectionData.favoriteTargetId) {
+          uni.showToast({ title: '请输入目标ID', icon: 'none' })
+          return
+        }
+        
+        uni.showLoading({ title: '添加中...' })
+        
+        const result = await this.collectionObj.addFavorite(
+          this.collectionData.favoriteTargetType,
+          this.collectionData.favoriteTargetId
+        )
+        
+        uni.hideLoading()
+        
+        console.log('添加收藏结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `${result.message} (favoriteId: ${result.data?.favoriteId || 'N/A'})`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: '添加成功', icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('添加收藏失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    // 2. 取消收藏
+    async testRemoveFavorite() {
+      try {
+        console.log('测试取消收藏:', this.collectionData.favoriteTargetType, this.collectionData.favoriteTargetId)
+        
+        if (!this.collectionData.favoriteTargetId) {
+          uni.showToast({ title: '请输入目标ID', icon: 'none' })
+          return
+        }
+        
+        uni.showLoading({ title: '取消中...' })
+        
+        const result = await this.collectionObj.removeFavorite(
+          this.collectionData.favoriteTargetType,
+          this.collectionData.favoriteTargetId
+        )
+        
+        uni.hideLoading()
+        
+        console.log('取消收藏结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: result.message,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: '取消成功', icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('取消收藏失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    // 3. 获取收藏列表
+    async testGetFavorites() {
+      try {
+        console.log('测试获取收藏列表:', {
+          page: this.collectionData.favoriteListPage,
+          pageSize: this.collectionData.favoriteListPageSize,
+          targetType: this.collectionData.favoriteListType
+        })
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const options = {
+          page: this.collectionData.favoriteListPage,
+          pageSize: this.collectionData.favoriteListPageSize
+        }
+        
+        if (this.collectionData.favoriteListType) {
+          options.targetType = this.collectionData.favoriteListType
+        }
+        
+        const result = await this.collectionObj.getFavorites(options)
+        
+        uni.hideLoading()
+        
+        console.log('收藏列表结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `查询成功！共${result.data?.total || 0}条，当前${result.data?.list?.length || 0}条`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: `查询成功: ${result.data.list.length}条`, icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取收藏列表失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    // 4. 检查收藏状态
+    async testCheckFavoriteStatus() {
+      try {
+        console.log('测试检查收藏状态:', this.collectionData.checkTargetType, this.collectionData.checkTargetId)
+        
+        if (!this.collectionData.checkTargetId) {
+          uni.showToast({ title: '请输入目标ID', icon: 'none' })
+          return
+        }
+        
+        uni.showLoading({ title: '检查中...' })
+        
+        const result = await this.collectionObj.checkFavoriteStatus(
+          this.collectionData.checkTargetType,
+          this.collectionData.checkTargetId
+        )
+        
+        uni.hideLoading()
+        
+        console.log('收藏状态结果:', result)
+        
+        const isFavorited = result.data?.isFavorited
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `收藏状态: ${isFavorited ? '✅ 已收藏' : '❌ 未收藏'}`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ 
+            title: isFavorited ? '已收藏' : '未收藏',
+            icon: isFavorited ? 'success' : 'none'
+          })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('检查收藏状态失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    // 5. 添加浏览历史
+    async testAddHistory() {
+      try {
+        console.log('测试添加浏览历史:', this.collectionData.historyTargetType, this.collectionData.historyTargetId)
+        
+        if (!this.collectionData.historyTargetId) {
+          uni.showToast({ title: '请输入目标ID', icon: 'none' })
+          return
+        }
+        
+        uni.showLoading({ title: '记录中...' })
+        
+        const result = await this.collectionObj.addHistory(
+          this.collectionData.historyTargetType,
+          this.collectionData.historyTargetId
+        )
+        
+        uni.hideLoading()
+        
+        console.log('添加历史结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: result.message,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: '记录成功', icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('添加浏览历史失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
+    },
+    
+    // 6. 获取浏览历史
+    async testGetHistory() {
+      try {
+        console.log('测试获取浏览历史:', {
+          page: this.collectionData.historyListPage,
+          pageSize: this.collectionData.historyListPageSize,
+          targetType: this.collectionData.historyListType
+        })
+        
+        uni.showLoading({ title: '加载中...' })
+        
+        const options = {
+          page: this.collectionData.historyListPage,
+          pageSize: this.collectionData.historyListPageSize
+        }
+        
+        if (this.collectionData.historyListType) {
+          options.targetType = this.collectionData.historyListType
+        }
+        
+        const result = await this.collectionObj.getHistory(options)
+        
+        uni.hideLoading()
+        
+        console.log('浏览历史结果:', result)
+        
+        this.lastResult = {
+          success: result.code === 0,
+          message: `查询成功！共${result.data?.total || 0}条，当前${result.data?.list?.length || 0}条`,
+          data: result
+        }
+        
+        if (result.code === 0) {
+          uni.showToast({ title: `查询成功: ${result.data.list.length}条`, icon: 'success' })
+        } else {
+          uni.showToast({ title: result.message, icon: 'none' })
+        }
+      } catch (error) {
+        uni.hideLoading()
+        console.error('获取浏览历史失败:', error)
+        this.lastResult = {
+          success: false,
+          message: error.message,
+          data: null
+        }
+        uni.showToast({ title: error.message, icon: 'none' })
+      }
     }
   }
 }

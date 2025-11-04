@@ -134,6 +134,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 collection 云对象
+    this.collectionObj = uniCloud.importObject('collection', {
+      customUI: true
+    })
     this.checkLoginAndLoad()
   },
   
@@ -163,17 +167,13 @@ export default {
       this.loading = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'history-list',
-          data: {
-            page: this.page,
-            page_size: this.pageSize,
-            token: Auth.getToken()
-          }
+        const result = await this.collectionObj.getHistory({
+          page: this.page,
+          pageSize: this.pageSize
         })
         
-        if (result.result.code === 0) {
-          const newList = result.result.data.list || []
+        if (result.code === 0) {
+          const newList = result.data.list || []
           
           if (isLoadMore) {
             this.historyList = [...this.historyList, ...newList]
@@ -181,9 +181,9 @@ export default {
             this.historyList = newList
           }
           
-          this.hasMore = newList.length >= this.pageSize
+          this.hasMore = result.data.hasMore
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
       } catch (error) {
         console.error('加载浏览历史失败：', error)

@@ -1,0 +1,11 @@
+{
+  "name": "collection",
+  "version": "1.0.0",
+  "description": "收藏和浏览历史云对象",
+  "main": "index.obj.js",
+  "scripts": {},
+  "author": "",
+  "license": "ISC",
+  "dependencies": {}
+}
+

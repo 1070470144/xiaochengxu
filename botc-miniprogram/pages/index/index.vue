@@ -258,6 +258,10 @@ export default {
 
   onLoad() {
     console.log('血染钟楼首页加载')
+    // 初始化 post 云对象
+    this.postObj = uniCloud.importObject('post', {
+      customUI: true
+    })
     this.loadHomeData()
     this.loadPosts()
     this.initScripts()
@@ -292,52 +296,46 @@ export default {
       console.log('=== 加载首页帖子（使用云函数）===')
       
       try {
-        // 使用云函数查询最新帖子
+        // 使用云对象查询最新帖子
         console.log('1. 查询最新帖子...')
-        const latestRes = await uniCloud.callFunction({
-          name: 'post-list',
-          data: {
-            page: 1,
-            pageSize: 5,
-            sortBy: 'time'
-          }
+        const latestRes = await this.postObj.getList({
+          page: 1,
+          pageSize: 5,
+          sortBy: 'time'
         })
         
-        console.log('最新帖子云函数返回:', latestRes.result)
+        console.log('最新帖子返回:', latestRes)
         
-        if (latestRes.result.code === 0) {
-          this.latestPosts = latestRes.result.data.list.map(post => ({
+        if (latestRes.code === 0) {
+          this.latestPosts = latestRes.data.list.map(post => ({
             ...post,
             userName: post.user?.nickname || '匿名用户',
             userAvatar: post.user?.avatar || ''
           }))
           console.log('✅ 最新帖子加载成功，数量:', this.latestPosts.length)
         } else {
-          console.error('最新帖子查询失败:', latestRes.result.message)
+          console.error('最新帖子查询失败:', latestRes.message)
         }
         
-        // 使用云函数查询火热帖子
+        // 使用云对象查询火热帖子
         console.log('2. 查询火热帖子...')
-        const hotRes = await uniCloud.callFunction({
-          name: 'post-list',
-          data: {
-            page: 1,
-            pageSize: 5,
-            sortBy: 'hot'
-          }
+        const hotRes = await this.postObj.getList({
+          page: 1,
+          pageSize: 5,
+          sortBy: 'hot'
         })
         
-        console.log('火热帖子云函数返回:', hotRes.result)
+        console.log('火热帖子返回:', hotRes)
         
-        if (hotRes.result.code === 0) {
-          this.hotPosts = hotRes.result.data.list.map(post => ({
+        if (hotRes.code === 0) {
+          this.hotPosts = hotRes.data.list.map(post => ({
             ...post,
             userName: post.user?.nickname || '匿名用户',
             userAvatar: post.user?.avatar || ''
           }))
           console.log('✅ 火热帖子加载成功，数量:', this.hotPosts.length)
         } else {
-          console.error('火热帖子查询失败:', hotRes.result.message)
+          console.error('火热帖子查询失败:', hotRes.message)
         }
         
         console.log('🎉 所有帖子加载完成')
@@ -372,17 +370,19 @@ export default {
       
       // 使用新的页码查询
       Promise.all([
-        uniCloud.callFunction({
-          name: 'post-list',
-          data: { page: this.postPage, pageSize: 4, sortBy: 'time' }
+        this.postObj.getList({
+          page: this.postPage,
+          pageSize: 4,
+          sortBy: 'time'
         }),
-        uniCloud.callFunction({
-          name: 'post-list',
-          data: { page: this.postPage, pageSize: 4, sortBy: 'hot' }
+        this.postObj.getList({
+          page: this.postPage,
+          pageSize: 4,
+          sortBy: 'hot'
         })
       ]).then(([latestRes, hotRes]) => {
-        if (latestRes.result.code === 0 && latestRes.result.data.list.length > 0) {
-          this.latestPosts = latestRes.result.data.list.map(post => ({
+        if (latestRes.code === 0 && latestRes.data.list.length > 0) {
+          this.latestPosts = latestRes.data.list.map(post => ({
             ...post,
             userName: post.user?.nickname || '匿名用户',
             userAvatar: post.user?.avatar || ''
@@ -393,8 +393,8 @@ export default {
           this.loadPosts()
         }
         
-        if (hotRes.result.code === 0 && hotRes.result.data.list.length > 0) {
-          this.hotPosts = hotRes.result.data.list.map(post => ({
+        if (hotRes.code === 0 && hotRes.data.list.length > 0) {
+          this.hotPosts = hotRes.data.list.map(post => ({
             ...post,
             userName: post.user?.nickname || '匿名用户',
             userAvatar: post.user?.avatar || ''

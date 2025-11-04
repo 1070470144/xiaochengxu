@@ -152,6 +152,10 @@ export default {
   },
   
   onLoad() {
+    // 初始化 post 云对象
+    this.postObj = uniCloud.importObject('post', {
+      customUI: true
+    })
     this.loadScripts()
   },
   
@@ -295,21 +299,15 @@ export default {
       this.publishing = true
       
       try {
-        const token = Auth.getToken()
-        
-        const result = await uniCloud.callFunction({
-          name: 'post-create',
-          data: {
-            token: token,
-            script_id: this.selectedScript._id,
-            content: this.content.trim(),
-            images: this.images,
-            tags: this.selectedTags,
-            type: 1
-          }
+        const result = await this.postObj.create({
+          scriptId: this.selectedScript._id,
+          content: this.content.trim(),
+          images: this.images,
+          tags: this.selectedTags,
+          type: 1
         })
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '发布成功',
             icon: 'success'
@@ -325,7 +323,7 @@ export default {
             uni.navigateBack()
           }, 1500)
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
         
       } catch (error) {
