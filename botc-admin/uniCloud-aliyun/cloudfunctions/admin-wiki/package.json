@@ -1,0 +1,14 @@
+{
+  "name": "admin-wiki",
+  "version": "1.0.0",
+  "description": "AdminWiki管理端云对象 - 百科批量同步/角色管理/同步日志",
+  "main": "index.obj.js",
+  "dependencies": {},
+  "cloudfunction-config": {
+    "memorySize": 512,
+    "timeout": 60
+  },
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

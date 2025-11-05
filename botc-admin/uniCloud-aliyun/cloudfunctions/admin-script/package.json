@@ -1,0 +1,14 @@
+{
+  "name": "admin-script",
+  "version": "1.0.0",
+  "description": "AdminScript管理端云对象 - 剧本批量导入/预览生成/审核管理",
+  "main": "index.obj.js",
+  "dependencies": {},
+  "cloudfunction-config": {
+    "memorySize": 512,
+    "timeout": 60
+  },
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+

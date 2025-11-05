@@ -1,0 +1,14 @@
+{
+  "name": "admin",
+  "version": "1.0.0",
+  "description": "Admin管理端云对象 - 认证/举报/系统消息/敏感词",
+  "main": "index.obj.js",
+  "dependencies": {},
+  "cloudfunction-config": {
+    "memorySize": 512,
+    "timeout": 60
+  },
+  "author": "BOTC Team",
+  "license": "MIT"
+}
+
