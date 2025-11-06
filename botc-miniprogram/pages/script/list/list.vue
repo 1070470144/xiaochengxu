@@ -27,10 +27,10 @@
             :class="['filter-item', currentType === 'hot' ? 'active' : '']"
             @click="changeType('hot')">最热</text>
           <text 
-            :class="['filter-item', currentType === 'mystery' || currentType === 'mystery-rating' ? 'active' : '']"
+            :class="['filter-item', currentType === 'mystery' ? 'active' : '']"
             @click="changeType('mystery')">推理</text>
           <text 
-            :class="['filter-item', currentType === 'fun' || currentType === 'fun-rating' ? 'active' : '']"
+            :class="['filter-item', currentType === 'fun' ? 'active' : '']"
             @click="changeType('fun')">娱乐</text>
           <text 
             :class="['filter-item', currentType === 'rating' || currentType === 'mystery-rating' || currentType === 'fun-rating' ? 'active' : '']"
@@ -160,7 +160,11 @@ export default {
 
   methods: {
     async loadScriptList(isLoadMore = false) {
-      if (this.loading) return
+      // 如果是刷新操作（非加载更多），强制执行
+      if (this.loading && isLoadMore) {
+        console.log('正在加载中，跳过加载更多')
+        return
+      }
       
       this.loading = true
       if (!isLoadMore) {
@@ -175,10 +179,10 @@ export default {
           whereCondition.title = new RegExp(this.searchKeyword, 'i')
         }
 
-        // 处理类型筛选（支持组合类型）
-        if (this.currentType === 'mystery' || this.currentType === 'mystery-rating') {
+        // 处理类型筛选
+        if (this.currentType === 'mystery') {
           whereCondition.script_type = 1 // 推理
-        } else if (this.currentType === 'fun' || this.currentType === 'fun-rating') {
+        } else if (this.currentType === 'fun') {
           whereCondition.script_type = 2 // 娱乐
         }
 
@@ -188,7 +192,7 @@ export default {
         
         if (this.currentType === 'hot') {
           orderByField = 'heat_score'  // 使用热度分数排序
-        } else if (this.currentType === 'rating' || this.currentType === 'mystery-rating' || this.currentType === 'fun-rating') {
+        } else if (this.currentType === 'rating') {
           orderByField = 'average_rating'  // 使用平均评分排序
         } else if (this.currentType === 'new') {
           orderByField = 'published_at'
@@ -226,8 +230,10 @@ export default {
     },
 
     refreshList() {
+      console.log('刷新列表，当前类型:', this.currentType)
       this.currentPage = 1
       this.hasNext = true
+      this.scriptList = []  // 立即清空列表，给用户反馈
       this.loadScriptList()
     },
 
@@ -251,17 +257,13 @@ export default {
     changeType(type) {
       console.log('切换类型:', type)
       
-      // 如果是组合类型，需要映射到基础类型显示
-      let displayType = type
-      if (type === 'mystery-rating') {
-        displayType = 'mystery' // 推理高分榜 -> 显示推理tab
-      } else if (type === 'fun-rating') {
-        displayType = 'fun' // 娱乐高分榜 -> 显示娱乐tab
-      }
+      // 点击相同的tab，不处理
+      if (this.currentType === type) return
       
-      if (this.currentType === displayType) return
-      
+      // 直接切换类型，不做复杂的组合逻辑
+      // 每个tab都是独立的，互斥选择
       this.currentType = type
+      console.log('切换到:', type)
       this.refreshList()
     },
 
