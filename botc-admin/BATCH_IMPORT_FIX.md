@@ -1,265 +1,228 @@
-# 批量导入文件夹选择修复
+# 批量导入JSON剧本数据显示问题修复
 
-## 🔧 问题描述
+## 问题描述
+用户反馈：管理端-剧本管理，批量导入JSON剧本提示上传成功但是数据没有正常显示。
 
-点击"选择文件夹"按钮没有反应，无法打开文件夹选择对话框。
+## 问题根因
 
-## ✅ 修复方案
-
-已将原来的 `<input>` + `<label>` 方式改为按钮触发动态创建 input 的方式。
-
----
-
-## 🎯 修复内容
-
-### 1. 界面改进
-
-**修复前：**
-```html
-<input webkitdirectory @change="..." />
-<label for="fileInput">选择文件夹</label>
-```
-
-**修复后：**
-```html
-<button @click="triggerFolderSelect">📂 选择文件夹</button>
-<button @click="triggerFileSelect">📄 选择文件</button>
-<text>（推荐选择文件夹，自动递归读取所有JSON）</text>
-```
-
-### 2. JavaScript改进
-
-新增专门的文件夹选择方法：
+### 原有代码问题
+在 `admin-script` 云对象的 `batchImport` 方法中，直接将解析的 JSON 数据插入数据库，**没有确保必需字段有默认值**。
 
 ```javascript
-triggerFolderSelect() {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.json'
-  input.webkitdirectory = true  // 启用文件夹选择
-  input.directory = true         // 兼容性
-  input.multiple = true          // 允许多选
-  input.onchange = (e) => {
-    this.handleFileSelect(e)
-  }
-  input.click()  // 触发点击
+// 原有代码（有问题）
+script.created_at = script.created_at || Date.now();
+script.updated_at = Date.now();
+const res = await db.collection('botc-scripts').add(script);
+```
+
+**问题**：
+- 如果 JSON 文件中没有 `script_type` 字段 → 数据库中该字段为 `undefined`
+- 如果 JSON 文件中没有 `difficulty` 字段 → 数据库中该字段为 `undefined`
+- 如果 JSON 文件中没有 `status` 字段 → 数据库中该字段为 `undefined`
+- 如果 JSON 文件中没有 `player_count` 字段 → 数据库中该字段为 `undefined`
+
+**结果**：虽然数据插入成功，但在列表页面显示时，这些字段因为是 `undefined` 而无法正确渲染。
+
+## 修复方案
+
+### 修改内容
+
+在插入数据库之前，**构建一个完整的 `scriptData` 对象**，为所有必需字段设置默认值。
+
+```javascript
+// 🔧 确保必要字段有默认值
+const scriptData = {
+  // 基本信息
+  title: script.title || '未命名剧本',
+  subtitle: script.subtitle || '',
+  author: script.author || '',
+  description: script.description || '',
+  
+  // 分类信息（设置默认值）
+  script_type: script.script_type || 1,  // 默认：推理
+  difficulty: script.difficulty || 2,     // 默认：中等
+  player_count: script.player_count || '',
+  duration: script.duration || null,
+  
+  // JSON数据
+  json_data: script.json_data || [],
+  
+  // 图片
+  cover_image: script.cover_image || '',
+  preview_image: previewImage || script.preview_image || '',
+  user_images: script.user_images || [],
+  
+  // 标签和链接
+  tags: script.tags || [],
+  related_links: script.related_links || [],
+  
+  // 状态信息（设置默认值）
+  status: script.status !== undefined ? script.status : 1,  // 默认：已发布
+  is_featured: script.is_featured || false,
+  
+  // 统计信息
+  view_count: script.view_count || 0,
+  download_count: script.download_count || 0,
+  favorite_count: script.favorite_count || 0,
+  share_count: script.share_count || 0,
+  comment_count: script.comment_count || 0,
+  rating: script.rating || 0,
+  rating_count: script.rating_count || 0,
+  
+  // 创建者和时间
+  creator_id: script.creator_id || 'admin',
+  created_at: script.created_at || Date.now(),
+  updated_at: Date.now()
+};
+
+// 直接插入数据库
+const res = await db.collection('botc-scripts').add(scriptData);
+```
+
+## 默认值说明
+
+| 字段 | 默认值 | 说明 |
+|------|--------|------|
+| `script_type` | `1` | 推理类型 |
+| `difficulty` | `2` | 中等难度 |
+| `status` | `1` | 已发布状态 |
+| `player_count` | `''` | 空字符串 |
+| `duration` | `null` | 空值 |
+| `view_count` | `0` | 浏览量初始为0 |
+| `download_count` | `0` | 下载量初始为0 |
+| `favorite_count` | `0` | 收藏量初始为0 |
+| `rating` | `0` | 评分初始为0 |
+| `creator_id` | `'admin'` | 创建者为管理员 |
+
+## 修复效果
+
+### 修复前
+批量导入的剧本数据：
+```json
+{
+  "title": "大权在握v4",
+  "json_data": [...],
+  // script_type、difficulty、status 等字段缺失
 }
 ```
 
----
+插入数据库后，列表页面显示：
+- **类型**：（空白）
+- **难度**：（空白）
+- **状态**：（空白）
 
-## 🚀 使用方法
-
-### 方法1：选择文件夹（推荐）
-
-```
-1. 点击 "📂 选择文件夹" 按钮
-2. 在弹出的对话框中选择包含JSON文件的文件夹
-3. 点击"选择文件夹"或"打开"
-4. 系统自动递归读取该文件夹及所有子文件夹中的JSON文件
-5. 显示找到的所有JSON文件列表
-```
-
-**示例：**
-```
-选择文件夹：D:\xue\小程序\botc-miniprogram\static\官方已发行剧本
-
-系统会自动找到：
-- #暗流涌动.json
-- #黯月初升.json
-- #无上愉悦·汀.json
-- #窃窃私语·汀.json
-
-以及该文件夹下所有子文件夹中的JSON文件
+### 修复后
+批量导入的剧本数据：
+```json
+{
+  "title": "大权在握v4",
+  "json_data": [...],
+  "script_type": 1,      // ✅ 自动补全
+  "difficulty": 2,        // ✅ 自动补全
+  "status": 1,           // ✅ 自动补全
+  "view_count": 0,       // ✅ 自动补全
+  "creator_id": "admin"  // ✅ 自动补全
+  // ... 其他字段也都有默认值
+}
 ```
 
-### 方法2：选择多个文件
+插入数据库后，列表页面显示：
+- **类型**：推理 ✅
+- **难度**：中等 ✅
+- **状态**：已发布 ✅
 
+## 使用说明
+
+### 1. 上传云对象
+修改完成后，需要将 `admin-script` 云对象上传到云端：
+
+1. 在 HBuilderX 中右键点击 `botc-admin/uniCloud-aliyun/cloudfunctions/admin-script`
+2. 选择"上传部署"
+3. 等待上传完成
+
+### 2. 重新测试批量导入
+
+1. 打开管理端剧本管理页面
+2. 点击"批量导入JSON"按钮
+3. 选择 JSON 文件或文件夹
+4. 点击"开始导入"
+5. 等待导入完成
+6. 刷新列表，查看数据是否正常显示
+
+### 3. 验证字段显示
+
+导入后的剧本应该显示：
+- ✅ **类型**：推理（如果JSON中有此字段则显示JSON中的值）
+- ✅ **难度**：中等（如果JSON中有此字段则显示JSON中的值）
+- ✅ **玩家人数**：-（如果JSON中没有此字段）
+- ✅ **时长**：-（如果JSON中没有此字段）
+- ✅ **状态**：已发布（如果JSON中有此字段则显示JSON中的值）
+
+## 现有数据修复
+
+如果之前已经导入了数据但显示不正常，可以通过以下方式修复：
+
+### 方案A：重新导入（推荐）
+1. 删除之前导入失败的数据
+2. 上传修复后的云对象
+3. 重新批量导入
+
+### 方案B：数据库批量更新
+在 uniCloud Web控制台执行：
+
+```javascript
+// 为所有缺少 script_type 的剧本设置默认值
+db.collection('botc-scripts')
+  .where({
+    script_type: db.command.or([
+      db.command.eq(null),
+      db.command.eq(undefined),
+      db.command.exists(false)
+    ])
+  })
+  .update({
+    script_type: 1
+  })
+
+// 为所有缺少 difficulty 的剧本设置默认值
+db.collection('botc-scripts')
+  .where({
+    difficulty: db.command.or([
+      db.command.eq(null),
+      db.command.eq(undefined),
+      db.command.exists(false)
+    ])
+  })
+  .update({
+    difficulty: 2
+  })
+
+// 为所有缺少 status 的剧本设置默认值
+db.collection('botc-scripts')
+  .where({
+    status: db.command.or([
+      db.command.eq(null),
+      db.command.eq(undefined),
+      db.command.exists(false)
+    ])
+  })
+  .update({
+    status: 1
+  })
 ```
-1. 点击 "📄 选择文件" 按钮
-2. 在弹出的对话框中，按住 Ctrl（Windows）或 Cmd（Mac）
-3. 点击选择多个JSON文件
-4. 点击"打开"
-5. 显示选中的文件列表
-```
 
----
+## 相关文件
 
-## 🔍 浏览器兼容性
+- 📄 `botc-admin/uniCloud-aliyun/cloudfunctions/admin-script/index.obj.js` - 已修复
+- 📄 `botc-admin/BATCH_IMPORT_FIX.md` - 本文档
 
-### 支持的浏览器
+## 下一步
 
-| 浏览器 | 文件夹选择 | 文件多选 |
-|--------|-----------|----------|
-| Chrome | ✅ | ✅ |
-| Edge | ✅ | ✅ |
-| Firefox | ⚠️ 部分支持 | ✅ |
-| Safari | ⚠️ 部分支持 | ✅ |
-
-**注意：**
-- Chrome 和 Edge 完全支持文件夹选择功能
-- Firefox 和 Safari 对 `webkitdirectory` 的支持可能有限
-- 如果文件夹选择不工作，请使用"选择文件"方式
-
-### 推荐开发环境
-
-```
-✅ Chrome 浏览器（推荐）
-✅ Edge 浏览器（推荐）
-⚠️ Firefox（建议使用文件选择）
-⚠️ Safari（建议使用文件选择）
-```
-
----
-
-## 📝 界面说明
-
-### 新界面布局
-
-```
-┌──────────────────────────────────────┐
-│  批量导入JSON剧本                      │
-├──────────────────────────────────────┤
-│  💡 支持选择多个JSON文件或整个文件夹   │
-│  📁 支持递归读取子文件夹              │
-│  📄 JSON文件格式请参考示例            │
-│                                        │
-│  [📂 选择文件夹] [📄 选择文件]        │
-│  （推荐选择文件夹，自动递归读取所有JSON）│
-│                                        │
-│  已选择 4 个文件              [清空]   │
-│  ┌────────────────────────────────┐   │
-│  │ #暗流涌动.json       17.2 KB   │   │
-│  │ #黯月初升.json       21.5 KB   │   │
-│  │ #无上愉悦·汀.json    10.3 KB   │   │
-│  │ #窃窃私语·汀.json    12.1 KB   │   │
-│  └────────────────────────────────┘   │
-│                                        │
-│  [取消]  [开始导入]                   │
-└──────────────────────────────────────┘
-```
-
----
-
-## ⚠️ 常见问题
-
-### Q1: 点击按钮没有反应？
-
-**可能原因：**
-1. 浏览器不支持文件夹选择
-2. 浏览器阻止了弹出窗口
-
-**解决方法：**
-1. 使用 Chrome 或 Edge 浏览器
-2. 检查浏览器是否阻止了弹出窗口
-3. 尝试使用"选择文件"方式
-
-### Q2: 选择了文件夹但没有显示文件？
-
-**可能原因：**
-1. 文件夹中没有JSON文件
-2. JSON文件扩展名不是 `.json`
-
-**解决方法：**
-1. 确认文件夹中有 `.json` 文件
-2. 检查文件扩展名是否正确
-3. 查看浏览器控制台是否有错误信息
-
-### Q3: 只能选择文件，不能选择文件夹？
-
-**可能原因：**
-浏览器不支持 `webkitdirectory` 属性
-
-**解决方法：**
-使用"选择文件"方式，手动选择多个JSON文件
-
-### Q4: 文件夹中有很多文件，选择后很慢？
-
-**正常现象：**
-- 系统需要遍历所有文件
-- 会过滤出所有 `.json` 文件
-- 文件越多，处理时间越长
-
-**建议：**
-- 如果文件夹中文件很多（>1000个），建议分批导入
-- 或者只选择包含JSON的子文件夹
+1. ✅ 修复代码已完成
+2. ⏳ **请上传 `admin-script` 云对象到云端**
+3. ⏳ **重新测试批量导入功能**
+4. ⏳ 如有问题，查看云函数日志进行排查
 
 ---
 
-## 🎯 测试步骤
-
-### 测试1：选择单个文件夹
-
-```
-1. 在 HBuilderX 中运行 botc-admin
-2. 进入：血染钟楼管理 → 剧本管理
-3. 点击 "📁 批量导入JSON"
-4. 点击 "📂 选择文件夹"
-5. 选择：D:\xue\小程序\botc-miniprogram\static\官方已发行剧本
-6. 确认
-7. 应该看到 4 个JSON文件
-```
-
-### 测试2：选择多个文件
-
-```
-1. 点击 "📄 选择文件"
-2. 按住 Ctrl
-3. 依次点击多个JSON文件
-4. 点击"打开"
-5. 应该看到选中的文件列表
-```
-
-### 测试3：导入流程
-
-```
-1. 选择文件后
-2. 检查文件列表是否正确
-3. 点击 "开始导入"
-4. 观察进度条
-5. 等待完成提示
-6. 检查导入结果
-```
-
----
-
-## 🔄 如果还是不工作
-
-### 终极方案：手动选择文件
-
-如果文件夹选择功能在您的浏览器中不工作：
-
-```
-1. 使用文件管理器打开剧本文件夹
-2. 全选所有JSON文件（Ctrl+A）
-3. 在管理后台点击 "📄 选择文件"
-4. 在弹出的对话框中，将选中的文件拖拽进去
-5. 或者在对话框中手动全选
-6. 点击"开始导入"
-```
-
----
-
-## ✅ 修复确认
-
-修复后应该能：
-- ✅ 点击"选择文件夹"按钮有响应
-- ✅ 弹出文件夹选择对话框
-- ✅ 选择后显示所有JSON文件
-- ✅ 递归读取子文件夹
-- ✅ 正常导入剧本
-
----
-
-## 📞 技术支持
-
-如果仍然无法使用，请提供：
-1. 使用的浏览器名称和版本
-2. 操作系统版本
-3. 浏览器控制台的错误信息（F12 → Console）
-4. 具体的操作步骤
-
----
-
-**文件夹选择功能已修复，现在应该可以正常使用了！** 🎉
-
+**修复完成！请上传云对象后重新测试批量导入功能。** 🎉

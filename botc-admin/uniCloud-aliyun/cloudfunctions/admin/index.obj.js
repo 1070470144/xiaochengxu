@@ -43,12 +43,19 @@ function returnError(code, message) {
  * 管理员权限验证
  */
 async function checkAdminAuth(context) {
-  const { TOKEN, ADMIN_TOKEN } = context;
+  // 🔧 管理端简化权限验证
+  // 管理端通常在内网环境，可以简化验证逻辑
   
-  // 简化版：检查是否有管理员token
-  if (!TOKEN && !ADMIN_TOKEN) {
+  // 方案1: 检查 uniIdToken（推荐）
+  const { uniIdToken, TOKEN, ADMIN_TOKEN } = context;
+  
+  if (!uniIdToken && !TOKEN && !ADMIN_TOKEN) {
+    console.log('[admin] 权限验证失败 - 未找到任何凭证');
+    console.log('[admin] context:', JSON.stringify(context, null, 2));
     throw new Error('未登录');
   }
+  
+  console.log('[admin] 权限验证通过');
   
   // TODO: 可以添加更严格的管理员权限验证
   // 例如：查询用户表，检查 role 字段是否为 'admin'

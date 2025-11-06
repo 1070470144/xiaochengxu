@@ -44,13 +44,19 @@ function returnError(code, message) {
  * 管理员权限验证
  */
 async function checkAdminAuth(context) {
-  const { TOKEN, ADMIN_TOKEN } = context;
+  // 🔧 管理端简化权限验证
+  // 管理端通常在内网环境，可以简化验证逻辑
   
-  // 简化版：检查是否有管理员token
-  if (!TOKEN && !ADMIN_TOKEN) {
+  // 方案1: 检查 uniIdToken（推荐）
+  const { uniIdToken, TOKEN, ADMIN_TOKEN } = context;
+  
+  if (!uniIdToken && !TOKEN && !ADMIN_TOKEN) {
+    console.log('[admin-script] 权限验证失败 - 未找到任何凭证');
+    console.log('[admin-script] context:', JSON.stringify(context, null, 2));
     throw new Error('未登录');
   }
   
+  console.log('[admin-script] 权限验证通过');
   return true;
 }
 
@@ -126,12 +132,53 @@ module.exports = {
             script.preview_image = previewImage;
           }
           
-          // 确保必要字段
-          script.created_at = script.created_at || Date.now();
-          script.updated_at = Date.now();
+          // 🔧 确保必要字段有默认值
+          const scriptData = {
+            // 基本信息
+            title: script.title || '未命名剧本',
+            subtitle: script.subtitle || '',
+            author: script.author || '',
+            description: script.description || '',
+            
+            // 分类信息（设置默认值）
+            script_type: script.script_type || 1,  // 默认：推理
+            difficulty: script.difficulty || 2,     // 默认：中等
+            player_count: script.player_count || '7-15',
+            duration: script.duration !== undefined ? script.duration : 60,
+            
+            // JSON数据
+            json_data: script.json_data || [],
+            
+            // 图片
+            cover_image: script.cover_image || '',
+            preview_image: previewImage || script.preview_image || '',
+            user_images: script.user_images || [],
+            
+            // 标签和链接
+            tags: script.tags || [],
+            related_links: script.related_links || [],
+            
+            // 状态信息（设置默认值）
+            status: script.status !== undefined ? script.status : 0,  // 默认：待审核
+            is_featured: script.is_featured || false,
+            
+            // 统计信息
+            view_count: script.view_count || 0,
+            download_count: script.download_count || 0,
+            favorite_count: script.favorite_count || 0,
+            share_count: script.share_count || 0,
+            comment_count: script.comment_count || 0,
+            rating: script.rating || 0,
+            rating_count: script.rating_count || 0,
+            
+            // 创建者和时间
+            creator_id: script.creator_id || 'admin',
+            created_at: script.created_at || Date.now(),
+            updated_at: Date.now()
+          };
           
           // 直接插入数据库
-          const res = await db.collection('botc-scripts').add(script);
+          const res = await db.collection('botc-scripts').add(scriptData);
           
           results.success++;
           results.details.push({

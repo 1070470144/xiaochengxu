@@ -222,7 +222,7 @@
 
     <!-- 筛选条件 -->
     <view class="filter-container">
-      <uni-forms ref="filterForm" :modelValue="filterForm" label-width="80px">
+      <uni-forms ref="filterForm" :modelValue="filterForm" label-width="80px" class="filter-form">
         <uni-row :gutter="16">
           <uni-col :span="6">
             <uni-forms-item label="剧本状态">
@@ -262,6 +262,13 @@
           </uni-col>
         </uni-row>
       </uni-forms>
+      
+      <!-- 批量操作按钮区域 -->
+      <view class="batch-actions-bar">
+        <button type="success" size="mini" @click="batchApprove">✓ 批量通过</button>
+        <button type="error" size="mini" @click="batchDelete">× 批量删除</button>
+        <button type="default" size="mini" @click="clearSelection">取消选择</button>
+      </view>
     </view>
 
     <!-- 数据表格 -->
@@ -272,6 +279,13 @@
         stripe 
         emptyText="暂无数据">
         <uni-tr>
+          <uni-th width="50" align="center">
+            <view class="checkbox-wrapper" @click="toggleSelectAll">
+              <view class="custom-checkbox" :class="{ 'checked': isAllSelected }">
+                <text v-if="isAllSelected" class="checkbox-icon">✓</text>
+              </view>
+            </view>
+          </uni-th>
           <uni-th width="80" align="center">ID</uni-th>
           <uni-th width="200">剧本标题</uni-th>
           <uni-th width="120">作者</uni-th>
@@ -287,6 +301,13 @@
           <uni-th width="200" align="center">操作</uni-th>
         </uni-tr>
         <uni-tr v-for="item in dataList" :key="item._id">
+          <uni-td align="center">
+            <view class="checkbox-wrapper" @click="toggleSelect(item._id)">
+              <view class="custom-checkbox" :class="{ 'checked': selectedIds.includes(item._id) }">
+                <text v-if="selectedIds.includes(item._id)" class="checkbox-icon">✓</text>
+              </view>
+            </view>
+          </uni-td>
           <uni-td align="center">{{ item._id.slice(-6) }}</uni-td>
           <uni-td>
             <view class="script-title">{{ item.title }}</view>
@@ -294,21 +315,15 @@
           </uni-td>
           <uni-td>{{ item.author || '未知' }}</uni-td>
           <uni-td>
-            <uni-tag :type="item.script_type === 1 ? 'primary' : 'success'" size="small">
-              {{ getTypeText(item.script_type) }}
-            </uni-tag>
+            <text>{{ getTypeText(item.script_type) }}</text>
           </uni-td>
           <uni-td>
-            <uni-tag :type="getDifficultyType(item.difficulty)" size="small">
-              {{ getDifficultyText(item.difficulty) }}
-            </uni-tag>
+            <text>{{ getDifficultyText(item.difficulty) }}</text>
           </uni-td>
           <uni-td>{{ item.player_count || '-' }}</uni-td>
           <uni-td>{{ item.duration ? item.duration + '分' : '-' }}</uni-td>
           <uni-td>
-            <uni-tag :type="getStatusType(item.status)" size="small">
-              {{ getStatusText(item.status) }}
-            </uni-tag>
+            <text>{{ getStatusText(item.status) }}</text>
           </uni-td>
           <uni-td>
             <view class="rating-info">
@@ -393,6 +408,7 @@ export default {
       adminScriptObj: null, // AdminScript云对象实例
       loading: false,
       dataList: [],
+      selectedIds: [], // 多选的ID列表
       filterForm: {
         status: null,
         script_type: null,
@@ -458,6 +474,11 @@ export default {
     // 检查是否有用户上传的图片
     hasUserImages() {
       return this.previewData?.user_images?.length > 0
+    },
+    
+    // 是否全选
+    isAllSelected() {
+      return this.dataList.length > 0 && this.selectedIds.length === this.dataList.length
     }
   },
 
@@ -500,6 +521,18 @@ export default {
           .get()
 
         this.dataList = res.result.data
+        
+        // 🔍 调试日志：查看查询到的数据
+        console.log('📊 查询到的剧本数量：', this.dataList.length)
+        if (this.dataList.length > 0) {
+          console.log('📝 第一条数据完整内容：', JSON.stringify(this.dataList[0], null, 2))
+          console.log('🔎 关键字段检查：')
+          console.log('  - script_type:', this.dataList[0].script_type, '(类型:', typeof this.dataList[0].script_type + ')')
+          console.log('  - difficulty:', this.dataList[0].difficulty, '(类型:', typeof this.dataList[0].difficulty + ')')
+          console.log('  - player_count:', this.dataList[0].player_count, '(类型:', typeof this.dataList[0].player_count + ')')
+          console.log('  - duration:', this.dataList[0].duration, '(类型:', typeof this.dataList[0].duration + ')')
+          console.log('  - status:', this.dataList[0].status, '(类型:', typeof this.dataList[0].status + ')')
+        }
 
       } catch (error) {
         console.error('加载数据失败：', error)
@@ -811,8 +844,13 @@ export default {
     },
 
     getStatusText(status) {
-      const map = { 0: '待审核', 1: '已发布', 2: '已下架' }
-      return map[status] || '未知'
+      console.log('🔍 getStatusText 接收值:', status, typeof status)
+      const map = { 
+        0: '待审核', 1: '已发布', 2: '已下架',
+        '0': '待审核', '1': '已发布', '2': '已下架'
+      }
+      if (status === null || status === undefined) return '未设置'
+      return map[status] || '未知(' + status + ')'
     },
 
     getStatusType(status) {
@@ -821,12 +859,21 @@ export default {
     },
 
     getTypeText(type) {
-      return type === 1 ? '推理' : '娱乐'
+      console.log('🔍 getTypeText 接收值:', type, typeof type)
+      if (type === 1 || type === '1') return '推理'
+      if (type === 2 || type === '2') return '娱乐'
+      if (type === null || type === undefined) return '未设置'
+      return '未知(' + type + ')'
     },
 
     getDifficultyText(difficulty) {
-      const map = { 1: '简单', 2: '中等', 3: '困难', 4: '专家' }
-      return map[difficulty] || '未知'
+      console.log('🔍 getDifficultyText 接收值:', difficulty, typeof difficulty)
+      const map = { 
+        1: '简单', 2: '中等', 3: '困难', 4: '专家',
+        '1': '简单', '2': '中等', '3': '困难', '4': '专家'
+      }
+      if (difficulty === null || difficulty === undefined) return '未设置'
+      return map[difficulty] || '未知(' + difficulty + ')'
     },
 
     getDifficultyType(difficulty) {
@@ -843,6 +890,159 @@ export default {
       const h = String(date.getHours()).padStart(2, '0')
       const m = String(date.getMinutes()).padStart(2, '0')
       return `${Y}-${M}-${D} ${h}:${m}`
+    },
+
+    // ========== 多选相关方法 ==========
+    
+    // 切换单个选择
+    toggleSelect(id) {
+      const index = this.selectedIds.indexOf(id)
+      if (index > -1) {
+        this.selectedIds.splice(index, 1)
+      } else {
+        this.selectedIds.push(id)
+      }
+    },
+    
+    // 切换全选
+    toggleSelectAll() {
+      if (this.isAllSelected) {
+        this.selectedIds = []
+      } else {
+        this.selectedIds = this.dataList.map(item => item._id)
+      }
+    },
+    
+    // 清空选择
+    clearSelection() {
+      this.selectedIds = []
+    },
+    
+    // 批量审批通过
+    async batchApprove() {
+      if (this.selectedIds.length === 0) {
+        uni.showToast({
+          title: '请先选择剧本',
+          icon: 'none'
+        })
+        return
+      }
+      
+      uni.showModal({
+        title: '批量审核',
+        content: `确定要通过审核这 ${this.selectedIds.length} 个剧本吗？`,
+        success: async (res) => {
+          if (res.confirm) {
+            uni.showLoading({
+              title: '处理中...',
+              mask: true
+            })
+            
+            try {
+              let successCount = 0
+              let failCount = 0
+              
+              for (const id of this.selectedIds) {
+                try {
+                  await db.collection('botc-scripts')
+                    .doc(id)
+                    .update({
+                      status: 1,
+                      published_at: Date.now(),
+                      updated_at: Date.now()
+                    })
+                  successCount++
+                } catch (error) {
+                  console.error(`审核失败 ${id}:`, error)
+                  failCount++
+                }
+              }
+              
+              uni.hideLoading()
+              uni.showToast({
+                title: `成功：${successCount}，失败：${failCount}`,
+                icon: successCount > 0 ? 'success' : 'none',
+                duration: 2000
+              })
+              
+              // 清空选择
+              this.selectedIds = []
+              
+              // 刷新列表
+              this.loadData()
+            } catch (error) {
+              uni.hideLoading()
+              console.error('批量审核失败：', error)
+              uni.showToast({
+                title: '批量审核失败',
+                icon: 'none'
+              })
+            }
+          }
+        }
+      })
+    },
+    
+    // 批量删除
+    async batchDelete() {
+      if (this.selectedIds.length === 0) {
+        uni.showToast({
+          title: '请先选择剧本',
+          icon: 'none'
+        })
+        return
+      }
+      
+      uni.showModal({
+        title: '批量删除',
+        content: `确定要删除这 ${this.selectedIds.length} 个剧本吗？此操作不可恢复！`,
+        confirmColor: '#f56c6c',
+        success: async (res) => {
+          if (res.confirm) {
+            uni.showLoading({
+              title: '删除中...',
+              mask: true
+            })
+            
+            try {
+              let successCount = 0
+              let failCount = 0
+              
+              for (const id of this.selectedIds) {
+                try {
+                  await db.collection('botc-scripts')
+                    .doc(id)
+                    .remove()
+                  successCount++
+                } catch (error) {
+                  console.error(`删除失败 ${id}:`, error)
+                  failCount++
+                }
+              }
+              
+              uni.hideLoading()
+              uni.showToast({
+                title: `删除成功：${successCount}，失败：${failCount}`,
+                icon: successCount > 0 ? 'success' : 'none',
+                duration: 2000
+              })
+              
+              // 清空选择
+              this.selectedIds = []
+              
+              // 刷新列表
+              this.loadData()
+            } catch (error) {
+              uni.hideLoading()
+              console.error('批量删除失败：', error)
+              uni.showToast({
+                title: '批量删除失败',
+                icon: 'none'
+              })
+            }
+          }
+        }
+      })
     },
 
     // ========== 批量上传相关方法 ==========
@@ -1002,6 +1202,26 @@ export default {
         } catch (error) {
           console.error('❌ 批量导入失败:', error)
           this.importProgress.failed += scripts.length
+          
+          // 🔍 检查是否是权限错误（未登录）
+          const errorMsg = error.message || error.errMsg || String(error)
+          if (errorMsg.includes('未登录') || errorMsg.includes('权限验证失败') || errorMsg.includes('未授权')) {
+            this.importing = false
+            this.$refs.batchUploadPopup.close()
+            
+            uni.showModal({
+              title: '未登录',
+              content: '您还未登录，请先登录后再进行操作',
+              showCancel: false,
+              success: () => {
+                // 跳转到登录页面
+                uni.reLaunch({
+                  url: '/pages/login/login'
+                })
+              }
+            })
+            return
+          }
         }
       }
 
@@ -1827,6 +2047,62 @@ export default {
   background: #1890ff;
   border-color: #1890ff;
   color: #fff;
+}
+
+/* 筛选表单布局 */
+.filter-form {
+  flex: 1;
+}
+
+/* 批量操作栏样式 */
+.batch-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px 0;
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.batch-actions-bar button {
+  margin: 0;
+}
+
+/* 自定义复选框样式 */
+.checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.custom-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #dcdfe6;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.custom-checkbox:hover {
+  border-color: #409eff;
+}
+
+.custom-checkbox.checked {
+  background: #409eff;
+  border-color: #409eff;
+}
+
+.checkbox-icon {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
 }
 </style>
 
