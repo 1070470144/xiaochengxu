@@ -1,6 +1,0 @@
-{
-  "name": "wiki-role-delete",
-  "version": "1.0.0",
-  "description": "删除角色",
-  "main": "index.js"
-}

@@ -184,6 +184,7 @@
 export default {
   data() {
     return {
+      adminObj: null, // Admin云对象实例
       loading: false,
       dataList: [],
       searchKeyword: '',
@@ -240,6 +241,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化云对象
+    this.adminObj = uniCloud.importObject('admin', { customUI: true })
     this.loadData()
   },
   
@@ -247,31 +250,27 @@ export default {
     async loadData() {
       this.loading = true
       try {
-        const res = await uniCloud.callFunction({
-          name: 'sensitive-words-admin',
-          data: {
-            action: 'list',
-            pageNo: this.pagination.current,
-            pageSize: this.pagination.pageSize,
-            keyword: this.searchKeyword,
-            type: this.queryParams.type || undefined,
-            status: this.queryParams.status || undefined
-          }
+        const result = await this.adminObj.getSensitiveWords({
+          pageNo: this.pagination.current,
+          pageSize: this.pagination.pageSize,
+          keyword: this.searchKeyword || undefined,
+          type: this.queryParams.type || undefined,
+          status: this.queryParams.status || undefined
         })
         
-        if (res.result.code === 0) {
-          this.dataList = res.result.data.list
-          this.pagination.total = res.result.data.total
+        if (result.code === 0) {
+          this.dataList = result.data.list
+          this.pagination.total = result.data.total
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('加载数据失败：', error)
         uni.showToast({
-          title: '加载失败',
+          title: error.message || '加载失败',
           icon: 'none'
         })
       } finally {
@@ -322,16 +321,14 @@ export default {
       
       uni.showLoading({ title: '提交中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'sensitive-words-admin',
-          data: {
-            action: this.isEdit ? 'edit' : 'add',
-            wordId: this.isEdit ? this.formData._id : undefined,
-            wordData: this.formData
-          }
-        })
+        let result
+        if (this.isEdit) {
+          result = await this.adminObj.editSensitiveWord(this.formData._id, this.formData)
+        } else {
+          result = await this.adminObj.addSensitiveWord(this.formData)
+        }
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: this.isEdit ? '更新成功' : '添加成功',
             icon: 'success'
@@ -340,14 +337,14 @@ export default {
           this.loadData()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('提交失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       } finally {
@@ -375,31 +372,24 @@ export default {
     async updateStatus(wordId, status) {
       uni.showLoading({ title: '处理中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'sensitive-words-admin',
-          data: {
-            action: 'toggleStatus',
-            wordId,
-            status
-          }
-        })
+        const result = await this.adminObj.toggleSensitiveWordStatus(wordId, status)
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'success'
           })
           this.loadData()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('操作失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       } finally {
@@ -422,15 +412,9 @@ export default {
     async deleteWord(wordId) {
       uni.showLoading({ title: '删除中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'sensitive-words-admin',
-          data: {
-            action: 'delete',
-            wordId
-          }
-        })
+        const result = await this.adminObj.deleteSensitiveWord(wordId)
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '删除成功',
             icon: 'success'
@@ -438,14 +422,14 @@ export default {
           this.loadData()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('删除失败：', error)
         uni.showToast({
-          title: '删除失败',
+          title: error.message || '删除失败',
           icon: 'none'
         })
       } finally {
@@ -489,17 +473,11 @@ export default {
       
       uni.showLoading({ title: '导入中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'sensitive-words-admin',
-          data: {
-            action: 'import',
-            words
-          }
-        })
+        const result = await this.adminObj.importSensitiveWords(words)
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'success',
             duration: 3000
           })
@@ -507,14 +485,14 @@ export default {
           this.loadData()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('导入失败：', error)
         uni.showToast({
-          title: '导入失败',
+          title: error.message || '导入失败',
           icon: 'none'
         })
       } finally {

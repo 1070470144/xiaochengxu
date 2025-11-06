@@ -197,6 +197,7 @@ const db = uniCloud.database()
 export default {
   data() {
     return {
+      adminScriptObj: null, // AdminScript云对象实例
       isEdit: false,
       scriptId: '',
       formData: {
@@ -255,6 +256,9 @@ export default {
   },
 
   onLoad(options) {
+    // 初始化云对象
+    this.adminScriptObj = uniCloud.importObject('admin-script', { customUI: true })
+    
     if (options.id) {
       this.isEdit = true
       this.scriptId = options.id
@@ -568,18 +572,15 @@ export default {
             
             console.log('[保存剧本] 开始生成预览图（压缩版）')
             
-            // 调用云函数生成预览图
-            const previewRes = await uniCloud.callFunction({
-              name: 'script-generate-preview',
-              data: {
-                title: data.title,
-                author: data.author || '未知',
-                jsonData: data.json_data
-              }
+            // 调用云对象生成预览图
+            const previewRes = await this.adminScriptObj.generatePreview({
+              title: data.title,
+              author: data.author || '未知',
+              jsonData: data.json_data
             })
             
-            if (previewRes.result && previewRes.result.code === 0) {
-              data.preview_image = previewRes.result.data.previewImage
+            if (previewRes.code === 0) {
+              data.preview_image = previewRes.data.previewImage
               console.log('[保存剧本] 预览图生成成功')
             }
             

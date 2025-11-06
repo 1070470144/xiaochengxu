@@ -1,7 +1,0 @@
-{
-  "name": "sensitive-words-admin",
-  "version": "1.0.0",
-  "description": "敏感词管理（管理端）",
-  "main": "index.js"
-}
-

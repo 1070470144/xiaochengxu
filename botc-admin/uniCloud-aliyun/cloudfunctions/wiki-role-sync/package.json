@@ -1,6 +1,0 @@
-{
-  "name": "wiki-role-sync",
-  "version": "1.0.0",
-  "description": "批量同步角色",
-  "main": "index.js"
-}

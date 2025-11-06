@@ -271,6 +271,7 @@ export default {
   
   data() {
     return {
+      adminWikiObj: null, // AdminWiki云对象实例
       stats: { total: 0, role: 0 },
       syncing: false,
       syncType: '',
@@ -311,6 +312,8 @@ export default {
   
   onLoad() {
     console.log('[WikiSync] 页面加载');
+    // 初始化云对象
+    this.adminWikiObj = uniCloud.importObject('admin-wiki', { customUI: true });
     this.loadStats();
     this.loadSyncLogs();
     this.loadRoleList();
@@ -400,15 +403,12 @@ export default {
       try {
         uni.showLoading({ title: '同步中...', mask: true });
         
-        const res = await uniCloud.callFunction({
-          name: 'wiki-admin-sync-all',
-          data: { sync_type: type, batch_size: 5 }
-        });
+        const res = await this.adminWikiObj.syncAll(type, 5);
         
         uni.hideLoading();
         
-        if (res.result.code === 0) {
-          const result = res.result.data;
+        if (res.code === 0) {
+          const result = res.data;
           uni.showModal({
             title: '同步完成',
             content: `总数: ${result.total_count}\n成功: ${result.success_count}\n失败: ${result.failed_count}\n耗时: ${result.duration}秒`,
@@ -419,7 +419,7 @@ export default {
             }
           });
         } else {
-          uni.showToast({ title: '同步失败: ' + res.result.message, icon: 'none', duration: 3000 });
+          uni.showToast({ title: '同步失败: ' + res.message, icon: 'none', duration: 3000 });
         }
       } catch (error) {
         uni.hideLoading();
@@ -445,13 +445,7 @@ export default {
       try {
         uni.showLoading({ title: '同步中...' });
         
-        // 改回云函数调用方式
-        const res = await uniCloud.callFunction({
-          name: 'wiki-admin-sync-single',
-          data: {
-            url: this.singleUrl.trim()
-          }
-        });
+        const res = await this.adminWikiObj.syncSingle(this.singleUrl.trim());
         
         console.log('[syncSingle] 云函数调用结果:', res);
         
@@ -520,20 +514,15 @@ export default {
       try {
         uni.showLoading({ title: '添加中...' });
         
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-add',
-          data: {
-            role_names: roleNames
-          }
-        });
+        const res = await this.adminWikiObj.addRoles(roleNames);
         
         uni.hideLoading();
         
-        console.log('[addRoles] 添加结果:', res.result);
+        console.log('[addRoles] 添加结果:', res);
         
-        if (res.result.code === 0) {
-          const data = res.result.data;
-          let message = res.result.message;
+        if (res.code === 0) {
+          const data = res.data;
+          let message = res.message;
           
           if (data.duplicate.length > 0) {
             message += `\n重复角色：${data.duplicate.join('、')}`;
@@ -554,7 +543,7 @@ export default {
           });
         } else {
           uni.showToast({ 
-            title: res.result.message, 
+            title: res.message, 
             icon: 'none',
             duration: 2000
           });
@@ -577,24 +566,21 @@ export default {
       this.loadingRoles = true;
       
       try {
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-list',
-          data: {
-            keyword: this.searchKeyword,
+        const res = await this.adminWikiObj.getRoles({
+          keyword: this.searchKeyword,
             sync_status: this.statusOptions[this.statusFilterIndex].value,
-            page: this.currentPage,
-            page_size: this.pageSize
-          }
+          page: this.currentPage,
+          page_size: this.pageSize
         });
         
-        console.log('[loadRoleList] 加载结果:', res.result);
+        console.log('[loadRoleList] 加载结果:', res);
         
-        if (res.result.code === 0) {
-          this.roleList = res.result.data.list;
-          this.totalRoles = res.result.data.total;
+        if (res.code === 0) {
+          this.roleList = res.data.list;
+          this.totalRoles = res.data.total;
         } else {
           uni.showToast({ 
-            title: '加载失败: ' + res.result.message, 
+            title: '加载失败: ' + res.message, 
             icon: 'none' 
           });
         }
@@ -682,19 +668,14 @@ export default {
       try {
         uni.showLoading({ title: '同步中...', mask: true });
         
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-sync',
-          data: {
-            role_ids: roleIds
-          }
-        });
+        const res = await this.adminWikiObj.syncRoles(roleIds);
         
         uni.hideLoading();
         
-        console.log('[executeSyncRoles] 同步结果:', res.result);
+        console.log('[executeSyncRoles] 同步结果:', res);
         
-        if (res.result.code === 0) {
-          const data = res.result.data;
+        if (res.code === 0) {
+          const data = res.data;
           let content = `总数: ${data.total_count}\n成功: ${data.success_count}\n失败: ${data.failed_count}\n耗时: ${data.duration}秒`;
           
           if (data.failed.length > 0) {
@@ -714,7 +695,7 @@ export default {
           });
         } else {
           uni.showToast({ 
-            title: '同步失败: ' + res.result.message, 
+            title: '同步失败: ' + res.message, 
             icon: 'none',
             duration: 3000
           });
@@ -768,27 +749,22 @@ export default {
       try {
         uni.showLoading({ title: '删除中...' });
         
-        const res = await uniCloud.callFunction({
-          name: 'wiki-role-delete',
-          data: {
-            role_ids: roleIds
-          }
-        });
+        const res = await this.adminWikiObj.deleteRoles(roleIds);
         
         uni.hideLoading();
         
-        console.log('[executeDeleteRoles] 删除结果:', res.result);
+        console.log('[executeDeleteRoles] 删除结果:', res);
         
-        if (res.result.code === 0) {
+        if (res.code === 0) {
           uni.showToast({ 
-            title: res.result.message, 
+            title: res.message, 
             icon: 'success' 
           });
           this.selectedRoles = [];
           this.loadRoleList();
         } else {
           uni.showToast({ 
-            title: '删除失败: ' + res.result.message, 
+            title: '删除失败: ' + res.message, 
             icon: 'none',
             duration: 2000
           });

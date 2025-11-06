@@ -1,1 +1,0 @@
-"https://clocktower-wiki.gstonegames.com/index.php?title=洗衣妇"

@@ -190,6 +190,7 @@
 export default {
   data() {
     return {
+      adminObj: null, // Admin云对象实例
       loading: false,
       dataList: [],
       queryParams: {
@@ -216,6 +217,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化云对象
+    this.adminObj = uniCloud.importObject('admin', { customUI: true })
     this.loadData()
     this.loadStats()
   },
@@ -224,29 +227,25 @@ export default {
     async loadData() {
       this.loading = true
       try {
-        const res = await uniCloud.callFunction({
-          name: 'certification-admin',
-          data: {
-            action: 'list',
-            pageNo: this.pagination.current,
-            pageSize: this.pagination.pageSize,
-            status: this.queryParams.status || undefined
-          }
+        const result = await this.adminObj.getCertifications({
+          pageNo: this.pagination.current,
+          pageSize: this.pagination.pageSize,
+          status: this.queryParams.status || undefined
         })
         
-        if (res.result.code === 0) {
-          this.dataList = res.result.data.list
-          this.pagination.total = res.result.data.total
+        if (result.code === 0) {
+          this.dataList = result.data.list
+          this.pagination.total = result.data.total
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('加载数据失败：', error)
         uni.showToast({
-          title: '加载失败',
+          title: error.message || '加载失败',
           icon: 'none'
         })
       } finally {
@@ -257,23 +256,14 @@ export default {
     async loadStats() {
       try {
         const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
-          uniCloud.callFunction({
-            name: 'certification-admin',
-            data: { action: 'list', pageNo: 1, pageSize: 1, status: 'pending' }
-          }),
-          uniCloud.callFunction({
-            name: 'certification-admin',
-            data: { action: 'list', pageNo: 1, pageSize: 1, status: 'approved' }
-          }),
-          uniCloud.callFunction({
-            name: 'certification-admin',
-            data: { action: 'list', pageNo: 1, pageSize: 1, status: 'rejected' }
-          })
+          this.adminObj.getCertifications({ pageNo: 1, pageSize: 1, status: 'pending' }),
+          this.adminObj.getCertifications({ pageNo: 1, pageSize: 1, status: 'approved' }),
+          this.adminObj.getCertifications({ pageNo: 1, pageSize: 1, status: 'rejected' })
         ])
         
-        this.pendingCount = pendingRes.result.data?.total || 0
-        this.approvedCount = approvedRes.result.data?.total || 0
-        this.rejectedCount = rejectedRes.result.data?.total || 0
+        this.pendingCount = pendingRes.data?.total || 0
+        this.approvedCount = approvedRes.data?.total || 0
+        this.rejectedCount = rejectedRes.data?.total || 0
       } catch (error) {
         console.error('加载统计失败：', error)
       }
@@ -304,15 +294,9 @@ export default {
     async approveItem(certId) {
       uni.showLoading({ title: '处理中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'certification-admin',
-          data: {
-            action: 'approve',
-            certId
-          }
-        })
+        const result = await this.adminObj.approveCertification(certId)
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '审核通过',
             icon: 'success'
@@ -321,14 +305,14 @@ export default {
           this.loadStats()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('审核失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       } finally {
@@ -362,16 +346,9 @@ export default {
     async rejectItem(certId, reason) {
       uni.showLoading({ title: '处理中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'certification-admin',
-          data: {
-            action: 'reject',
-            certId,
-            rejectReason: reason
-          }
-        })
+        const result = await this.adminObj.rejectCertification(certId, reason)
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '已拒绝',
             icon: 'success'
@@ -380,14 +357,14 @@ export default {
           this.loadStats()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('拒绝失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       } finally {

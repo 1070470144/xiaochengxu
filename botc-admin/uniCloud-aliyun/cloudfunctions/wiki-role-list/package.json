@@ -1,6 +1,0 @@
-{
-  "name": "wiki-role-list",
-  "version": "1.0.0",
-  "description": "获取角色同步列表",
-  "main": "index.js"
-}

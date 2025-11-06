@@ -1,8 +1,0 @@
-{
-  "name": "script-batch-import",
-  "version": "1.0.0",
-  "description": "批量导入剧本数据",
-  "main": "index.js",
-  "dependencies": {}
-}
-

@@ -1,6 +1,0 @@
-{
-  "name": "wiki-role-add",
-  "version": "1.0.0",
-  "description": "添加角色到同步列表",
-  "main": "index.js"
-}

@@ -390,6 +390,7 @@ const db = uniCloud.database()
 export default {
   data() {
     return {
+      adminScriptObj: null, // AdminScript云对象实例
       loading: false,
       dataList: [],
       filterForm: {
@@ -440,6 +441,8 @@ export default {
   },
 
   onLoad() {
+    // 初始化云对象
+    this.adminScriptObj = uniCloud.importObject('admin-script', { customUI: true })
     this.loadData()
   },
   
@@ -985,21 +988,16 @@ export default {
         console.log(`开始批量导入 ${scripts.length} 个剧本...`)
         
         try {
-          const result = await uniCloud.callFunction({
-            name: 'script-batch-import',
-            data: {
-              scripts: scripts
-            }
-          })
+          const result = await this.adminScriptObj.batchImport(scripts)
           
-          console.log('云函数返回结果：', result)
+          console.log('云对象返回结果：', result)
           
-          if (result.result && result.result.code === 0) {
-            this.importProgress.success = result.result.data.success
-            this.importProgress.failed += result.result.data.failed
-            console.log(`✅ 批量导入完成：成功 ${result.result.data.success}，失败 ${result.result.data.failed}`)
+          if (result.code === 0) {
+            this.importProgress.success = result.data.success
+            this.importProgress.failed += result.data.failed
+            console.log(`✅ 批量导入完成：成功 ${result.data.success}，失败 ${result.data.failed}`)
           } else {
-            throw new Error(result.result ? result.result.message : '云函数调用失败')
+            throw new Error(result.message || '批量导入失败')
           }
         } catch (error) {
           console.error('❌ 批量导入失败:', error)

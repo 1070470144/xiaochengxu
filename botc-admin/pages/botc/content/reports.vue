@@ -265,6 +265,7 @@
 export default {
   data() {
     return {
+      adminObj: null, // Admin云对象实例
       loading: false,
       dataList: [],
       queryParams: {
@@ -324,6 +325,8 @@ export default {
   },
   
   onLoad() {
+    // 初始化云对象
+    this.adminObj = uniCloud.importObject('admin', { customUI: true })
     this.loadData()
     this.loadStats()
   },
@@ -332,31 +335,27 @@ export default {
     async loadData() {
       this.loading = true
       try {
-        const res = await uniCloud.callFunction({
-          name: 'reports-admin',
-          data: {
-            action: 'list',
-            pageNo: this.pagination.current,
-            pageSize: this.pagination.pageSize,
-            status: this.queryParams.status || undefined,
-            contentType: this.queryParams.contentType || undefined,
-            reason: this.queryParams.reason || undefined
-          }
+        const result = await this.adminObj.getReports({
+          pageNo: this.pagination.current,
+          pageSize: this.pagination.pageSize,
+          status: this.queryParams.status || undefined,
+          contentType: this.queryParams.contentType || undefined,
+          reason: this.queryParams.reason || undefined
         })
         
-        if (res.result.code === 0) {
-          this.dataList = res.result.data.list
-          this.pagination.total = res.result.data.total
+        if (result.code === 0) {
+          this.dataList = result.data.list
+          this.pagination.total = result.data.total
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('加载数据失败：', error)
         uni.showToast({
-          title: '加载失败',
+          title: error.message || '加载失败',
           icon: 'none'
         })
       } finally {
@@ -366,13 +365,10 @@ export default {
     
     async loadStats() {
       try {
-        const res = await uniCloud.callFunction({
-          name: 'reports-admin',
-          data: { action: 'stats' }
-        })
+        const result = await this.adminObj.getReportStats()
         
-        if (res.result.code === 0) {
-          this.stats = res.result.data
+        if (result.code === 0) {
+          this.stats = result.data
         }
       } catch (error) {
         console.error('加载统计失败：', error)
@@ -409,17 +405,13 @@ export default {
       
       uni.showLoading({ title: '处理中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'reports-admin',
-          data: {
-            action: 'handle',
-            reportId: this.currentReport._id,
-            handleResult: this.handleForm.handleResult,
-            handleRemark: this.handleForm.handleRemark
-          }
-        })
+        const result = await this.adminObj.handleReport(
+          this.currentReport._id,
+          this.handleForm.handleResult,
+          this.handleForm.handleRemark
+        )
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '处理成功',
             icon: 'success'
@@ -429,14 +421,14 @@ export default {
           this.loadStats()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('处理失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       } finally {
@@ -464,16 +456,9 @@ export default {
     async submitReject(reportId, remark) {
       uni.showLoading({ title: '处理中...' })
       try {
-        const res = await uniCloud.callFunction({
-          name: 'reports-admin',
-          data: {
-            action: 'reject',
-            reportId,
-            rejectRemark: remark
-          }
-        })
+        const result = await this.adminObj.rejectReport(reportId, remark)
         
-        if (res.result.code === 0) {
+        if (result.code === 0) {
           uni.showToast({
             title: '已驳回',
             icon: 'success'
@@ -482,14 +467,14 @@ export default {
           this.loadStats()
         } else {
           uni.showToast({
-            title: res.result.message,
+            title: result.message,
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('操作失败：', error)
         uni.showToast({
-          title: '操作失败',
+          title: error.message || '操作失败',
           icon: 'none'
         })
       } finally {

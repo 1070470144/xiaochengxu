@@ -1,7 +1,0 @@
-{
-  "name": "reports-admin",
-  "version": "1.0.0",
-  "description": "举报管理（管理端）",
-  "main": "index.js"
-}
-
