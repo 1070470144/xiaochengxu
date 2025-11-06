@@ -151,11 +151,26 @@ export default {
     }
   },
   
-  onLoad() {
+  onLoad(options) {
     // 初始化 post 云对象
     this.postObj = uniCloud.importObject('post', {
       customUI: true
     })
+    
+    // 如果从剧本详情页跳转过来，自动选中该剧本
+    if (options.scriptInfo) {
+      try {
+        const scriptInfo = JSON.parse(decodeURIComponent(options.scriptInfo))
+        this.selectedScript = {
+          _id: scriptInfo._id,
+          title: scriptInfo.title
+        }
+        console.log('✅ 自动选中剧本：', this.selectedScript)
+      } catch (error) {
+        console.error('解析剧本信息失败：', error)
+      }
+    }
+    
     this.loadScripts()
   },
   

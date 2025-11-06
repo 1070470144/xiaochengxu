@@ -416,8 +416,14 @@ export default {
     
     // 发帖
     goToCreatePost() {
+      // 携带当前剧本ID和标题，自动选中当前剧本
+      const scriptInfo = encodeURIComponent(JSON.stringify({
+        _id: this.scriptId,
+        title: this.scriptDetail?.title || ''
+      }))
+      
       uni.navigateTo({
-        url: '/pages/community/create/create'
+        url: `/pages/community/create/create?scriptInfo=${scriptInfo}`
       })
     },
     
