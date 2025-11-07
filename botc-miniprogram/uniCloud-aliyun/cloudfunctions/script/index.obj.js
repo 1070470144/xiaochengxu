@@ -839,6 +839,43 @@ module.exports = {
     }
   },
   
+  /**
+   * 获取用户对某个剧本的评分
+   * @param {string} scriptId - 剧本ID
+   */
+  async getUserRating(scriptId) {
+    if (!scriptId) {
+      throw new Error('剧本ID不能为空')
+    }
+    
+    // 如果未登录，返回 null
+    if (!this.currentUserId) {
+      console.log(`ℹ️ 未登录用户，返回空评分`)
+      return returnSuccess(null, '未登录')
+    }
+    
+    try {
+      const result = await this.db.collection('botc-script-ratings')
+        .where({
+          user_id: this.currentUserId,
+          script_id: scriptId
+        })
+        .get()
+      
+      if (result.data && result.data.length > 0) {
+        console.log(`✅ 获取用户评分成功: ${scriptId}`)
+        return returnSuccess(result.data[0])
+      } else {
+        console.log(`ℹ️ 用户未评分: ${scriptId}`)
+        return returnSuccess(null, '用户未评分')
+      }
+      
+    } catch (error) {
+      console.error('❌ 获取用户评分失败:', error)
+      throw error
+    }
+  },
+  
   // ==================== 阶段3：查询功能（5个方法）====================
   
   /**

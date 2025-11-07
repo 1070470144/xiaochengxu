@@ -288,6 +288,11 @@ export default {
       customUI: true
     })
     
+    // 初始化 collection 云对象
+    this.collectionObj = uniCloud.importObject('collection', {
+      customUI: true
+    })
+    
     if (options.id) {
       this.scriptId = options.id
       
@@ -1158,17 +1163,9 @@ export default {
       console.log('📝 开始记录浏览历史...')
       console.log('📝 target_type: script')
       console.log('📝 target_id:', this.scriptId)
-      console.log('📝 token:', Auth.getToken())
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'history-add',
-          data: {
-            target_type: 'script',
-            target_id: this.scriptId,
-            token: Auth.getToken()
-          }
-        })
+        const result = await this.collectionObj.addHistory('script', this.scriptId)
         console.log('✅ 浏览历史记录成功，返回结果：', result)
       } catch (error) {
         console.error('❌ 记录浏览历史失败：', error)
@@ -1274,17 +1271,10 @@ export default {
     // 加载用户评分
     async loadUserRating() {
       try {
-        const result = await uniCloud.callFunction({
-          name: 'script-rating',
-          data: {
-            action: 'getUserRating',
-            user_id: this.currentUserId,
-            script_id: this.scriptId
-          }
-        })
+        const result = await this.scriptObj.getUserRating(this.scriptId)
         
-        if (result.result.code === 0 && result.result.data) {
-          this.userRating = result.result.data
+        if (result.code === 0 && result.data) {
+          this.userRating = result.data
           this.selectedRating = this.userRating.rating
           console.log('✅ 用户评分加载成功:', this.userRating)
         }
@@ -1311,22 +1301,14 @@ export default {
       this.submitting = true
       
       try {
-        const result = await uniCloud.callFunction({
-          name: 'script-rating',
-          data: {
-            action: 'submit',
-            user_id: this.currentUserId,
-            script_id: this.scriptId,
-            rating: this.selectedRating
-          }
-        })
+        const result = await this.scriptObj.rate(this.scriptId, this.selectedRating)
         
-        if (result.result.code === 0) {
+        if (result.code === 0) {
           // 关闭弹出层
           this.hideRatingPopup()
           
           uni.showToast({
-            title: result.result.data.is_new ? '评分成功' : '评分已更新',
+            title: result.data.is_new ? '评分成功' : '评分已更新',
             icon: 'success'
           })
           
@@ -1334,7 +1316,7 @@ export default {
           await this.loadUserRating()
           await this.loadScriptDetail()
         } else {
-          throw new Error(result.result.message)
+          throw new Error(result.message)
         }
       } catch (error) {
         console.error('提交评分失败:', error)
