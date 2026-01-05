@@ -615,9 +615,13 @@ export default {
         })
 
         if (this.isEdit) {
-          // 更新时需要移除_id字段（不能更新_id）
+          // 更新时需要移除_id字段和只读字段（不能更新）
           const updateData = { ...data }
           delete updateData._id
+          delete updateData.related_links  // schema中不存在或只读
+          delete updateData.average_rating // 由评分系统自动计算
+          delete updateData.rating_count   // 由评分系统自动计算
+          delete updateData.created_at     // 创建时间不能修改
           
           await db.collection('botc-scripts')
             .doc(this.scriptId)

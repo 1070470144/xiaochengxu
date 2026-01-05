@@ -28,33 +28,33 @@
     <view v-else class="favorites-list">
       <view 
         v-for="item in filteredFavoritesList" 
-        :key="item.favorite_id"
+        :key="item.favoriteId"
         class="favorite-card"
         @click="goToDetail(item)"
       >
         <!-- 剧本收藏 -->
-        <view v-if="item.target_type === 'script'" class="script-favorite">
+        <view v-if="item.targetType === 'script'" class="script-favorite">
           <image 
-            v-if="item.target_data.cover"
+            v-if="item.targetData.cover"
             class="cover-image" 
-            :src="item.target_data.cover" 
+            :src="item.targetData.cover" 
             mode="aspectFill"
           />
           <view class="cover-placeholder" v-else>📚</view>
           <view class="info">
-            <text class="title">{{ item.target_data.title || '未知剧本' }}</text>
-            <text class="author">作者：{{ item.target_data.author || '未知' }}</text>
-            <text class="time">{{ formatTime(item.created_at) }}</text>
+            <text class="title">{{ item.targetData.title || '未知剧本' }}</text>
+            <text class="author">作者：{{ item.targetData.author || '未知' }}</text>
+            <text class="time">{{ formatTime(item.createdAt) }}</text>
           </view>
         </view>
 
         <!-- 帖子收藏 -->
-        <view v-else-if="item.target_type === 'post'" class="post-favorite">
+        <view v-else-if="item.targetType === 'post'" class="post-favorite">
           <view class="post-content">
-            <text class="post-text">{{ item.target_data.content }}</text>
-            <view v-if="item.target_data.images && item.target_data.images.length > 0" class="post-images">
+            <text class="post-text">{{ item.targetData.content }}</text>
+            <view v-if="item.targetData.images && item.targetData.images.length > 0" class="post-images">
               <image 
-                v-for="(img, index) in item.target_data.images.slice(0, 3)"
+                v-for="(img, index) in item.targetData.images.slice(0, 3)"
                 :key="index"
                 class="post-image"
                 :src="img"
@@ -62,7 +62,7 @@
               />
             </view>
           </view>
-          <text class="time">{{ formatTime(item.created_at) }}</text>
+          <text class="time">{{ formatTime(item.createdAt) }}</text>
         </view>
       </view>
     </view>
@@ -88,6 +88,12 @@ export default {
   data() {
     return {
       favoritesList: [],
+        // 缓存各分类的列表（用于提升切换分类时的感知速度）
+        favoritesCache: {
+          all: null,
+          script: null,
+          post: null
+        },
       loading: false,
       page: 1,
       pageSize: 10,
@@ -99,8 +105,8 @@ export default {
   computed: {
     // 分类标签
     categories() {
-      const scriptCount = this.favoritesList.filter(item => item.target_type === 'script').length
-      const postCount = this.favoritesList.filter(item => item.target_type === 'post').length
+      const scriptCount = this.favoritesList.filter(item => item.targetType === 'script').length
+      const postCount = this.favoritesList.filter(item => item.targetType === 'post').length
       
       return [
         { type: 'all', name: '全部', icon: '⭐', count: this.favoritesList.length },
@@ -114,7 +120,7 @@ export default {
       if (this.activeCategory === 'all') {
         return this.favoritesList
       }
-      return this.favoritesList.filter(item => item.target_type === this.activeCategory)
+      return this.favoritesList.filter(item => item.targetType === this.activeCategory)
     }
   },
   
@@ -133,7 +139,16 @@ export default {
   methods: {
     // 切换分类
     switchCategory(type) {
+      if (this.activeCategory === type) return
       this.activeCategory = type
+      // reset pagination and list, then load for the new category
+      this.page = 1
+      this.hasMore = true
+      // 如果有缓存数据，先展示缓存，减少等待感
+      if (this.favoritesCache[type]) {
+        this.favoritesList = this.favoritesCache[type]
+      }
+      this.loadFavoritesList(false)
     },
     
     // 检查登录并加载数据
@@ -152,10 +167,16 @@ export default {
       this.loading = true
       
       try {
-        const result = await this.collectionObj.getFavorites({
+        // 构建请求参数，按当前分类传递 targetType（cloud object 接口为 camelCase）
+        const options = {
           page: this.page,
           pageSize: this.pageSize
-        })
+        }
+        if (this.activeCategory && this.activeCategory !== 'all') {
+          options.targetType = this.activeCategory
+        }
+
+        const result = await this.collectionObj.getFavorites(options)
         
         if (result.code === 0) {
           const newList = result.data.list || []
@@ -164,6 +185,9 @@ export default {
             this.favoritesList = [...this.favoritesList, ...newList]
           } else {
             this.favoritesList = newList
+            // 更新缓存（非加载更多场景）
+            const cacheKey = this.activeCategory || 'all'
+            this.favoritesCache[cacheKey] = newList
           }
           
           this.hasMore = result.data.hasMore
@@ -199,14 +223,21 @@ export default {
     
     // 跳转到详情
     goToDetail(item) {
-      if (item.target_type === 'script') {
-        uni.navigateTo({
-          url: `/pages/script/detail/detail?id=${item.target_data.id}`
-        })
-      } else if (item.target_type === 'post') {
-        uni.navigateTo({
-          url: `/pages/community/detail/detail?id=${item.target_data.id}`
-        })
+      // 使用云对象返回的 camelCase 字段
+      if (item.targetType === 'script') {
+        const scriptId = item.targetData && item.targetData.id
+        if (scriptId) {
+          uni.navigateTo({
+            url: `/pages/script/detail/detail?id=${scriptId}`
+          })
+        }
+      } else if (item.targetType === 'post') {
+        const postId = item.targetData && item.targetData.id
+        if (postId) {
+          uni.navigateTo({
+            url: `/pages/community/detail/detail?id=${postId}`
+          })
+        }
       }
     },
     

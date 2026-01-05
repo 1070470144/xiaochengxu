@@ -250,6 +250,9 @@
 import Auth from '@/utils/auth.js'
 import UserAction from '@/utils/user-action.js'
 
+// 导入云对象
+const collection = uniCloud.importObject('collection')
+
 export default {
   name: 'ScriptDetail',
   
@@ -1175,17 +1178,13 @@ export default {
     // 检查收藏状态
     async checkFavoriteStatus() {
       try {
-        const db = uniCloud.database()
-        const result = await db.collection('botc-favorites')
-          .where({
-            user_id: this.currentUserId,
-            target_type: 'script',
-            target_id: this.scriptId
-          })
-          .get()
-        
-        this.isFavorite = result.data && result.data.length > 0
-        console.log('✅ 收藏状态：', this.isFavorite)
+        // 调用云对象方法检查收藏状态
+        const result = await collection.checkFavoriteStatus('script', this.scriptId)
+
+        if (result.code === 0) {
+          this.isFavorite = result.data.isFavorited
+          console.log('✅ 收藏状态：', this.isFavorite)
+        }
       } catch (error) {
         console.error('检查收藏状态失败：', error)
       }
@@ -1200,26 +1199,21 @@ export default {
       }
 
       try {
-        const functionName = this.isFavorite ? 'favorite-remove' : 'favorite-add'
-        
-        const result = await uniCloud.callFunction({
-          name: functionName,
-          data: { 
-            target_type: 'script',
-            target_id: this.scriptId,
-            token: Auth.getToken()
-          }
-        })
-
-        if (result.result.code === 0) {
-          this.isFavorite = !this.isFavorite
-          uni.showToast({
-            title: this.isFavorite ? '收藏成功' : '取消收藏',
-            icon: 'success'
-          })
+        // 调用云对象方法
+        if (this.isFavorite) {
+          // 取消收藏
+          await collection.removeFavorite('script', this.scriptId)
         } else {
-          throw new Error(result.result.message)
+          // 添加收藏
+          await collection.addFavorite('script', this.scriptId)
         }
+
+        // 更新状态
+        this.isFavorite = !this.isFavorite
+        uni.showToast({
+          title: this.isFavorite ? '收藏成功' : '取消收藏',
+          icon: 'success'
+        })
       } catch (error) {
         console.error('收藏操作失败：', error)
         uni.showToast({
