@@ -212,15 +212,20 @@ export default {
       this.loadingStorytellers = true;
       
       try {
+        const field = this.storytellerTabs[this.storytellerTab].field;
+
+        // 只使用云对象实现（不再回退到旧云函数）
         const wikiObj = uniCloud.importObject('wiki', { customUI: true });
-        const res = await wikiObj.getRankingStorytellers(
-          this.storytellerTabs[this.storytellerTab].field,
-          50
-        );
-        
-        if (res.code === 0) {
+        const res = await wikiObj.getRankingStorytellers(field, 50);
+
+        if (res && res.code === 0) {
           this.storytellerList = res.data.list || [];
+          console.log('[loadStorytellerRanking] data source: cloudObject');
+        } else {
+          console.error('[loadStorytellerRanking] cloud object returned error:', res);
+          throw new Error(res && res.message ? res.message : 'cloud object error');
         }
+        
       } catch (error) {
         console.error('[loadStorytellerRanking] 加载失败:', error);
         uni.showToast({

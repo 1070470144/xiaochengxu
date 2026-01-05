@@ -1,6 +1,36 @@
 'use strict';
 
-const cheerio = require('cheerio');
+// Compatibility patch: some cloud runtimes (and undici) expect ReadableStream to exist.
+// In environments where it's missing, provide a minimal shim to avoid ReferenceError.
+if (typeof ReadableStream === 'undefined') {
+  // minimal no-op shim sufficient for libraries that only check for existence
+  global.ReadableStream = class ReadableStream {};
+}
+
+// Some environments also lack Blob which undici's webidl expects.
+// Provide a minimal Blob shim to avoid ReferenceError during module load.
+if (typeof Blob === 'undefined') {
+  global.Blob = class Blob {
+    constructor(parts = [], options = {}) {
+      this._parts = parts;
+      this.type = options.type || '';
+      // rough size estimate
+      try {
+        this.size = parts.reduce((acc, p) => acc + (typeof p === 'string' ? Buffer.byteLength(p) : (p && p.length) || 0), 0);
+      } catch (e) {
+        this.size = 0;
+      }
+    }
+    async arrayBuffer() {
+      // best-effort: concat strings only
+      const buffers = this._parts.map(p => (typeof p === 'string' ? Buffer.from(p) : (Buffer.isBuffer(p) ? p : Buffer.from(String(p)))));
+      return Buffer.concat(buffers).buffer;
+    }
+    text() {
+      return Promise.resolve(this._parts.map(p => (typeof p === 'string' ? p : String(p))).join(''));
+    }
+  };
+}
 
 // ==================== 工具函数（外部） ====================
 
@@ -43,101 +73,103 @@ function returnError(code = -1, message = '操作失败', data = null) {
   };
 }
 
-// ==================== HTML 解析函数 ====================
+// ==================== HTML 解析函数（正则实现，替代 cheerio） ====================
 
-/**
- * 解析 MediaWiki 页面（钟楼百科）
- */
+function stripTags(html) {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function parseMediaWikiPage(html, url) {
-  const $ = cheerio.load(html);
-  
-  // 提取页面标题
-  const title = $('#firstHeading').text().trim() || $('h1').first().text().trim();
-  
+  // 标题：优先匹配 id="firstHeading"，否则取第一个 h1
+  let m = html.match(/<h1[^>]*id=["']firstHeading["'][^>]*>([\s\S]*?)<\/h1>/i)
+        || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  const title = m ? stripTags(m[1]) : '';
   if (!title) {
     throw new Error('无法提取页面标题');
   }
-  
-  // 提取主要内容
-  const $content = $('#mw-content-text .mw-parser-output');
-  
-  if ($content.length === 0) {
+
+  // 提取主要内容容器：id="mw-content-text" 或 class="mw-parser-output"
+  m = html.match(/<div[^>]*id=["']mw-content-text['"][^>]*>([\s\S]*?)<\/div>/i)
+      || html.match(/<div[^>]*class=["']mw-parser-output['"][^>]*>([\s\S]*?)<\/div>/i);
+  let contentHtml = m ? m[1] : '';
+  if (!contentHtml) {
     throw new Error('无法找到页面内容');
   }
-  
-  // 移除不需要的元素
-  $content.find('.toc, .navbox, .navigation, #toc, script, style, .printfooter').remove();
-  
-  // 提取纯文本
-  const contentText = $content.text()
-    .replace(/\s+/g, ' ')
-    .replace(/\[编辑\]/g, '')
-    .trim();
-  
-  // 提取结构化段落
+
+  // 移除脚本样式和目录等不需展示的内容
+  contentHtml = contentHtml.replace(/<script[\s\S]*?<\/script>/gi, '')
+                           .replace(/<style[\s\S]*?<\/style>/gi, '')
+                           .replace(/<div[^>]*class=["']?toc["']?[^>]*>[\s\S]*?<\/div>/gi, '')
+                           .replace(/<table[^>]*class=["']?navbox["']?[^>]*>[\s\S]*?<\/table>/gi, '');
+
+  const contentText = stripTags(contentHtml).replace(/\[编辑\]/g, '').trim();
+
+  // 提取结构化段落（h2/h3/h4）和对应内容
   const sections = [];
-  $content.children('h2, h3, h4').each((i, elem) => {
-    const $heading = $(elem);
-    const headingText = $heading.find('.mw-headline').text().trim() || $heading.text().trim();
-    const level = parseInt(elem.name.substring(1));
-    
-    // 获取该标题下的内容
-    let sectionContent = '';
-    $heading.nextUntil('h2, h3, h4').each((j, contentElem) => {
-      const text = $(contentElem).text().trim();
-      if (text) {
-        sectionContent += text + '\n';
-      }
-    });
-    
-    if (headingText && sectionContent) {
+  const headingRegex = /<(h[2-4])[^>]*>([\s\S]*?)<\/\1>/gi;
+  const headings = [];
+  let match;
+  while ((match = headingRegex.exec(contentHtml)) !== null) {
+    headings.push({ tag: match[1], text: stripTags(match[2]), index: match.index });
+  }
+  for (let i = 0; i < headings.length; i++) {
+    const start = headings[i].index;
+    const end = (i + 1) < headings.length ? headings[i + 1].index : contentHtml.length;
+    const sectionHtml = contentHtml.slice(start, end);
+    const sectionText = stripTags(sectionHtml);
+    if (headings[i].text && sectionText) {
       sections.push({
-        heading: headingText,
-        content: sectionContent.trim(),
-        level
+        heading: headings[i].text,
+        content: sectionText.trim(),
+        level: parseInt(headings[i].tag.substring(1))
       });
     }
-  });
-  
-  // 提取图片
+  }
+
+  // 提取图片（过滤 icon/logo）
   const images = [];
-  $content.find('img').each((i, elem) => {
-    let src = $(elem).attr('src') || $(elem).attr('data-src');
-    if (src && !src.includes('icon') && !src.includes('logo')) {
-      // MediaWiki 图片通常是相对路径
-      if (!src.startsWith('http')) {
-        src = 'https://clocktower-wiki.gstonegames.com' + src;
-      }
-      images.push(src);
+  const imgRegex = /<img[^>]*src=["']([^"']+)["'][^>]*>/gi;
+  while ((match = imgRegex.exec(contentHtml)) !== null) {
+    let src = match[1];
+    if (!src) continue;
+    if (src.includes('icon') || src.includes('logo')) continue;
+    if (!/^https?:\/\//i.test(src)) {
+      src = 'https://clocktower-wiki.gstonegames.com' + src;
     }
-  });
-  
-  // 提取信息框（角色专用）
-  const roleInfo = extractRoleInfobox($, $content);
-  
+    images.push(src);
+  }
+
+  // 信息框（角色）
+  const roleInfo = extractRoleInfobox(contentHtml);
+
   // 判断词条类型
   const entryType = detectEntryType(title, contentText, roleInfo);
-  
-  // 提取分类标签
+
+  // 分类标签
   const tags = [];
-  $('#mw-normal-catlinks ul li').each((i, elem) => {
-    const tag = $(elem).text().trim();
-    if (tag) tags.push(tag);
-  });
-  
-  // 提取相关链接
+  const catMatch = html.match(/<div[^>]*id=["']?mw-normal-catlinks['"]?[^>]*>[\s\S]*?<ul[^>]*>([\s\S]*?)<\/ul>/i);
+  if (catMatch) {
+    const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    while ((match = liRegex.exec(catMatch[1])) !== null) {
+      const tag = stripTags(match[1]);
+      if (tag) tags.push(tag);
+    }
+  }
+
+  // 相关链接：以 /index.php 开头的链接
   const relatedLinks = [];
-  $content.find('a[href^="/index.php"]').each((i, elem) => {
-    const linkText = $(elem).text().trim();
-    const linkHref = $(elem).attr('href');
-    if (linkText && linkHref && !linkHref.includes('action=')) {
+  const aRegex = /<a[^>]*href=["'](\/index\.php[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  while ((match = aRegex.exec(contentHtml)) !== null) {
+    const linkHref = match[1];
+    const linkText = stripTags(match[2]);
+    if (linkHref && !linkHref.includes('action=') && linkText) {
       relatedLinks.push({
         text: linkText,
         url: 'https://clocktower-wiki.gstonegames.com' + linkHref
       });
     }
-  });
-  
+  }
+
   return {
     entry_type: entryType,
     title: title,
@@ -151,7 +183,7 @@ function parseMediaWikiPage(html, url) {
     },
     role_info: roleInfo,
     media: {
-      icon_url: extractRoleIcon($, $content),
+      icon_url: extractRoleIcon(contentHtml),
       images: images.slice(0, 15)
     },
     tags: tags,
@@ -161,9 +193,9 @@ function parseMediaWikiPage(html, url) {
 }
 
 /**
- * 提取角色信息框
+ * 提取角色信息框（基于正则）
  */
-function extractRoleInfobox($, $content) {
+function extractRoleInfobox(contentHtml) {
   const roleInfo = {
     team: null,
     team_name: null,
@@ -171,57 +203,56 @@ function extractRoleInfobox($, $content) {
     setup_info: null,
     script_belongs: []
   };
-  
-  // MediaWiki 信息框通常在 .infobox 中
-  const $infobox = $content.find('.infobox, .character-info');
-  
-  $infobox.find('tr').each((i, tr) => {
-    const $tr = $(tr);
-    const label = $tr.find('th').text().trim();
-    const value = $tr.find('td').text().trim();
-    
-    if (label.includes('阵营') || label.includes('类型')) {
-      roleInfo.team_name = value;
-      roleInfo.team = detectTeam(value);
-    }
-    
-    if (label.includes('能力')) {
-      roleInfo.ability = value;
-    }
-    
-    if (label.includes('设置')) {
-      roleInfo.setup_info = value;
-    }
-    
-    if (label.includes('剧本')) {
-      roleInfo.script_belongs = value.split(/[、，,]/).map(s => s.trim()).filter(s => s);
-    }
-  });
-  
-  // 如果没有信息框，尝试从内容中提取
-  if (!roleInfo.ability) {
-    const text = $content.text();
-    
-    // 匹配角色能力描述（通常在引号中）
-    const abilityMatch = text.match(/["""]([^"""]{10,200})["""]/);
+
+  const infoboxMatch = contentHtml.match(/<table[^>]*class=["']?([^"']*infobox[^"']*)["']?[^>]*>([\s\S]*?)<\/table>/i)
+                    || contentHtml.match(/<table[^>]*class=["']?([^"']*character-info[^"']*)["']?[^>]*>([\s\S]*?)<\/table>/i);
+  const infoboxHtml = infoboxMatch ? infoboxMatch[2] : '';
+  if (!infoboxHtml) {
+    // fallback: try to extract quoted ability from content
+    const abilityMatch = contentHtml.match(/["“]([^"”]{10,200})["”]/);
     if (abilityMatch) {
       roleInfo.ability = abilityMatch[1];
     }
+    return roleInfo;
   }
-  
+
+  // extract rows
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let match;
+  while ((match = rowRegex.exec(infoboxHtml)) !== null) {
+    const rowHtml = match[1];
+    const thMatch = rowHtml.match(/<th[^>]*>([\s\S]*?)<\/th>/i);
+    const tdMatch = rowHtml.match(/<td[^>]*>([\s\S]*?)<\/td>/i);
+    const label = thMatch ? stripTags(thMatch[1]) : '';
+    const value = tdMatch ? stripTags(tdMatch[1]) : '';
+    if (!label) continue;
+    if (label.includes('阵营') || label.includes('类型')) {
+      roleInfo.team_name = value;
+      roleInfo.team = detectTeam(value);
+    } else if (label.includes('能力')) {
+      roleInfo.ability = value;
+    } else if (label.includes('设置')) {
+      roleInfo.setup_info = value;
+    } else if (label.includes('剧本')) {
+      roleInfo.script_belongs = value.split(/[、，,]/).map(s => s.trim()).filter(s => s);
+    }
+  }
+
   return roleInfo;
 }
 
 /**
- * 提取角色图标
+ * 提取角色图标（基于正则）
  */
-function extractRoleIcon($, $content) {
-  // 钟楼百科的角色图标通常在页面右侧或信息框中
-  const iconSrc = $content.find('.infobox img, .character-icon img').first().attr('src');
-  if (iconSrc) {
-    return iconSrc.startsWith('http') 
-      ? iconSrc 
-      : 'https://clocktower-wiki.gstonegames.com' + iconSrc;
+function extractRoleIcon(contentHtml) {
+  const iconMatch = contentHtml.match(/<img[^>]*class=["']?[^"']*(infobox|character-icon|thumb|image)[^"']*["']?[^>]*src=["']([^"']+)["'][^>]*>/i)
+                 || contentHtml.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/i);
+  if (iconMatch) {
+    let src = iconMatch[2] || iconMatch[1];
+    if (src && !/^https?:\/\//i.test(src)) {
+      src = 'https://clocktower-wiki.gstonegames.com' + src;
+    }
+    return src;
   }
   return null;
 }
@@ -231,7 +262,6 @@ function extractRoleIcon($, $content) {
  */
 function detectTeam(teamText) {
   if (!teamText) return null;
-  
   const text = teamText.toLowerCase();
   if (text.includes('镇民') || text.includes('townsfolk')) return 'townsfolk';
   if (text.includes('外来者') || text.includes('outsider')) return 'outsider';
@@ -245,14 +275,10 @@ function detectTeam(teamText) {
  * 判断词条类型
  */
 function detectEntryType(title, content, roleInfo) {
-  // 如果有角色信息，则为角色
   if (roleInfo && roleInfo.team) {
     return 'role';
   }
-  
-  // 根据标题和内容判断
   const combined = (title + ' ' + content).toLowerCase();
-  
   if (combined.includes('剧本') && !combined.includes('角色')) {
     return 'script';
   } else if (combined.includes('规则') || combined.includes('术语')) {
@@ -273,7 +299,7 @@ module.exports = {
    */
   _before() {
     this.db = uniCloud.database();
-    this.dbCmd = this.db.command();
+    this.dbCmd = this.db.command;
     this.clientInfo = this.getClientInfo();
     
     // 需要认证的方法
@@ -782,17 +808,40 @@ module.exports = {
     try {
       console.log(`[wiki] getRankingStorytellers: type=${type}, limit=${limit}`);
       
+      // Debug info to help trace runtime errors
+      try {
+        console.log('[wiki] debug this.dbCmd type:', typeof this.dbCmd);
+        console.log('[wiki] debug this.dbCmd has gt:', !!(this.dbCmd && this.dbCmd.gt));
+        console.log('[wiki] debug this.dbCmd has in:', !!(this.dbCmd && this.dbCmd.in));
+      } catch (dbgErr) {
+        console.warn('[wiki] dbCmd debug failed:', dbgErr);
+      }
+
       let orderField = 'storyteller_stats.fans_count';
       
       if (type === 'heat_score') {
         orderField = 'storyteller_stats.heat_score';
       }
-      
-      const res = await this.db.collection('uni-id-users')
-        .where({
-          [`storyteller_stats.${type}`]: this.dbCmd.gt(0),
-          storyteller_certified: true  // 只显示认证通过的说书人
-        })
+
+      // Normalize db command helper (some runtimes expose it as function, some as object)
+      const dbCmd = (typeof this.dbCmd === 'function') ? this.dbCmd() : this.dbCmd;
+
+      // Build where condition first to make it easier to inspect in logs
+      const whereCondition = {
+        storyteller_certified: true
+      };
+      try {
+        if (!dbCmd || typeof dbCmd.gt !== 'function') {
+          console.warn('[wiki] dbCmd missing or does not expose gt():', typeof dbCmd);
+        }
+        whereCondition[`storyteller_stats.${type}`] = dbCmd && typeof dbCmd.gt === 'function' ? dbCmd.gt(0) : 0;
+      } catch (condErr) {
+        console.error('[wiki] 构建 whereCondition 失败:', condErr);
+        throw condErr;
+      }
+
+      const query = this.db.collection('uni-id-users')
+        .where(whereCondition)
         .field({
           _id: true,
           nickname: true,
@@ -802,8 +851,10 @@ module.exports = {
           storyteller_certified: true
         })
         .orderBy(orderField, 'desc')
-        .limit(limit)
-        .get();
+        .limit(limit);
+      // debug the built query condition
+      console.log('[wiki] getRankingStorytellers whereCondition:', JSON.stringify(whereCondition));
+      const res = await query.get();
       
       const list = res.data || [];
       
@@ -815,8 +866,13 @@ module.exports = {
       }, '获取成功');
       
     } catch (error) {
-      console.error('[wiki] getRankingStorytellers失败:', error);
-      return returnError(500, '获取失败: ' + error.message);
+      // Log detailed error information
+      console.error('[wiki] getRankingStorytellers失败:', {
+        message: error && error.message,
+        stack: error && error.stack,
+        name: error && error.name
+      });
+      return returnError(500, '获取失败: ' + (error && error.message ? error.message : '未知错误'));
     }
   },
   
